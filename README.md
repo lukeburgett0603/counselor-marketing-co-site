@@ -37,6 +37,11 @@ README covers the mechanical setup for one client.
 
 ## Local development
 
+Requires **Node 22.19+** (`@supabase/supabase-js` needs native WebSocket
+support to construct its client at all, even though this project never
+uses realtime features). Check with `node --version`; if you're on an
+older Node via nvm, run `nvm install 22 && nvm use 22` first.
+
 ```bash
 cp .env.example .env   # fill in this client's Supabase URL + anon key
 npm install

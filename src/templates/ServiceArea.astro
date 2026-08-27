@@ -19,7 +19,7 @@ const { page, allPages, business } = Astro.props;
 <BaseLayout page={page} allPages={allPages} business={business}>
   <Hero
     h1={page.h1 ?? page.title}
-    subhead={page.purpose ?? undefined}
+    subhead={page.hero_subhead ?? undefined}
     imageUrl={page.images.hero?.url}
     imageAlt={page.images.hero?.alt}
     compact

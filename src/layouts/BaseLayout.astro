@@ -61,6 +61,6 @@ const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbChain, siteUrl);
       <slot />
     </main>
     <Footer navPages={allPages} business={business} />
-    <MobileCTABar telephone={business.telephone} />
+    <MobileCTABar telephone={business.telephone} ctaText={page.cta_button_text ?? undefined} />
   </body>
 </html>

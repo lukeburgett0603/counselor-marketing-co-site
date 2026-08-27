@@ -69,7 +69,8 @@ create table pages (
     'Homepage', 'About', 'Services Overview', 'Service Page',
     'Content Pillar', 'Counselor Profile', 'Service Area', 'Contact', 'Other'
   )),
-  purpose text,
+  purpose text,                           -- internal planning note only, never rendered to visitors
+                                           -- (hero_subhead added in 0002_add_hero_subhead.sql)
   nav_placement text not null default 'none'
     check (nav_placement in ('primary', 'footer', 'utility', 'none')),
   nav_order int not null default 0,

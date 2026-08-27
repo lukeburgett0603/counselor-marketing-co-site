@@ -24,7 +24,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # @supabase/supabase-js needs Node's native WebSocket support
+          # (stable from Node 22) to construct its client at all, even
+          # though this template never uses realtime features — Node 20
+          # throws at build time the first moment a real Supabase URL/key
+          # is present (undici, a supabase-js dependency, also requires
+          # >=22.19.0, per its own npm install warning).
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run build

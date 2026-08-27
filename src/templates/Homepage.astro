@@ -20,7 +20,7 @@ const { page, allPages, business } = Astro.props;
 <BaseLayout page={page} allPages={allPages} business={business}>
   <Hero
     h1={page.h1 ?? page.title}
-    subhead={page.purpose ?? undefined}
+    subhead={page.hero_subhead ?? undefined}
     imageUrl={page.images.hero?.url}
     imageAlt={page.images.hero?.alt}
     ctaText={page.cta_button_text ?? 'Get Started'}
@@ -32,5 +32,5 @@ const { page, allPages, business } = Astro.props;
     <Testimonial quote={page.testimonial_quote} author={page.testimonial_author} role={page.testimonial_role} />
   )}
   <CTA heading={page.cta_heading ?? `Ready to work with ${business.display_name}?`} buttonText={page.cta_button_text ?? undefined} />
-  <LeadGenerator slug={page.slug} />
+  <LeadGenerator slug={page.slug} heading={page.cta_button_text ?? undefined} />
 </BaseLayout>

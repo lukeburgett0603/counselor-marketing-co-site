@@ -22,6 +22,7 @@ export interface Page {
   slug: string;
   page_type: PageType;
   purpose: string | null;
+  hero_subhead: string | null;
   nav_placement: 'primary' | 'footer' | 'utility' | 'none';
   nav_order: number;
   parent_page_id: string | null;

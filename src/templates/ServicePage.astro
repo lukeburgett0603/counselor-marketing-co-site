@@ -20,7 +20,7 @@ const heroImage = page.images.serviceHero ?? page.images.hero;
 <BaseLayout page={page} allPages={allPages} business={business}>
   <Hero
     h1={page.h1 ?? page.title}
-    subhead={page.purpose ?? undefined}
+    subhead={page.hero_subhead ?? undefined}
     imageUrl={heroImage?.url}
     imageAlt={heroImage?.alt}
     ctaText={page.cta_button_text ?? 'Get a Quote'}
