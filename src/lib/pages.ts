@@ -70,6 +70,8 @@ export interface Business {
   same_as: string[];
   photos: string[];
   google_maps_url: string | null;
+  collect_website_in_leads: boolean;
+  lead_response_time_note: string | null;
 }
 
 // Only content-complete pages are ever rendered — a page left at

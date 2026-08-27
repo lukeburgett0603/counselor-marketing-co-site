@@ -40,5 +40,10 @@ const { page, allPages, business } = Astro.props;
       </p>
     )}
   </div>
-  <LeadGenerator slug={page.slug} heading="Send us a message" />
+  <LeadGenerator
+    slug={page.slug}
+    heading="Send us a message"
+    collectWebsiteUrl={business.collect_website_in_leads}
+    responseTimeNote={business.lead_response_time_note}
+  />
 </BaseLayout>

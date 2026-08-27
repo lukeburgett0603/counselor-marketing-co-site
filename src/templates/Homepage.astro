@@ -32,5 +32,10 @@ const { page, allPages, business } = Astro.props;
     <Testimonial quote={page.testimonial_quote} author={page.testimonial_author} role={page.testimonial_role} />
   )}
   <CTA heading={page.cta_heading ?? `Ready to work with ${business.display_name}?`} buttonText={page.cta_button_text ?? undefined} />
-  <LeadGenerator slug={page.slug} heading={page.cta_button_text ?? undefined} />
+  <LeadGenerator
+    slug={page.slug}
+    heading={page.cta_button_text ?? undefined}
+    collectWebsiteUrl={business.collect_website_in_leads}
+    responseTimeNote={business.lead_response_time_note}
+  />
 </BaseLayout>

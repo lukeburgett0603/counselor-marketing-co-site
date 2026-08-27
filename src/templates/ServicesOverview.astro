@@ -44,5 +44,9 @@ const linkedServices = allPages.filter(
     <Fragment set:html={renderCopy(page.copy)} />
   </Section>
   <CTA heading={page.cta_heading ?? 'Not sure which service you need?'} buttonText={page.cta_button_text ?? undefined} />
-  <LeadGenerator slug={page.slug} />
+  <LeadGenerator
+    slug={page.slug}
+    collectWebsiteUrl={business.collect_website_in_leads}
+    responseTimeNote={business.lead_response_time_note}
+  />
 </BaseLayout>

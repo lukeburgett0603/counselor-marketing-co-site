@@ -22,5 +22,9 @@ const { page, allPages, business } = Astro.props;
     <Fragment set:html={renderCopy(page.copy)} />
   </Section>
   <CTA heading={page.cta_heading ?? 'Get to know how we can help'} buttonText={page.cta_button_text ?? 'Contact Us'} />
-  <LeadGenerator slug={page.slug} />
+  <LeadGenerator
+    slug={page.slug}
+    collectWebsiteUrl={business.collect_website_in_leads}
+    responseTimeNote={business.lead_response_time_note}
+  />
 </BaseLayout>

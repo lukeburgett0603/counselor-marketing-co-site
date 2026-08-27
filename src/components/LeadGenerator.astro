@@ -2,9 +2,16 @@
 interface Props {
   slug: string;
   heading?: string;
+  collectWebsiteUrl?: boolean;
+  responseTimeNote?: string | null;
 }
 
-const { slug, heading = "Let's talk about your project" } = Astro.props;
+const {
+  slug,
+  heading = "Let's talk about your project",
+  collectWebsiteUrl = false,
+  responseTimeNote,
+} = Astro.props;
 ---
 
 <section id="lead-generator" class="bg-white py-14">
@@ -12,7 +19,12 @@ const { slug, heading = "Let's talk about your project" } = Astro.props;
     <h2 class="mb-6 text-center font-[family-name:var(--font-heading)] text-2xl font-bold text-brand-ink">
       {heading}
     </h2>
-    <form id="lead-form" class="space-y-4" data-source-page={slug}>
+    <form
+      id="lead-form"
+      class="space-y-4"
+      data-source-page={slug}
+      data-collect-website={collectWebsiteUrl ? 'true' : 'false'}
+    >
       <input
         name="name"
         type="text"
@@ -33,6 +45,14 @@ const { slug, heading = "Let's talk about your project" } = Astro.props;
         placeholder="Phone (optional)"
         class="w-full rounded-md border border-slate-300 px-4 py-2"
       />
+      {collectWebsiteUrl && (
+        <input
+          name="existing_website_url"
+          type="url"
+          placeholder="Current website (optional — skip if you don't have one yet)"
+          class="w-full rounded-md border border-slate-300 px-4 py-2"
+        />
+      )}
       <textarea
         name="message"
         placeholder="How can we help?"
@@ -44,6 +64,7 @@ const { slug, heading = "Let's talk about your project" } = Astro.props;
       >
         Send
       </button>
+      {responseTimeNote && <p class="text-center text-xs text-slate-500">{responseTimeNote}</p>}
       <p id="lead-form-status" class="text-center text-sm" role="status"></p>
     </form>
   </div>
@@ -67,6 +88,17 @@ const { slug, heading = "Let's talk about your project" } = Astro.props;
     const formData = new FormData(form);
     status.textContent = 'Sending...';
 
+    const payload: Record<string, unknown> = {
+      name: formData.get('name'),
+      email: formData.get('email'),
+      phone: formData.get('phone') || null,
+      message: formData.get('message') || null,
+      source_page: form.dataset.sourcePage,
+    };
+    if (form.dataset.collectWebsite === 'true') {
+      payload.existing_website_url = formData.get('existing_website_url') || null;
+    }
+
     const response = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
       method: 'POST',
       headers: {
@@ -75,13 +107,7 @@ const { slug, heading = "Let's talk about your project" } = Astro.props;
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
         Prefer: 'return=minimal',
       },
-      body: JSON.stringify({
-        name: formData.get('name'),
-        email: formData.get('email'),
-        phone: formData.get('phone') || null,
-        message: formData.get('message') || null,
-        source_page: form.dataset.sourcePage,
-      }),
+      body: JSON.stringify(payload),
     });
 
     status.textContent = response.ok

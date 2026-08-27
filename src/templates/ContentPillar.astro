@@ -36,5 +36,9 @@ const relatedPages = allPages.filter((p) => page.internal_links.includes(p.slug)
     </section>
   )}
   <CTA heading={page.cta_heading ?? `Want help from ${business.display_name}?`} buttonText={page.cta_button_text ?? undefined} />
-  <LeadGenerator slug={page.slug} />
+  <LeadGenerator
+    slug={page.slug}
+    collectWebsiteUrl={business.collect_website_in_leads}
+    responseTimeNote={business.lead_response_time_note}
+  />
 </BaseLayout>
