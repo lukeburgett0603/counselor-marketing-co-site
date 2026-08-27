@@ -1,0 +1,66 @@
+---
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import MobileCTABar from '../components/MobileCTABar.astro';
+import SchemaScript from '../components/SchemaScript.astro';
+import { buildPageSchemas, buildBreadcrumbSchema } from '../lib/schema';
+import { buildBreadcrumbChain } from '../lib/pages';
+import type { Page, Business } from '../lib/pages';
+import { withBase } from '../lib/url';
+import '../styles/global.css';
+
+interface Props {
+  page: Page;
+  allPages: Page[];
+  business: Business;
+}
+
+const { page, allPages, business } = Astro.props;
+
+// siteUrl is the site's real root including any GitHub Pages project-page
+// base path (e.g. https://user.github.io/repo-name) — every schema/canonical
+// URL below is built from this so they stay correct with or without a
+// custom domain (which just makes the base path '/').
+const siteUrl = new URL(withBase('/'), Astro.site ?? Astro.url).toString().replace(/\/$/, '');
+const canonicalUrl = page.page_type === 'Homepage' ? `${siteUrl}/` : `${siteUrl}/${page.slug}`;
+const title = page.meta_title ?? page.title;
+const description = page.meta_description ?? page.purpose ?? '';
+const ogImage = page.images.hero?.url ?? business.logo_url ?? undefined;
+
+const pageSchemas = buildPageSchemas(page, business, siteUrl);
+const breadcrumbChain = buildBreadcrumbChain(page, allPages);
+const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbChain, siteUrl);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalUrl} />
+
+    <meta property="og:type" content={page.page_type === 'Content Pillar' ? 'article' : 'website'} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:site_name" content={business.display_name} />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    {ogImage && <meta name="twitter:image" content={ogImage} />}
+
+    <SchemaScript schemas={[...pageSchemas, breadcrumbSchema]} />
+  </head>
+  <body class="pb-14 md:pb-0">
+    <Header navPages={allPages} businessName={business.display_name} telephone={business.telephone} />
+    <main>
+      <slot />
+    </main>
+    <Footer navPages={allPages} business={business} />
+    <MobileCTABar telephone={business.telephone} />
+  </body>
+</html>

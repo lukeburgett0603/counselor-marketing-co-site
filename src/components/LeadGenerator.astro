@@ -1,0 +1,92 @@
+---
+interface Props {
+  slug: string;
+  heading?: string;
+}
+
+const { slug, heading = "Let's talk about your project" } = Astro.props;
+---
+
+<section id="lead-generator" class="bg-white py-14">
+  <div class="mx-auto max-w-xl px-6">
+    <h2 class="mb-6 text-center font-[family-name:var(--font-heading)] text-2xl font-bold text-brand-ink">
+      {heading}
+    </h2>
+    <form id="lead-form" class="space-y-4" data-source-page={slug}>
+      <input
+        name="name"
+        type="text"
+        placeholder="Name"
+        required
+        class="w-full rounded-md border border-slate-300 px-4 py-2"
+      />
+      <input
+        name="email"
+        type="email"
+        placeholder="Email"
+        required
+        class="w-full rounded-md border border-slate-300 px-4 py-2"
+      />
+      <input
+        name="phone"
+        type="tel"
+        placeholder="Phone (optional)"
+        class="w-full rounded-md border border-slate-300 px-4 py-2"
+      />
+      <textarea
+        name="message"
+        placeholder="How can we help?"
+        rows="4"
+        class="w-full rounded-md border border-slate-300 px-4 py-2"></textarea>
+      <button
+        type="submit"
+        class="w-full rounded-md bg-brand-primary px-6 py-3 font-semibold text-white hover:opacity-90"
+      >
+        Send
+      </button>
+      <p id="lead-form-status" class="text-center text-sm" role="status"></p>
+    </form>
+  </div>
+</section>
+
+<script>
+  // A direct REST call instead of importing @supabase/supabase-js here:
+  // the full SDK adds ~200KB of JS to every single page (this component is
+  // on nearly every page), which drags down Core Web Vitals sitewide for a
+  // one-line insert. supabase.ts (imported at build time only, never
+  // shipped to the browser) still uses the real SDK for content fetching.
+  const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
+  const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+  const form = document.getElementById('lead-form') as HTMLFormElement | null;
+  const status = document.getElementById('lead-form-status');
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!status) return;
+    const formData = new FormData(form);
+    status.textContent = 'Sending...';
+
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify({
+        name: formData.get('name'),
+        email: formData.get('email'),
+        phone: formData.get('phone') || null,
+        message: formData.get('message') || null,
+        source_page: form.dataset.sourcePage,
+      }),
+    });
+
+    status.textContent = response.ok
+      ? 'Thanks! We’ll be in touch soon.'
+      : 'Something went wrong — please try again.';
+    if (response.ok) form.reset();
+  });
+</script>

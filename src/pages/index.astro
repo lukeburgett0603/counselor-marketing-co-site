@@ -1,0 +1,17 @@
+---
+import { getHomepage, getPublishedPages, getBusiness } from '../lib/pages';
+import Homepage from '../templates/Homepage.astro';
+
+const page = await getHomepage();
+const allPages = await getPublishedPages();
+const business = await getBusiness();
+
+if (!page) {
+  throw new Error(
+    'No page with page_type "Homepage" and status "content-complete" was found in Supabase. ' +
+      'Run site-structure-planner-supabase and webpage-copywriter before building.'
+  );
+}
+---
+
+<Homepage page={page} allPages={allPages} business={business} />

@@ -1,0 +1,25 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Section from '../components/Section.astro';
+import { renderCopy } from '../lib/markdown';
+import type { Page, Business } from '../lib/pages';
+
+interface Props {
+  page: Page;
+  allPages: Page[];
+  business: Business;
+}
+
+const { page, allPages, business } = Astro.props;
+---
+
+<BaseLayout page={page} allPages={allPages} business={business}>
+  <section class="mx-auto max-w-3xl px-6 pt-10">
+    <h1 class="font-[family-name:var(--font-heading)] text-2xl font-bold text-brand-ink">
+      {page.h1 ?? page.title}
+    </h1>
+  </section>
+  <Section tight>
+    <Fragment set:html={renderCopy(page.copy)} />
+  </Section>
+</BaseLayout>

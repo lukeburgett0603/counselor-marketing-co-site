@@ -1,0 +1,27 @@
+---
+// Local-business searches skew heavily mobile, and calling is often the
+// actual conversion action (not filling out a form) — a persistent
+// tap-to-call bar removes the need to scroll back to the header/footer.
+// Hidden on desktop; hidden entirely if there's no phone number to show.
+interface Props {
+  telephone?: string | null;
+  ctaText?: string;
+  ctaHref?: string;
+}
+
+const { telephone, ctaText = 'Get a Quote', ctaHref = '#lead-generator' } = Astro.props;
+---
+
+{telephone && (
+  <div class="fixed inset-x-0 bottom-0 z-50 flex border-t border-slate-200 bg-white shadow-[0_-2px_8px_rgba(0,0,0,0.08)] md:hidden">
+    <a
+      href={`tel:${telephone.replace(/[^0-9+]/g, '')}`}
+      class="flex-1 border-r border-slate-200 py-3 text-center font-semibold text-brand-ink"
+    >
+      Call Now
+    </a>
+    <a href={ctaHref} class="flex-1 bg-brand-primary py-3 text-center font-semibold text-white">
+      {ctaText}
+    </a>
+  </div>
+)}

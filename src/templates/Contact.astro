@@ -1,0 +1,44 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Section from '../components/Section.astro';
+import LeadGenerator from '../components/LeadGenerator.astro';
+import { renderCopy } from '../lib/markdown';
+import type { Page, Business } from '../lib/pages';
+
+interface Props {
+  page: Page;
+  allPages: Page[];
+  business: Business;
+}
+
+const { page, allPages, business } = Astro.props;
+---
+
+<BaseLayout page={page} allPages={allPages} business={business}>
+  <section class="mx-auto max-w-2xl px-6 py-14 text-center">
+    <h1 class="font-[family-name:var(--font-heading)] text-3xl font-bold text-brand-ink">
+      {page.h1 ?? page.title}
+    </h1>
+  </section>
+  <Section tight>
+    <Fragment set:html={renderCopy(page.copy)} />
+  </Section>
+  <div class="mx-auto max-w-2xl px-6 pb-6 text-center text-sm text-slate-600">
+    {business.telephone && (
+      <p>
+        Call us: <a href={`tel:${business.telephone.replace(/[^0-9+]/g, '')}`} class="text-brand-primary">{business.telephone}</a>
+      </p>
+    )}
+    {business.email && (
+      <p>
+        Email: <a href={`mailto:${business.email}`} class="text-brand-primary">{business.email}</a>
+      </p>
+    )}
+    {business.street_address && (
+      <p>
+        {business.street_address}, {business.address_locality} {business.address_region} {business.postal_code}
+      </p>
+    )}
+  </div>
+  <LeadGenerator slug={page.slug} heading="Send us a message" />
+</BaseLayout>

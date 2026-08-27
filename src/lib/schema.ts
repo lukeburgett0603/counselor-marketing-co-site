@@ -1,0 +1,177 @@
+// JSON-LD generation, per frontend-site-builder's references/schema-markup.md.
+// Same rules as the Wix version: one canonical business entity referenced by
+// @id everywhere else, never invent a property value, no self-serving
+// Review/AggregateRating markup, FAQPage only on pages with real visible Q&A.
+import type { Business, Page } from './pages';
+
+function businessId(siteUrl: string): string {
+  return `${siteUrl}/#business`;
+}
+
+// The one place the full business entity is declared (Homepage only).
+export function buildBusinessSchema(business: Business, siteUrl: string) {
+  const schema: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': business.business_subtype,
+    '@id': businessId(siteUrl),
+    name: business.display_name,
+    url: siteUrl,
+  };
+
+  if (business.legal_name) schema.legalName = business.legal_name;
+  if (business.logo_url) schema.logo = business.logo_url;
+  if (business.founding_year) schema.foundingDate = `${business.founding_year}-01-01`;
+  if (business.price_range) schema.priceRange = business.price_range;
+  if (business.telephone) schema.telephone = business.telephone;
+  if (business.email) schema.email = business.email;
+
+  if (
+    business.street_address ||
+    business.address_locality ||
+    business.address_region ||
+    business.postal_code
+  ) {
+    schema.address = {
+      '@type': 'PostalAddress',
+      ...(business.street_address && { streetAddress: business.street_address }),
+      ...(business.address_locality && { addressLocality: business.address_locality }),
+      ...(business.address_region && { addressRegion: business.address_region }),
+      ...(business.postal_code && { postalCode: business.postal_code }),
+    };
+  }
+
+  if (business.latitude != null && business.longitude != null) {
+    schema.geo = {
+      '@type': 'GeoCoordinates',
+      latitude: business.latitude,
+      longitude: business.longitude,
+    };
+  }
+
+  if (business.opening_hours) schema.openingHoursSpecification = business.opening_hours;
+  if (business.same_as?.length) schema.sameAs = business.same_as;
+  if (business.photos?.length) schema.image = business.photos;
+  if (business.google_maps_url) schema.hasMap = business.google_maps_url;
+
+  return schema;
+}
+
+export function buildWebsiteSchema(business: Business, siteUrl: string) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: business.display_name,
+    url: siteUrl,
+  };
+}
+
+export function buildServiceSchema(page: Page, siteUrl: string) {
+  const schema: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    name: page.title,
+    provider: { '@id': businessId(siteUrl) },
+  };
+  if (page.purpose) schema.description = page.purpose;
+  if (page.area_served_name) schema.areaServed = page.area_served_name;
+  return schema;
+}
+
+export function buildArticleSchema(page: Page, siteUrl: string, hasBlog: boolean) {
+  const schema: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': hasBlog ? 'BlogPosting' : 'Article',
+    headline: page.h1 ?? page.title,
+    publisher: { '@id': businessId(siteUrl) },
+  };
+  if (page.author_name) schema.author = { '@type': 'Person', name: page.author_name };
+  if (page.date_published) schema.datePublished = page.date_published;
+  if (page.date_modified) schema.dateModified = page.date_modified;
+  if (page.images.hero) schema.image = page.images.hero.url;
+  return schema;
+}
+
+export function buildPersonSchema(page: Page, siteUrl: string) {
+  const schema: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: page.title,
+    worksFor: { '@id': businessId(siteUrl) },
+  };
+  if (page.credentials) schema.honorificSuffix = page.credentials;
+  if (page.purpose) schema.description = page.purpose;
+  if (page.images.headshot) schema.image = page.images.headshot.url;
+  return schema;
+}
+
+export function buildServiceAreaSchema(business: Business, page: Page, siteUrl: string) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': business.business_subtype,
+    '@id': businessId(siteUrl),
+    areaServed: page.area_served_name ?? page.title,
+  };
+}
+
+export function buildContactPageSchema(business: Business, siteUrl: string) {
+  const schema: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'ContactPage',
+    about: { '@id': businessId(siteUrl) },
+  };
+  if (business.telephone) schema.telephone = business.telephone;
+  return schema;
+}
+
+export function buildWebPageSchema(page: Page, siteUrl: string) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: page.title,
+    url: `${siteUrl}/${page.slug}`,
+  };
+}
+
+// Generated from the page's real parent_page_id chain — never hand-write
+// breadcrumb text that doesn't match the actual nav hierarchy.
+export function buildBreadcrumbSchema(chain: Page[], siteUrl: string) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: chain.map((page, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: page.title,
+      item: page.page_type === 'Homepage' ? siteUrl : `${siteUrl}/${page.slug}`,
+    })),
+  };
+}
+
+// Dispatches a page to its schema type(s) per the mapping table in
+// schema-markup.md. Returns an array since Homepage needs two nodes.
+export function buildPageSchemas(
+  page: Page,
+  business: Business,
+  siteUrl: string,
+  options: { hasBlog?: boolean } = {}
+): Record<string, unknown>[] {
+  switch (page.page_type) {
+    case 'Homepage':
+      return [buildBusinessSchema(business, siteUrl), buildWebsiteSchema(business, siteUrl)];
+    case 'Service Page':
+      return [buildServiceSchema(page, siteUrl)];
+    case 'Content Pillar':
+      return [buildArticleSchema(page, siteUrl, options.hasBlog ?? false)];
+    case 'Counselor Profile':
+      return [buildPersonSchema(page, siteUrl)];
+    case 'Service Area':
+      return [buildServiceAreaSchema(business, page, siteUrl)];
+    case 'Contact':
+      return [buildContactPageSchema(business, siteUrl)];
+    case 'About':
+    case 'Services Overview':
+    case 'Other':
+    default:
+      return [buildWebPageSchema(page, siteUrl)];
+  }
+}

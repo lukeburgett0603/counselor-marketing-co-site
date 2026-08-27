@@ -1,0 +1,40 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/Hero.astro';
+import CTA from '../components/CTA.astro';
+import LeadGenerator from '../components/LeadGenerator.astro';
+import { renderCopy } from '../lib/markdown';
+import { withBase } from '../lib/url';
+import type { Page, Business } from '../lib/pages';
+
+interface Props {
+  page: Page;
+  allPages: Page[];
+  business: Business;
+}
+
+const { page, allPages, business } = Astro.props;
+
+const relatedPages = allPages.filter((p) => page.internal_links.includes(p.slug));
+---
+
+<BaseLayout page={page} allPages={allPages} business={business}>
+  <Hero h1={page.h1 ?? page.title} imageUrl={page.images.hero?.url} imageAlt={page.images.hero?.alt} compact />
+  <article class="prose prose-lg mx-auto max-w-3xl px-6 py-10">
+    <Fragment set:html={renderCopy(page.copy)} />
+  </article>
+  {relatedPages.length > 0 && (
+    <section class="mx-auto max-w-3xl px-6 pb-10">
+      <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-bold text-brand-ink">Related</h2>
+      <ul class="list-inside list-disc space-y-1">
+        {relatedPages.map((related) => (
+          <li>
+            <a href={withBase(`/${related.slug}`)} class="text-brand-primary hover:underline">{related.title}</a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
+  <CTA heading={page.cta_heading ?? `Want help from ${business.display_name}?`} buttonText={page.cta_button_text ?? undefined} />
+  <LeadGenerator slug={page.slug} />
+</BaseLayout>

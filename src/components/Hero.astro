@@ -1,0 +1,46 @@
+---
+import OptimizedImage from './OptimizedImage.astro';
+
+interface Props {
+  h1: string;
+  subhead?: string;
+  imageUrl?: string;
+  imageAlt?: string;
+  compact?: boolean;
+  ctaText?: string;
+  ctaHref?: string;
+}
+
+const { h1, subhead, imageUrl, imageAlt, compact = false, ctaText, ctaHref = '#lead-generator' } = Astro.props;
+---
+
+<section class:list={['bg-brand-neutral', compact ? 'py-10' : 'py-20']}>
+  <div class="mx-auto flex max-w-6xl flex-col items-center gap-10 px-6 md:flex-row">
+    <div class="flex-1">
+      <h1 class:list={['font-[family-name:var(--font-heading)] font-bold text-brand-ink', compact ? 'text-3xl' : 'text-4xl md:text-5xl']}>
+        {h1}
+      </h1>
+      {subhead && <p class="mt-4 max-w-xl text-lg text-slate-600">{subhead}</p>}
+      {/*
+        A visible CTA above the fold, not just at the bottom of the page —
+        visitors deciding quickly (especially on mobile, especially local
+        service searches) shouldn't have to scroll through the whole
+        StoryBrand arc to find a way to act.
+      */}
+      {ctaText && (
+        <a
+          href={ctaHref}
+          class="mt-6 inline-block rounded-md bg-brand-primary px-6 py-3 font-semibold text-white hover:opacity-90"
+        >
+          {ctaText}
+        </a>
+      )}
+      <slot />
+    </div>
+    {imageUrl && (
+      <div class="flex-1">
+        <OptimizedImage src={imageUrl} alt={imageAlt ?? ''} class="w-full rounded-xl object-cover" loading="eager" widths={[400, 800, 1200]} sizes="(min-width: 768px) 50vw, 100vw" />
+      </div>
+    )}
+  </div>
+</section>

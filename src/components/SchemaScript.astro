@@ -1,0 +1,14 @@
+---
+// One <script type="application/ld+json"> block per schema node, per
+// schema-markup.md's "JSON-LD only" rule. Takes an array so a layout can
+// pass multiple nodes (e.g. Homepage's business + WebSite) in one place.
+interface Props {
+  schemas: Record<string, unknown>[];
+}
+
+const { schemas } = Astro.props;
+---
+
+{schemas.map((schema) => (
+  <script type="application/ld+json" is:inline set:html={JSON.stringify(schema)} />
+))}

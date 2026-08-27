@@ -1,0 +1,21 @@
+---
+interface Props {
+  heading: string;
+  buttonText?: string;
+  href?: string;
+}
+
+const { heading, buttonText = 'Contact Us', href = '/contact' } = Astro.props;
+---
+
+<section class="bg-brand-primary py-16 text-center text-white">
+  <div class="mx-auto max-w-3xl px-6">
+    <h2 class="font-[family-name:var(--font-heading)] text-2xl font-bold md:text-3xl">{heading}</h2>
+    <a
+      href={href}
+      class="mt-6 inline-block rounded-md bg-white px-6 py-3 font-semibold text-brand-primary hover:bg-brand-neutral"
+    >
+      {buttonText}
+    </a>
+  </div>
+</section>

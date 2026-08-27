@@ -1,0 +1,48 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/Hero.astro';
+import Section from '../components/Section.astro';
+import CTA from '../components/CTA.astro';
+import LeadGenerator from '../components/LeadGenerator.astro';
+import { renderCopy } from '../lib/markdown';
+import { withBase } from '../lib/url';
+import type { Page, Business } from '../lib/pages';
+
+interface Props {
+  page: Page;
+  allPages: Page[];
+  business: Business;
+}
+
+const { page, allPages, business } = Astro.props;
+
+const linkedServices = allPages.filter(
+  (p) => page.internal_links.includes(p.slug) && p.page_type === 'Service Page'
+);
+---
+
+<BaseLayout page={page} allPages={allPages} business={business}>
+  <Hero h1={page.h1 ?? page.title} imageUrl={page.images.hero?.url} imageAlt={page.images.hero?.alt} compact />
+  {linkedServices.length > 0 && (
+    <section class="mx-auto max-w-6xl px-6 py-10">
+      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {linkedServices.map((service) => (
+          <a
+            href={withBase(`/${service.slug}`)}
+            class="block rounded-lg border border-slate-200 p-6 hover:border-brand-primary hover:shadow-md"
+          >
+            <h3 class="font-[family-name:var(--font-heading)] text-lg font-bold text-brand-ink">
+              {service.title}
+            </h3>
+            {service.purpose && <p class="mt-2 text-sm text-slate-600">{service.purpose}</p>}
+          </a>
+        ))}
+      </div>
+    </section>
+  )}
+  <Section>
+    <Fragment set:html={renderCopy(page.copy)} />
+  </Section>
+  <CTA heading={page.cta_heading ?? 'Not sure which service you need?'} buttonText={page.cta_button_text ?? undefined} />
+  <LeadGenerator slug={page.slug} />
+</BaseLayout>

@@ -1,0 +1,74 @@
+---
+import type { Page, Business } from '../lib/pages';
+import { withBase } from '../lib/url';
+
+interface Props {
+  navPages: Page[];
+  business: Business;
+}
+
+const { navPages, business } = Astro.props;
+
+const footerLinks = navPages
+  .filter((p) => p.nav_placement === 'footer')
+  .sort((a, b) => a.nav_order - b.nav_order);
+
+function hrefFor(page: Page): string {
+  return withBase(page.page_type === 'Homepage' ? '/' : `/${page.slug}`);
+}
+---
+
+<footer class="border-t border-slate-200 bg-brand-secondary text-slate-200">
+  <div class="mx-auto max-w-6xl px-6 py-10">
+    <div class="flex flex-wrap items-start justify-between gap-8">
+      <div>
+        <p class="font-[family-name:var(--font-heading)] text-lg font-bold text-white">
+          {business.display_name}
+        </p>
+        {business.telephone && (
+          <p class="mt-2 text-sm">
+            <a href={`tel:${business.telephone.replace(/[^0-9+]/g, '')}`} class="hover:text-white">
+              {business.telephone}
+            </a>
+          </p>
+        )}
+        {business.email && (
+          <p class="text-sm">
+            <a href={`mailto:${business.email}`} class="hover:text-white">
+              {business.email}
+            </a>
+          </p>
+        )}
+        {business.street_address && (
+          <p class="text-sm">
+            {business.google_maps_url ? (
+              <a href={business.google_maps_url} target="_blank" rel="noopener" class="hover:text-white">
+                {business.street_address}, {business.address_locality} {business.address_region} {business.postal_code}
+              </a>
+            ) : (
+              <>
+                {business.street_address}, {business.address_locality} {business.address_region} {business.postal_code}
+              </>
+            )}
+          </p>
+        )}
+      </div>
+      {footerLinks.length > 0 && (
+        <nav>
+          <ul class="space-y-2">
+            {footerLinks.map((page) => (
+              <li>
+                <a href={hrefFor(page)} class="text-sm hover:text-white">
+                  {page.title}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
+    </div>
+    <p class="mt-8 text-xs text-slate-400">
+      &copy; {new Date().getFullYear()} {business.legal_name ?? business.display_name}. All rights reserved.
+    </p>
+  </div>
+</footer>

@@ -1,0 +1,22 @@
+---
+// Wraps astro:assets' Image so every photo on the site (stock photos from
+// an external URL, or a client-hosted logo/team photo) gets compressed,
+// converted to a modern format, and given explicit dimensions at build
+// time — a raw <img src="https://..."> would ship the original file
+// untouched and cause layout shift, both of which hurt Core Web Vitals
+// (and therefore rankings) and page-load conversion.
+import { Image } from 'astro:assets';
+
+interface Props {
+  src: string;
+  alt: string;
+  class?: string;
+  loading?: 'eager' | 'lazy';
+  widths?: number[];
+  sizes?: string;
+}
+
+const { src, alt, class: className, loading = 'lazy', widths, sizes } = Astro.props;
+---
+
+<Image src={src} alt={alt} inferSize class={className} loading={loading} widths={widths} sizes={sizes} />

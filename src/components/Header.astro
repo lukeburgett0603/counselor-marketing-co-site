@@ -1,0 +1,67 @@
+---
+import type { Page } from '../lib/pages';
+import { withBase } from '../lib/url';
+
+interface Props {
+  navPages: Page[];
+  businessName: string;
+  telephone?: string | null;
+}
+
+const { navPages, businessName, telephone } = Astro.props;
+
+const primary = navPages
+  .filter((p) => p.nav_placement === 'primary' && !p.parent_page_id)
+  .sort((a, b) => a.nav_order - b.nav_order);
+
+function children(parentId: string): Page[] {
+  return navPages
+    .filter((p) => p.parent_page_id === parentId)
+    .sort((a, b) => a.nav_order - b.nav_order);
+}
+
+function hrefFor(page: Page): string {
+  return withBase(page.page_type === 'Homepage' ? '/' : `/${page.slug}`);
+}
+---
+
+<header class="border-b border-slate-200 bg-white">
+  <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+    <a href={withBase('/')} class="font-[family-name:var(--font-heading)] text-lg font-bold text-brand-ink">
+      {businessName}
+    </a>
+    <nav>
+      <ul class="flex items-center gap-6">
+        {primary.map((page) => {
+          const kids = children(page.id);
+          return (
+            <li class:list={[{ group: kids.length > 0 }, 'relative']}>
+              <a href={hrefFor(page)} class="text-sm font-medium text-brand-ink hover:text-brand-primary">
+                {page.title}
+              </a>
+              {kids.length > 0 && (
+                <ul class="absolute left-0 top-full hidden min-w-[10rem] rounded-md border border-slate-200 bg-white py-2 shadow-lg group-hover:block">
+                  {kids.map((child) => (
+                    <li>
+                      <a href={hrefFor(child)} class="block px-4 py-2 text-sm text-brand-ink hover:bg-brand-neutral">
+                        {child.title}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+    {telephone && (
+      <a
+        href={`tel:${telephone.replace(/[^0-9+]/g, '')}`}
+        class="hidden text-sm font-semibold text-brand-primary md:block"
+      >
+        {telephone}
+      </a>
+    )}
+  </div>
+</header>

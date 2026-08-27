@@ -1,0 +1,24 @@
+---
+import { getBusiness } from '../lib/pages';
+import { withBase } from '../lib/url';
+import '../styles/global.css';
+
+const business = await getBusiness();
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Page Not Found | {business.display_name}</title>
+    <meta name="robots" content="noindex" />
+  </head>
+  <body class="flex min-h-screen flex-col items-center justify-center bg-brand-neutral px-6 text-center">
+    <h1 class="font-[family-name:var(--font-heading)] text-3xl font-bold text-brand-ink">Page Not Found</h1>
+    <p class="mt-2 text-slate-600">The page you're looking for doesn't exist.</p>
+    <a href={withBase('/')} class="mt-6 rounded-md bg-brand-primary px-6 py-3 font-semibold text-white">
+      Back to Home
+    </a>
+  </body>
+</html>
