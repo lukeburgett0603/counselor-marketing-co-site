@@ -34,7 +34,9 @@ const linkedServices = allPages.filter(
             <h3 class="font-[family-name:var(--font-heading)] text-lg font-bold text-brand-ink">
               {service.title}
             </h3>
-            {service.purpose && <p class="mt-2 text-sm text-slate-600">{service.purpose}</p>}
+            {service.meta_description && (
+              <p class="mt-2 text-sm text-slate-600">{service.meta_description}</p>
+            )}
           </a>
         ))}
       </div>
