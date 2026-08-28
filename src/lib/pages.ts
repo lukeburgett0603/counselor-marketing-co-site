@@ -48,6 +48,7 @@ export interface Page {
   testimonial_quote: string | null;
   testimonial_author: string | null;
   testimonial_role: string | null;
+  plan_steps: { title: string; description: string }[];
 }
 
 export interface Business {
