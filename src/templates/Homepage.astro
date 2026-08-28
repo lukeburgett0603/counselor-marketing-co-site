@@ -40,6 +40,7 @@ const { page, allPages, business } = Astro.props;
         slug={page.slug}
         embedded
         heading={page.cta_button_text ?? 'Get Started'}
+        submitText={page.cta_button_text ?? 'Get Started'}
         collectWebsiteUrl={business.collect_website_in_leads}
         responseTimeNote={business.lead_response_time_note}
       />
@@ -56,6 +57,7 @@ const { page, allPages, business } = Astro.props;
   <LeadGenerator
     slug={page.slug}
     heading={page.cta_button_text ?? undefined}
+    submitText={page.cta_button_text ?? undefined}
     collectWebsiteUrl={business.collect_website_in_leads}
     responseTimeNote={business.lead_response_time_note}
   />

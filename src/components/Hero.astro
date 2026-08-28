@@ -24,6 +24,13 @@ const {
   ctaText,
   ctaHref = '#lead-generator',
 } = Astro.props;
+
+// When there's no image, the `aside` slot typically holds a form (see
+// PlanSteps.astro's sibling pattern in page-templates.md) — a standalone
+// button that just scrolls down to a DIFFERENT, distant form is redundant
+// once a form is already visible right here, and looks like two competing
+// CTAs with mismatched labels. The visible form becomes the CTA instead.
+const showAside = !imageUrl && Astro.slots.has('aside');
 ---
 
 <section class:list={['bg-brand-neutral', compact ? 'py-10' : 'py-20']}>
@@ -32,14 +39,15 @@ const {
       <h1 class:list={['font-[family-name:var(--font-heading)] font-extrabold tracking-tight text-brand-ink', compact ? 'text-3xl' : 'text-4xl md:text-5xl']}>
         {h1}
       </h1>
-      {subhead && <p class="mt-4 max-w-xl text-lg text-slate-600">{subhead}</p>}
+      {subhead && <p class="mt-4 text-lg text-slate-600">{subhead}</p>}
       {/*
         A visible CTA above the fold, not just at the bottom of the page —
         visitors deciding quickly (especially on mobile, especially local
         service searches) shouldn't have to scroll through the whole
-        StoryBrand arc to find a way to act.
+        StoryBrand arc to find a way to act. Suppressed when a form is
+        already visible in `aside` — see `showAside` above.
       */}
-      {ctaText && (
+      {ctaText && !showAside && (
         <a
           href={ctaHref}
           class="mt-6 inline-block rounded-md bg-brand-accent px-6 py-3 font-semibold text-white transition hover:opacity-90 hover:shadow-md"
@@ -63,7 +71,7 @@ const {
         />
       </div>
     ) : (
-      Astro.slots.has('aside') && (
+      showAside && (
         <div class="w-full flex-1 md:max-w-sm">
           <slot name="aside" />
         </div>
