@@ -27,12 +27,19 @@ function hrefFor(page: Page): string {
 }
 ---
 
-<header class="border-b border-slate-200 bg-white">
+<!--
+  `relative z-50` on the header establishes a real stacking context above the
+  rest of the page (Hero images etc.) — without it, the Services dropdown
+  below can render behind later page content despite being `position:
+  absolute`, since neither it nor its ancestors otherwise establish one.
+-->
+<header class="relative z-50 border-b border-slate-200 bg-white">
   <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
     <a href={withBase('/')} class="font-[family-name:var(--font-heading)] text-lg font-extrabold tracking-tight text-brand-ink">
       {wordmark.main}{wordmark.accent && <span class="text-brand-accent">{wordmark.accent}</span>}
     </a>
-    <nav>
+
+    <nav class="hidden md:block">
       <ul class="flex items-center gap-6">
         {primary.map((page) => {
           const kids = children(page.id);
@@ -42,7 +49,7 @@ function hrefFor(page: Page): string {
                 {page.title}
               </a>
               {kids.length > 0 && (
-                <ul class="absolute left-0 top-full hidden min-w-[10rem] rounded-md border border-slate-200 bg-white py-2 shadow-lg group-hover:block">
+                <ul class="absolute left-0 top-full z-50 hidden min-w-[10rem] rounded-md border border-slate-200 bg-white py-2 shadow-lg group-hover:block">
                   {kids.map((child) => (
                     <li>
                       <a href={hrefFor(child)} class="block px-4 py-2 text-sm text-brand-ink hover:bg-brand-neutral">
@@ -57,6 +64,7 @@ function hrefFor(page: Page): string {
         })}
       </ul>
     </nav>
+
     {telephone && (
       <a
         href={`tel:${telephone.replace(/[^0-9+]/g, '')}`}
@@ -65,5 +73,70 @@ function hrefFor(page: Page): string {
         {telephone}
       </a>
     )}
+
+    <button
+      id="menu-toggle"
+      type="button"
+      class="text-brand-ink md:hidden"
+      aria-label="Open menu"
+      aria-expanded="false"
+      aria-controls="mobile-menu"
+    >
+      <svg id="menu-icon-open" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+      <svg id="menu-icon-close" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="hidden">
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+      </svg>
+    </button>
+  </div>
+
+  <div id="mobile-menu" class="hidden border-t border-slate-200 bg-white md:hidden">
+    <ul class="flex flex-col px-6 py-4">
+      {primary.map((page) => {
+        const kids = children(page.id);
+        return (
+          <Fragment>
+            <li>
+              <a href={hrefFor(page)} class="block py-2 text-sm font-medium text-brand-ink">
+                {page.title}
+              </a>
+            </li>
+            {kids.map((child) => (
+              <li>
+                <a href={hrefFor(child)} class="block py-2 pl-4 text-sm text-slate-600">
+                  {child.title}
+                </a>
+              </li>
+            ))}
+          </Fragment>
+        );
+      })}
+      {telephone && (
+        <li class="mt-2 border-t border-slate-100 pt-3">
+          <a href={`tel:${telephone.replace(/[^0-9+]/g, '')}`} class="block py-2 text-sm font-semibold text-brand-primary">
+            {telephone}
+          </a>
+        </li>
+      )}
+    </ul>
   </div>
 </header>
+
+<script>
+  const toggle = document.getElementById('menu-toggle');
+  const menu = document.getElementById('mobile-menu');
+  const iconOpen = document.getElementById('menu-icon-open');
+  const iconClose = document.getElementById('menu-icon-close');
+
+  toggle?.addEventListener('click', () => {
+    const willOpen = menu?.classList.contains('hidden');
+    menu?.classList.toggle('hidden');
+    iconOpen?.classList.toggle('hidden');
+    iconClose?.classList.toggle('hidden');
+    toggle.setAttribute('aria-expanded', String(!!willOpen));
+  });
+</script>
