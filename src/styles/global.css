@@ -2,17 +2,18 @@
 @plugin "@tailwindcss/typography";
 
 /*
- * Design tokens — placeholder defaults. frontend-site-builder-supabase
- * overwrites these per client once a design direction is approved (see
- * references/design-direction.md), rather than hardcoding colors in
- * individual components. Keep every component reading from these tokens
- * (bg-brand-primary, text-brand-ink, font-heading, etc.) so a rebrand is a
- * one-file change.
+ * Design direction, approved 2026-08-27 (inferred from the master
+ * brandscript's tone — professional, credible, warm without being
+ * clinical, B2B rather than consumer-emotional). Deep navy over the
+ * template's generic default blue reads as more established; a muted sage
+ * teal accent replaces the default orange (which reads as home-services
+ * urgency, wrong fit here). Inter kept for both heading/body — no new web
+ * font, per the Core Web Vitals reasoning in design-direction.md.
  */
 @theme {
-  --color-brand-primary: #1d4ed8;
+  --color-brand-primary: #1e3a5f;
   --color-brand-secondary: #0f172a;
-  --color-brand-accent: #f97316;
+  --color-brand-accent: #4a9b8e;
   --color-brand-neutral: #f8fafc;
   --color-brand-ink: #0f172a;
 

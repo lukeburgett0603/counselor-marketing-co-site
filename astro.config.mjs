@@ -17,7 +17,13 @@ export default defineConfig({
   site: 'https://lukeburgett0603.github.io',
   base: '/counselor-marketing-co-site',
   trailingSlash: 'never',
-  integrations: [sitemap()],
+  integrations: [
+    sitemap({
+      // /leads is the internal, auth-gated leads dashboard — never a
+      // public/indexable page.
+      filter: (page) => !page.includes('/leads'),
+    }),
+  ],
   image: {
     // Stock photos (Unsplash) and any client-hosted logo/photo URLs are
     // fetched and optimized by astro:assets at build time rather than

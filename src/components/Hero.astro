@@ -6,12 +6,24 @@ interface Props {
   subhead?: string;
   imageUrl?: string;
   imageAlt?: string;
+  imageCreditName?: string;
+  imageCreditUrl?: string;
   compact?: boolean;
   ctaText?: string;
   ctaHref?: string;
 }
 
-const { h1, subhead, imageUrl, imageAlt, compact = false, ctaText, ctaHref = '#lead-generator' } = Astro.props;
+const {
+  h1,
+  subhead,
+  imageUrl,
+  imageAlt,
+  imageCreditName,
+  imageCreditUrl,
+  compact = false,
+  ctaText,
+  ctaHref = '#lead-generator',
+} = Astro.props;
 ---
 
 <section class:list={['bg-brand-neutral', compact ? 'py-10' : 'py-20']}>
@@ -39,7 +51,16 @@ const { h1, subhead, imageUrl, imageAlt, compact = false, ctaText, ctaHref = '#l
     </div>
     {imageUrl && (
       <div class="flex-1">
-        <OptimizedImage src={imageUrl} alt={imageAlt ?? ''} class="w-full rounded-xl object-cover" loading="eager" widths={[400, 800, 1200]} sizes="(min-width: 768px) 50vw, 100vw" />
+        <OptimizedImage
+          src={imageUrl}
+          alt={imageAlt ?? ''}
+          class="w-full rounded-xl object-cover"
+          loading="eager"
+          widths={[400, 800, 1200]}
+          sizes="(min-width: 768px) 50vw, 100vw"
+          creditName={imageCreditName}
+          creditUrl={imageCreditUrl}
+        />
       </div>
     )}
   </div>

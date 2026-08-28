@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 // `site` is set to — one less per-client file to remember to edit.
 export const GET: APIRoute = ({ site }) => {
   const sitemapUrl = new URL('sitemap-index.xml', site).toString();
-  return new Response(`User-agent: *\nAllow: /\n\nSitemap: ${sitemapUrl}\n`, {
+  return new Response(`User-agent: *\nAllow: /\nDisallow: /leads\n\nSitemap: ${sitemapUrl}\n`, {
     headers: { 'Content-Type': 'text/plain' },
   });
 };

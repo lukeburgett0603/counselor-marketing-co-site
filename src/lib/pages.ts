@@ -14,6 +14,10 @@ export type PageType =
 export interface ImageSlot {
   url: string;
   alt: string;
+  // Only set for Unsplash-sourced photos — required for their API's
+  // attribution guidelines. Absent for client-supplied photos.
+  creditName?: string;
+  creditUrl?: string;
 }
 
 export interface Page {

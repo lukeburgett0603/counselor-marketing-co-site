@@ -14,9 +14,28 @@ interface Props {
   loading?: 'eager' | 'lazy';
   widths?: number[];
   sizes?: string;
+  // Required by Unsplash's API guidelines whenever a photo sourced through
+  // their API is used: visible photographer credit linking back to both
+  // the photographer and Unsplash. Omit for client-supplied photos (a
+  // headshot, a business's own photos) — this is Unsplash-specific, not a
+  // general "every image needs a caption" rule.
+  creditName?: string;
+  creditUrl?: string;
 }
 
-const { src, alt, class: className, loading = 'lazy', widths, sizes } = Astro.props;
+const { src, alt, class: className, loading = 'lazy', widths, sizes, creditName, creditUrl } = Astro.props;
 ---
 
-<Image src={src} alt={alt} inferSize class={className} loading={loading} widths={widths} sizes={sizes} />
+<div class="relative">
+  <Image src={src} alt={alt} inferSize class={className} loading={loading} widths={widths} sizes={sizes} />
+  {creditName && creditUrl && (
+    <a
+      href={`${creditUrl}?utm_source=counselor_marketing_co&utm_medium=referral`}
+      target="_blank"
+      rel="noopener"
+      class="absolute bottom-1 right-1 rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-white/90 hover:text-white"
+    >
+      Photo: {creditName} / Unsplash
+    </a>
+  )}
+</div>

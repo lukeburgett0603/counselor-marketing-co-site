@@ -20,7 +20,16 @@ const headshot = page.images.headshot;
 <BaseLayout page={page} allPages={allPages} business={business}>
   <section class="mx-auto flex max-w-4xl flex-col items-center gap-6 px-6 py-14 text-center">
     {headshot && (
-      <OptimizedImage src={headshot.url} alt={headshot.alt} class="h-40 w-40 rounded-full object-cover" loading="eager" widths={[160, 320]} sizes="160px" />
+      <OptimizedImage
+        src={headshot.url}
+        alt={headshot.alt}
+        class="h-40 w-40 rounded-full object-cover"
+        loading="eager"
+        widths={[160, 320]}
+        sizes="160px"
+        creditName={headshot.creditName}
+        creditUrl={headshot.creditUrl}
+      />
     )}
     <div>
       <h1 class="font-[family-name:var(--font-heading)] text-3xl font-bold text-brand-ink">

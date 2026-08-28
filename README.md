@@ -13,12 +13,18 @@ README covers the mechanical setup for one client.
 
 ## One-time setup per new client
 
-1. **Copy this repo** into a new GitHub repo for the client (public, so
-   GitHub Pages hosting stays free).
+1. **Create the client repo from this template** — this repo is a GitHub
+   template repository (`is_template: true`), so:
+   `gh repo create <client-repo-name> --public --template=lukeburgett0603/local-business-site-template`
+   (or click "Use this template" on GitHub). This gives the new repo a clean
+   history of its own rather than inheriting this template's commits — don't
+   fall back to manually copying files unless `gh`/GitHub template creation
+   is genuinely unavailable. Keep it **public** so GitHub Pages hosting
+   stays free.
 2. **Create a Supabase project** for this client (same Supabase account,
-   new project). Run `supabase/migrations/0001_init.sql` against it — either
-   via `supabase db push` (Supabase CLI) or by pasting it into the
-   Supabase Studio SQL editor.
+   new project). Run `supabase/migrations/*.sql` against it, in order —
+   either via `supabase db push` (Supabase CLI) or by pasting each file into
+   the Supabase Studio SQL editor.
 3. **Add repo secrets** (Settings → Secrets and variables → Actions):
    - `PUBLIC_SUPABASE_URL`
    - `PUBLIC_SUPABASE_ANON_KEY`
