@@ -16,14 +16,21 @@
  * in BaseLayout.astro's <head>, not a CSS @import here — the browser can
  * start that fetch while parsing HTML, before it's even reached this
  * stylesheet, which matters given speed is a stated priority for this site.
+ *
+ * Neutral/tint revised 2026-08-28: the original khaki-tan neutral (#faf7f2)
+ * and tint (#d8c9a8) sat right next to the forest-green primary and read as
+ * literal camouflage/army-surplus coloring, not "warm and grounded." The
+ * neutral is now a cooler, barely-warm off-white instead of tan; the tint
+ * is a soft wash of the accent (terracotta) rather than khaki, so the
+ * two-background section rhythm stays warm without the military cast.
  */
 @theme {
   --color-brand-primary: #2b3a2f;
   --color-brand-secondary: #1c1917;
   --color-brand-accent: #b5542a;
-  --color-brand-neutral: #faf7f2;
+  --color-brand-neutral: #faf9f7;
   --color-brand-ink: #1c1917;
-  --color-brand-tint: #d8c9a8;
+  --color-brand-tint: #f2e2d8;
 
   --font-heading: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;

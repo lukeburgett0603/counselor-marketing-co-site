@@ -27,7 +27,24 @@ const { page, allPages, business } = Astro.props;
     imageCreditName={page.images.hero?.creditName}
     imageCreditUrl={page.images.hero?.creditUrl}
     ctaText={page.cta_button_text ?? 'Get Started'}
-  />
+  >
+    {/*
+      Only renders when there's no hero image (Hero.astro's `aside` slot is
+      ignored whenever imageUrl is set) — a compact, lower-friction form as
+      a second entry point for a homepage that leads with a form instead of
+      a photo, without displacing the full-fields LeadGenerator further
+      down the page for visitors who scroll first.
+    */}
+    <Fragment slot="aside">
+      <LeadGenerator
+        slug={page.slug}
+        embedded
+        heading={page.cta_button_text ?? 'Get Started'}
+        collectWebsiteUrl={business.collect_website_in_leads}
+        responseTimeNote={business.lead_response_time_note}
+      />
+    </Fragment>
+  </Hero>
   <Section>
     <Fragment set:html={renderCopy(page.copy)} />
   </Section>

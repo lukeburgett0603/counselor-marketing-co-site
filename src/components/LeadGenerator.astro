@@ -4,6 +4,12 @@ interface Props {
   heading?: string;
   collectWebsiteUrl?: boolean;
   responseTimeNote?: string | null;
+  // A leaner card variant (name + email only, no phone/message, no full
+  // section wrapper) meant to sit inside a Hero's aside slot — for pages
+  // that also have the full form elsewhere. Never remove the full-fields
+  // version entirely from a page; embedded is a second, lower-friction
+  // entry point, not a replacement.
+  embedded?: boolean;
 }
 
 const {
@@ -11,17 +17,27 @@ const {
   heading = "Let's talk about your project",
   collectWebsiteUrl = false,
   responseTimeNote,
+  embedded = false,
 } = Astro.props;
+
+const Wrapper = embedded ? 'div' : 'section';
 ---
 
-<section id="lead-generator" class="bg-white py-14">
-  <div class="mx-auto max-w-xl px-6">
-    <h2 class="mb-6 text-center font-[family-name:var(--font-heading)] text-2xl font-extrabold tracking-tight text-brand-ink">
+<Wrapper
+  id={embedded ? undefined : 'lead-generator'}
+  class={embedded ? 'rounded-lg border border-black/5 bg-white p-6 shadow-md' : 'bg-white py-14'}
+>
+  <div class:list={[embedded ? '' : 'mx-auto max-w-xl px-6']}>
+    <h2
+      class:list={[
+        'mb-4 text-center font-[family-name:var(--font-heading)] font-extrabold tracking-tight text-brand-ink',
+        embedded ? 'text-lg' : 'mb-6 text-2xl',
+      ]}
+    >
       {heading}
     </h2>
     <form
-      id="lead-form"
-      class="space-y-4"
+      class="lead-form space-y-3"
       data-source-page={slug}
       data-collect-website={collectWebsiteUrl ? 'true' : 'false'}
     >
@@ -39,12 +55,14 @@ const {
         required
         class="w-full rounded-md border border-slate-300 px-4 py-2"
       />
-      <input
-        name="phone"
-        type="tel"
-        placeholder="Phone (optional)"
-        class="w-full rounded-md border border-slate-300 px-4 py-2"
-      />
+      {!embedded && (
+        <input
+          name="phone"
+          type="tel"
+          placeholder="Phone (optional)"
+          class="w-full rounded-md border border-slate-300 px-4 py-2"
+        />
+      )}
       {collectWebsiteUrl && (
         <input
           name="existing_website_url"
@@ -53,11 +71,13 @@ const {
           class="w-full rounded-md border border-slate-300 px-4 py-2"
         />
       )}
-      <textarea
-        name="message"
-        placeholder="How can we help?"
-        rows="4"
-        class="w-full rounded-md border border-slate-300 px-4 py-2"></textarea>
+      {!embedded && (
+        <textarea
+          name="message"
+          placeholder="How can we help?"
+          rows="4"
+          class="w-full rounded-md border border-slate-300 px-4 py-2"></textarea>
+      )}
       <button
         type="submit"
         class="w-full rounded-md bg-brand-accent px-6 py-3 font-semibold text-white transition hover:opacity-90 hover:shadow-md"
@@ -65,54 +85,58 @@ const {
         Send
       </button>
       {responseTimeNote && <p class="text-center text-xs text-slate-500">{responseTimeNote}</p>}
-      <p id="lead-form-status" class="text-center text-sm" role="status"></p>
+      <p class="lead-form-status text-center text-sm" role="status"></p>
     </form>
   </div>
-</section>
+</Wrapper>
 
 <script>
   // A direct REST call instead of importing @supabase/supabase-js here:
-  // the full SDK adds ~200KB of JS to every single page (this component is
-  // on nearly every page), which drags down Core Web Vitals sitewide for a
-  // one-line insert. supabase.ts (imported at build time only, never
-  // shipped to the browser) still uses the real SDK for content fetching.
+  // the full SDK adds ~200KB of JS to every single page (this component can
+  // appear more than once per page now), which drags down Core Web Vitals
+  // sitewide for what's still just a one-line insert per submit.
+  //
+  // Class-based, not id-based: a page can have more than one LeadGenerator
+  // (e.g. a compact one in the Hero plus the full one further down) — using
+  // getElementById would only ever wire up the first form on the page.
   const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
   const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
-  const form = document.getElementById('lead-form') as HTMLFormElement | null;
-  const status = document.getElementById('lead-form-status');
+  document.querySelectorAll<HTMLFormElement>('.lead-form').forEach((form) => {
+    const status = form.querySelector<HTMLElement>('.lead-form-status');
 
-  form?.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    if (!status) return;
-    const formData = new FormData(form);
-    status.textContent = 'Sending...';
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!status) return;
+      const formData = new FormData(form);
+      status.textContent = 'Sending...';
 
-    const payload: Record<string, unknown> = {
-      name: formData.get('name'),
-      email: formData.get('email'),
-      phone: formData.get('phone') || null,
-      message: formData.get('message') || null,
-      source_page: form.dataset.sourcePage,
-    };
-    if (form.dataset.collectWebsite === 'true') {
-      payload.existing_website_url = formData.get('existing_website_url') || null;
-    }
+      const payload: Record<string, unknown> = {
+        name: formData.get('name'),
+        email: formData.get('email'),
+        phone: formData.get('phone') || null,
+        message: formData.get('message') || null,
+        source_page: form.dataset.sourcePage,
+      };
+      if (form.dataset.collectWebsite === 'true') {
+        payload.existing_website_url = formData.get('existing_website_url') || null;
+      }
 
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        Prefer: 'return=minimal',
-      },
-      body: JSON.stringify(payload),
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          Prefer: 'return=minimal',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      status.textContent = response.ok
+        ? 'Thanks! We’ll be in touch soon.'
+        : 'Something went wrong — please try again.';
+      if (response.ok) form.reset();
     });
-
-    status.textContent = response.ok
-      ? 'Thanks! We’ll be in touch soon.'
-      : 'Something went wrong — please try again.';
-    if (response.ok) form.reset();
   });
 </script>
