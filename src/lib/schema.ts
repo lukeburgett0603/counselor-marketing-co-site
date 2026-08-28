@@ -72,7 +72,10 @@ export function buildServiceSchema(page: Page, siteUrl: string) {
     name: page.title,
     provider: { '@id': businessId(siteUrl) },
   };
-  if (page.purpose) schema.description = page.purpose;
+  // `purpose` is internal planning metadata (has held things like pricing
+  // tiers) — never surface it in public output. `meta_description` is the
+  // field written for public consumption, same as it is in <head>.
+  if (page.meta_description) schema.description = page.meta_description;
   if (page.area_served_name) schema.areaServed = page.area_served_name;
   return schema;
 }
@@ -99,7 +102,8 @@ export function buildPersonSchema(page: Page, siteUrl: string) {
     worksFor: { '@id': businessId(siteUrl) },
   };
   if (page.credentials) schema.honorificSuffix = page.credentials;
-  if (page.purpose) schema.description = page.purpose;
+  // See buildServiceSchema above — purpose is internal-only, never public.
+  if (page.meta_description) schema.description = page.meta_description;
   if (page.images.headshot) schema.image = page.images.headshot.url;
   return schema;
 }

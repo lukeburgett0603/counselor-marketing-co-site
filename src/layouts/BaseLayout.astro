@@ -24,7 +24,10 @@ const { page, allPages, business } = Astro.props;
 const siteUrl = new URL(withBase('/'), Astro.site ?? Astro.url).toString().replace(/\/$/, '');
 const canonicalUrl = page.page_type === 'Homepage' ? `${siteUrl}/` : `${siteUrl}/${page.slug}`;
 const title = page.meta_title ?? page.title;
-const description = page.meta_description ?? page.purpose ?? '';
+// No `?? page.purpose` fallback here on purpose: `purpose` is internal
+// planning metadata (has held pricing tiers) — it must never reach a
+// public tag. An empty description is a smaller problem than a leak.
+const description = page.meta_description ?? '';
 const ogImage = page.images.hero?.url ?? business.logo_url ?? undefined;
 
 const pageSchemas = buildPageSchemas(page, business, siteUrl);
