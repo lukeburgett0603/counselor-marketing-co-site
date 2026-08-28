@@ -69,6 +69,8 @@ function hrefFor(page: Page): string {
     </div>
     <p class="mt-8 text-xs text-slate-400">
       &copy; {new Date().getFullYear()} {business.legal_name ?? business.display_name}. All rights reserved.
+      {' · '}
+      <a href={withBase('/leads')} class="hover:text-white">Admin Login</a>
     </p>
   </div>
 </footer>
