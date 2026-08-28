@@ -1,6 +1,7 @@
 ---
 import type { Page } from '../lib/pages';
 import { withBase } from '../lib/url';
+import { splitWordmark } from '../lib/wordmark';
 
 interface Props {
   navPages: Page[];
@@ -9,6 +10,7 @@ interface Props {
 }
 
 const { navPages, businessName, telephone } = Astro.props;
+const wordmark = splitWordmark(businessName);
 
 const primary = navPages
   .filter((p) => p.nav_placement === 'primary' && !p.parent_page_id)
@@ -27,8 +29,8 @@ function hrefFor(page: Page): string {
 
 <header class="border-b border-slate-200 bg-white">
   <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-    <a href={withBase('/')} class="font-[family-name:var(--font-heading)] text-lg font-bold text-brand-ink">
-      {businessName}
+    <a href={withBase('/')} class="font-[family-name:var(--font-heading)] text-lg font-extrabold tracking-tight text-brand-ink">
+      {wordmark.main}{wordmark.accent && <span class="text-brand-accent">{wordmark.accent}</span>}
     </a>
     <nav>
       <ul class="flex items-center gap-6">

@@ -29,7 +29,7 @@ const {
 <section class:list={['bg-brand-neutral', compact ? 'py-10' : 'py-20']}>
   <div class="mx-auto flex max-w-6xl flex-col items-center gap-10 px-6 md:flex-row">
     <div class="flex-1">
-      <h1 class:list={['font-[family-name:var(--font-heading)] font-bold text-brand-ink', compact ? 'text-3xl' : 'text-4xl md:text-5xl']}>
+      <h1 class:list={['font-[family-name:var(--font-heading)] font-extrabold tracking-tight text-brand-ink', compact ? 'text-3xl' : 'text-4xl md:text-5xl']}>
         {h1}
       </h1>
       {subhead && <p class="mt-4 max-w-xl text-lg text-slate-600">{subhead}</p>}
@@ -42,7 +42,7 @@ const {
       {ctaText && (
         <a
           href={ctaHref}
-          class="mt-6 inline-block rounded-md bg-brand-primary px-6 py-3 font-semibold text-white hover:opacity-90"
+          class="mt-6 inline-block rounded-md bg-brand-primary px-6 py-3 font-semibold text-white transition hover:opacity-90 hover:shadow-md"
         >
           {ctaText}
         </a>

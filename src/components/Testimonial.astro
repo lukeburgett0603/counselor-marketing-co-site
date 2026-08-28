@@ -13,11 +13,12 @@ interface Props {
 const { quote, author, role } = Astro.props;
 ---
 
-<section class="bg-brand-neutral py-14">
+<section class="bg-brand-tint py-14">
   <blockquote class="mx-auto max-w-2xl px-6 text-center">
-    <p class="font-[family-name:var(--font-heading)] text-xl italic text-brand-ink">&ldquo;{quote}&rdquo;</p>
-    <footer class="mt-4 text-sm font-medium text-slate-600">
-      {author}{role && `, ${role}`}
+    <span class="font-[family-name:var(--font-heading)] text-5xl font-extrabold leading-none text-brand-accent" aria-hidden="true">&ldquo;</span>
+    <p class="mt-2 font-[family-name:var(--font-heading)] text-xl font-medium text-brand-ink">{quote}</p>
+    <footer class="mt-4 text-sm font-semibold text-brand-primary">
+      {author}{role && <span class="font-normal text-slate-600">, {role}</span>}
     </footer>
   </blockquote>
 </section>

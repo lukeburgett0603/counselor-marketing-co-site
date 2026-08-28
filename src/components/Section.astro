@@ -9,7 +9,7 @@ const { heading, tight = false } = Astro.props;
 
 <section class:list={['mx-auto max-w-4xl px-6', tight ? 'py-8' : 'py-14']}>
   {heading && (
-    <h2 class="mb-6 font-[family-name:var(--font-heading)] text-2xl font-bold text-brand-ink">{heading}</h2>
+    <h2 class="mb-6 font-[family-name:var(--font-heading)] text-2xl font-extrabold tracking-tight text-brand-ink">{heading}</h2>
   )}
   <div class="prose max-w-none">
     <slot />

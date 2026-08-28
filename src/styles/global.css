@@ -2,20 +2,28 @@
 @plugin "@tailwindcss/typography";
 
 /*
- * Design direction, approved 2026-08-27 (inferred from the master
- * brandscript's tone — professional, credible, warm without being
- * clinical, B2B rather than consumer-emotional). Deep navy over the
- * template's generic default blue reads as more established; a muted sage
- * teal accent replaces the default orange (which reads as home-services
- * urgency, wrong fit here). Inter kept for both heading/body — no new web
- * font, per the Core Web Vitals reasoning in design-direction.md.
+ * Design direction, approved 2026-08-27 (revised after design-canvas
+ * review). SaaS-clean, not therapy-soft — deep charcoal-forest anchor with
+ * a warm terracotta accent (ties to the founder's headshot, which is warm
+ * and earthy — the earlier navy/teal direction visually fought that photo
+ * instead of working with it). Real Inter loaded deliberately (Stripe/
+ * Linear/Vercel pattern) rather than relying on OS system-font fallback,
+ * for pixel-consistent branding across every visitor's device. SaaS
+ * personality comes from weight/scale contrast (extrabold, tight tracking
+ * on headings), not a second typeface — wordmark-only, no pictorial mark.
+ *
+ * Inter itself is loaded via <link rel="preconnect">/<link rel="stylesheet">
+ * in BaseLayout.astro's <head>, not a CSS @import here — the browser can
+ * start that fetch while parsing HTML, before it's even reached this
+ * stylesheet, which matters given speed is a stated priority for this site.
  */
 @theme {
-  --color-brand-primary: #1e3a5f;
-  --color-brand-secondary: #0f172a;
-  --color-brand-accent: #4a9b8e;
-  --color-brand-neutral: #f8fafc;
-  --color-brand-ink: #0f172a;
+  --color-brand-primary: #2b3a2f;
+  --color-brand-secondary: #1c1917;
+  --color-brand-accent: #b5542a;
+  --color-brand-neutral: #faf7f2;
+  --color-brand-ink: #1c1917;
+  --color-brand-tint: #d8c9a8;
 
   --font-heading: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -25,4 +33,15 @@ body {
   background-color: var(--color-brand-neutral);
   color: var(--color-brand-ink);
   font-family: var(--font-body);
+}
+
+.prose ol > li::marker {
+  color: var(--color-brand-accent);
+  font-weight: 700;
+}
+
+.prose h2,
+.prose h3 {
+  font-weight: 800;
+  letter-spacing: -0.01em;
 }

@@ -32,7 +32,7 @@ const relatedPages = allPages.filter((p) => page.internal_links.includes(p.slug)
   </article>
   {relatedPages.length > 0 && (
     <section class="mx-auto max-w-3xl px-6 pb-10">
-      <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-bold text-brand-ink">Related</h2>
+      <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold tracking-tight text-brand-ink">Related</h2>
       <ul class="list-inside list-disc space-y-1">
         {relatedPages.map((related) => (
           <li>
