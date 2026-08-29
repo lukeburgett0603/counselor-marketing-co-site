@@ -72,6 +72,40 @@ import '../styles/global.css';
       </div>
 
       <div id="leads-view" class="hidden">
+        <!--
+          Real-data proof-of-work dashboard, computed entirely client-side
+          from the same `leads` fetch the table below already does — no
+          second query, no new table, no analytics tool wired in yet (see
+          CLAUDE.md's "Outstanding" for the traffic/rankings tiers planned
+          on top of this later). This exists so a client can see their
+          marketing is working without waiting on a monthly report.
+        -->
+        <div class="mb-8 grid gap-4 sm:grid-cols-3">
+          <div class="rounded-lg border border-black/5 bg-white p-5 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Total leads</p>
+            <p id="stat-total" class="mt-1 font-[family-name:var(--font-heading)] text-3xl font-extrabold text-brand-ink">—</p>
+          </div>
+          <div class="rounded-lg border border-black/5 bg-white p-5 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">This month</p>
+            <p id="stat-this-month" class="mt-1 font-[family-name:var(--font-heading)] text-3xl font-extrabold text-brand-ink">—</p>
+            <p id="stat-month-change" class="mt-1 text-xs"></p>
+          </div>
+          <div class="rounded-lg border border-black/5 bg-white p-5 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Last month</p>
+            <p id="stat-last-month" class="mt-1 font-[family-name:var(--font-heading)] text-3xl font-extrabold text-brand-ink">—</p>
+          </div>
+        </div>
+
+        <div class="mb-8 rounded-lg border border-black/5 bg-white p-5 shadow-sm">
+          <p class="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Leads per week (last 10 weeks)</p>
+          <div id="weekly-chart" class="flex h-32 gap-2"></div>
+        </div>
+
+        <div class="mb-8 rounded-lg border border-black/5 bg-white p-5 shadow-sm">
+          <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Leads by page</p>
+          <div id="by-page-list" class="space-y-2 text-sm"></div>
+        </div>
+
         <div class="mb-4 flex items-center justify-between">
           <p id="leads-count" class="text-sm text-slate-600"></p>
           <button id="logout-button" class="text-sm text-brand-primary hover:underline">Log out</button>
@@ -122,6 +156,109 @@ import '../styles/global.css';
         return div.innerHTML;
       }
 
+      type Lead = {
+        created_at: string;
+        name: string | null;
+        email: string | null;
+        phone: string | null;
+        message: string | null;
+        existing_website_url: string | null;
+        source_page: string | null;
+        status: string | null;
+      };
+
+      function renderDashboard(leads: Lead[]) {
+        const now = new Date();
+        const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+        const thisMonthCount = leads.filter((l) => new Date(l.created_at) >= startOfThisMonth).length;
+        const lastMonthCount = leads.filter((l) => {
+          const d = new Date(l.created_at);
+          return d >= startOfLastMonth && d < startOfThisMonth;
+        }).length;
+
+        document.getElementById('stat-total')!.textContent = String(leads.length);
+        document.getElementById('stat-this-month')!.textContent = String(thisMonthCount);
+        document.getElementById('stat-last-month')!.textContent = String(lastMonthCount);
+
+        const changeEl = document.getElementById('stat-month-change')!;
+        if (lastMonthCount > 0) {
+          const pct = Math.round(((thisMonthCount - lastMonthCount) / lastMonthCount) * 100);
+          changeEl.textContent = `${pct > 0 ? '+' : ''}${pct}% vs last month`;
+          changeEl.className = 'mt-1 text-xs ' + (pct >= 0 ? 'text-emerald-600' : 'text-red-500');
+        } else if (thisMonthCount > 0) {
+          changeEl.textContent = 'No leads last month';
+          changeEl.className = 'mt-1 text-xs text-slate-500';
+        } else {
+          changeEl.textContent = '';
+        }
+
+        // Weekly chart: last 10 Monday-start weeks, bucketed client-side —
+        // no SQL date_trunc needed for a dataset this small.
+        const WEEKS = 10;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const dayOfWeek = (today.getDay() + 6) % 7; // Mon=0 ... Sun=6
+        const mondayThisWeek = new Date(today);
+        mondayThisWeek.setDate(today.getDate() - dayOfWeek);
+
+        const weekBuckets: { start: Date; end: Date; count: number }[] = [];
+        for (let i = WEEKS - 1; i >= 0; i--) {
+          const start = new Date(mondayThisWeek);
+          start.setDate(mondayThisWeek.getDate() - i * 7);
+          const end = new Date(start);
+          end.setDate(start.getDate() + 7);
+          weekBuckets.push({ start, end, count: 0 });
+        }
+        for (const lead of leads) {
+          const d = new Date(lead.created_at);
+          const bucket = weekBuckets.find((b) => d >= b.start && d < b.end);
+          if (bucket) bucket.count++;
+        }
+        const maxWeekCount = Math.max(1, ...weekBuckets.map((b) => b.count));
+        const chartEl = document.getElementById('weekly-chart')!;
+        chartEl.innerHTML = weekBuckets
+          .map((b) => {
+            const heightPct = Math.max(Math.round((b.count / maxWeekCount) * 100), b.count > 0 ? 6 : 2);
+            const label = b.start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+            return `
+          <div class="flex flex-1 flex-col items-center justify-end gap-1" title="${b.count} lead${b.count === 1 ? '' : 's'} — week of ${label}">
+            <span class="text-[10px] font-semibold text-slate-500">${b.count > 0 ? b.count : ''}</span>
+            <div class="w-full rounded-t bg-brand-accent" style="height: ${heightPct}%"></div>
+            <span class="text-[9px] text-slate-400">${label}</span>
+          </div>`;
+          })
+          .join('');
+
+        // Which pages are actually converting — ties lead volume back to
+        // specific content/SEO work, not just an undifferentiated total.
+        const byPage = new Map<string, number>();
+        for (const lead of leads) {
+          const key = lead.source_page || '(unknown page)';
+          byPage.set(key, (byPage.get(key) ?? 0) + 1);
+        }
+        const sorted = [...byPage.entries()].sort((a, b) => b[1] - a[1]);
+        const byPageEl = document.getElementById('by-page-list')!;
+        if (sorted.length === 0) {
+          byPageEl.innerHTML = '<p class="text-slate-500">No leads yet.</p>';
+        } else {
+          const maxPageCount = sorted[0][1];
+          byPageEl.innerHTML = sorted
+            .map(
+              ([page, count]) => `
+          <div class="flex items-center gap-3">
+            <span class="w-32 shrink-0 truncate text-slate-700">${escapeHtml(page)}</span>
+            <div class="h-2 flex-1 rounded-full bg-slate-100">
+              <div class="h-2 rounded-full bg-brand-accent" style="width: ${Math.round((count / maxPageCount) * 100)}%"></div>
+            </div>
+            <span class="w-6 shrink-0 text-right font-semibold text-brand-ink">${count}</span>
+          </div>`
+            )
+            .join('');
+        }
+      }
+
       async function loadLeads() {
         const { data, error } = await supabase
           .from('leads')
@@ -132,6 +269,8 @@ import '../styles/global.css';
           leadsCount.textContent = 'Could not load leads: ' + error.message;
           return;
         }
+
+        renderDashboard(data);
 
         leadsCount.textContent = `${data.length} lead${data.length === 1 ? '' : 's'}`;
         tableBody.innerHTML = data

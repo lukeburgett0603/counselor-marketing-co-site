@@ -157,6 +157,25 @@ before touching the related code on a future client site.
   paragraphs inside `copy`. When either gets written into `copy` instead
   (or in addition), pull it out into the structured column and remove it
   from `copy` so it isn't rendered twice.
+- **Never hardcode one client's identity into shared template code.**
+  `OptimizedImage.astro`'s Unsplash attribution link had a specific
+  client's business slug hardcoded into the `utm_source` UTM parameter —
+  every future client site would have silently inherited the wrong
+  attribution. Fixed by reading `PUBLIC_UNSPLASH_APP_NAME` instead (falls
+  back to a generic name if unset) — this identifies the *Unsplash
+  Application* registered on unsplash.com/oauth/applications, not the
+  client, and is meant to be the same value across every client site that
+  shares one Unsplash API app. If a UTM value, an API app name, or any
+  other identifier needs a slug (no spaces/apostrophes), derive one rather
+  than passing user-supplied text straight into a query string.
+- **A new `PUBLIC_*` env var isn't wired up just because a component reads
+  it and `.env.example` documents it.** It also has to be explicitly
+  passed through in `.github/workflows/deploy.yml`'s `npm run build`
+  step's `env:` block — `PUBLIC_UNSPLASH_APP_NAME` was defined and
+  documented for a while before anyone noticed the workflow never actually
+  passed it to the build, so setting the GitHub secret alone would have
+  done nothing. Check the workflow file, not just `.env.example`, when
+  adding any new build-time env var.
 
 ## Generating a logo from a CSS wordmark
 
