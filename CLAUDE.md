@@ -94,6 +94,14 @@ these as "done" criteria, not nice-to-haves, for every future client.
   client's homepage.
 - CTA heading/button text comes from `page.cta_heading`/`cta_button_text`,
   never hardcoded — see `page-templates.md`.
+- **A hover-revealed nav dropdown's trigger word is also a real link, but
+  most visitors never discover that.** `Header.astro`'s dropdown always
+  prepends an explicit, visually set-apart link back to the parent page
+  itself as the dropdown's first item — don't remove this trying to
+  "declutter" a dropdown; it's the fix for a real, reported point of
+  confusion (a "Resources" nav item whose own destination — the blog
+  index — was undiscoverable except by clicking the trigger word itself,
+  which a hover-dropdown UI hides).
 
 ## Real bugs found and fixed here — don't reintroduce these
 

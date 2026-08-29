@@ -56,6 +56,9 @@ export interface Page {
   // Pillar' hub row) which category feeds its embedded spoke-post section.
   // Independent of the service list on purpose — see 0007_blog.sql.
   category: string | null;
+  // Short summary bullets rendered before a hub page's main content (see
+  // KeyTakeaways.astro) — see 0008_key_takeaways.sql.
+  key_takeaways: string[];
 }
 
 export interface Business {

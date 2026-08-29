@@ -1,0 +1,31 @@
+---
+// A sticky sidebar TOC for long-form content (ContentPillar.astro),
+// linking straight to each H2's id (see lib/markdown.ts). Desktop/large
+// viewports only (`hidden lg:block`) — a sticky sidebar doesn't have
+// anywhere sensible to sit on a narrow viewport, and the content is still
+// fully readable top-to-bottom without it there. Renders nothing when
+// there aren't at least a couple of real sections to navigate between.
+interface Props {
+  items: { text: string; id: string }[];
+}
+
+const { items } = Astro.props;
+---
+
+{items.length > 1 && (
+  <nav aria-label="Table of contents" class="hidden lg:sticky lg:top-24 lg:block lg:self-start">
+    <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">On this page</p>
+    <ul class="space-y-1 border-l border-slate-200 text-sm">
+      {items.map((item) => (
+        <li>
+          <a
+            href={`#${item.id}`}
+            class="-ml-px block border-l-2 border-transparent py-1 pl-4 text-slate-600 transition hover:border-brand-primary hover:text-brand-ink"
+          >
+            {item.text}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+)}

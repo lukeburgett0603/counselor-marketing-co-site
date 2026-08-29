@@ -1,0 +1,26 @@
+---
+// A short summary card rendered before a long-form article's body —
+// genuine takeaways the article actually covers (pages.key_takeaways),
+// never invented to fill the card. Renders nothing when empty.
+interface Props {
+  items: string[];
+}
+
+const { items } = Astro.props;
+---
+
+{items.length > 0 && (
+  <div class="mx-auto mb-10 max-w-3xl rounded-lg border border-brand-accent/20 bg-brand-tint p-6">
+    <p class="mb-3 font-[family-name:var(--font-heading)] text-xs font-extrabold uppercase tracking-wide text-brand-accent">
+      Key takeaways
+    </p>
+    <ul class="space-y-2">
+      {items.map((item) => (
+        <li class="flex gap-2 text-sm text-slate-700">
+          <span class="mt-0.5 shrink-0 text-brand-accent" aria-hidden="true">&check;</span>
+          <span>{item}</span>
+        </li>
+      ))}
+    </ul>
+  </div>
+)}

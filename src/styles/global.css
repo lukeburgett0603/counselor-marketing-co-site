@@ -52,3 +52,10 @@ body {
   font-weight: 800;
   letter-spacing: -0.01em;
 }
+
+/* A TableOfContents.astro link jumps straight to `#<id>`, which by default
+   lands the heading flush against the very top edge of the viewport — this
+   gives it breathing room above instead. H3, not H2 — see lib/markdown.ts. */
+.prose h3 {
+  scroll-margin-top: 6rem;
+}
