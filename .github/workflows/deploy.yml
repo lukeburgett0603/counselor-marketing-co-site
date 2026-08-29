@@ -37,6 +37,10 @@ jobs:
         env:
           PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
           PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
+          # Optional — falls back to a generic value in OptimizedImage.astro
+          # if unset. Set once per Unsplash API application, reused across
+          # every client site built from this template (see .env.example).
+          PUBLIC_UNSPLASH_APP_NAME: ${{ secrets.PUBLIC_UNSPLASH_APP_NAME }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
