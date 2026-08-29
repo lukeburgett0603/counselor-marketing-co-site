@@ -24,13 +24,22 @@ interface Props {
 }
 
 const { src, alt, class: className, loading = 'lazy', widths, sizes, creditName, creditUrl } = Astro.props;
+
+// Unsplash's API guidelines require utm_source to identify the actual
+// registered Unsplash Application, not the end client's business — the
+// same Unsplash app is typically reused to source images across every
+// client site built from this template, so this is one env var set once,
+// not per-client copy. Never hardcode a specific client's name here again
+// (this was a real bug: shipped as `counselor_marketing_co` for one
+// client, which every future client site would have silently inherited).
+const unsplashAppName = import.meta.env.PUBLIC_UNSPLASH_APP_NAME || 'local-business-site-template';
 ---
 
 <div class="relative">
   <Image src={src} alt={alt} inferSize class={className} loading={loading} widths={widths} sizes={sizes} />
   {creditName && creditUrl && (
     <a
-      href={`${creditUrl}?utm_source=counselor_marketing_co&utm_medium=referral`}
+      href={`${creditUrl}?utm_source=${unsplashAppName}&utm_medium=referral`}
       target="_blank"
       rel="noopener"
       class="absolute bottom-1 right-1 rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-white/90 hover:text-white"

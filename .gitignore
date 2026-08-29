@@ -3,3 +3,7 @@ dist/
 .astro/
 .env
 .DS_Store
+# Local state from `supabase db push --project-ref ...` / `supabase link` —
+# ties this checkout to whichever client project was last pushed to
+# on this machine. Never commit a specific client's project ref here.
+supabase/.temp/
