@@ -50,6 +50,20 @@ function hrefFor(page: Page): string {
               </a>
               {kids.length > 0 && (
                 <ul class="absolute left-0 top-full z-50 hidden min-w-[10rem] rounded-md border border-slate-200 bg-white py-2 shadow-lg group-hover:block">
+                  {/*
+                    The trigger word above is itself a real link, but a
+                    hover-revealed dropdown hides that fact from a lot of
+                    visitors — they see the revealed list and assume that's
+                    the whole menu. Repeating it as an explicit first item
+                    (visually set apart) makes "go to the page itself" a
+                    real, visible choice instead of something only
+                    discoverable by clicking the trigger word by accident.
+                  */}
+                  <li class="mb-1 border-b border-slate-100 pb-1">
+                    <a href={hrefFor(page)} class="block px-4 py-2 text-sm font-semibold text-brand-ink hover:bg-brand-neutral">
+                      {page.title}
+                    </a>
+                  </li>
                   {kids.map((child) => (
                     <li>
                       <a href={hrefFor(child)} class="block px-4 py-2 text-sm text-brand-ink hover:bg-brand-neutral">

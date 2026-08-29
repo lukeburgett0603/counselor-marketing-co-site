@@ -230,6 +230,60 @@ or a client asking for more):**
   without exposing credentials — Search Console data itself also lags a
   few days). Treat as a premium-tier differentiator, not a v1 expectation.
 
+## Hub-and-spoke content (Content Pillar + Blog Post + Blog Index)
+
+Built 2026-08-29, first shipped on Counselor Marketing Co. — see
+`page-templates.md`'s "Hub-and-spoke content" section for the technical
+spec (that's the source of truth; this section is the reasoning and the
+process worth reusing).
+
+**Service Pages are never part of this system.** The original ask on the
+first real client build was to embed a filtered blog preview directly on
+Service Pages, styled as if they were content pillars. Talked through why
+that's the wrong shape before building it: Service Pages are short,
+CTA-heavy conversion pages, and merging genuine informational-pillar
+intent onto the same page dilutes both jobs — the conversion page gets
+noisier, and the "pillar" content is trapped on a page that was never
+built to rank broadly for informational search. **Dedicated hub pages**
+(reusing `Content Pillar` — its original spec always meant long-form,
+topic-cluster content) solve this cleanly instead, linked from their own
+nav dropdown, with Service Pages left untouched.
+
+**Category taxonomy must come from real keyword research, not a guessed
+list.** Categories seeded to match the service list 1:1 seems obvious at
+first but is the wrong default — it assumes every genuinely valuable blog
+topic maps onto exactly one existing service, which real keyword research
+consistently disproves (the strongest cluster found for Counselor
+Marketing Co., faith-based counseling, doesn't map to any single service
+page). Do real keyword research (Mangools API — `GET
+https://api.mangools.com/v3/kwfinder/related-keywords?kw=<seed>&location_id=2840&language_id=1000`
+with the key in an `x-access-token` header) around informational-intent
+seed terms adjacent to the business's actual services, then group
+genuine, on-topic, correctly-intent-matched results into categories.
+Expect to manually filter out a lot of noise (brand names, adjacent
+professions, "near me" hyper-local queries meant for a different
+audience than the blog's) — raw keyword tool output is not ready-to-use
+data.
+
+**Watch for search-intent mismatches when a raw volume number looks
+exciting.** A high-volume keyword cluster can be *end-client* search
+volume (someone looking for a therapist for themselves) rather than
+*counselor*-facing search volume (someone looking for marketing help) —
+the two have completely different audiences and a blog aimed at
+counselors can't target the first kind directly, no matter how large the
+number is. Surface this distinction explicitly rather than presenting a
+combined volume number that implies it's all directly targetable — it
+isn't, and the client will (rightly) ask for the breakdown if the number
+seems too good to be true.
+
+**Verification pattern**: same as the leads dashboard — build the full
+mechanism (pill filtering, `?category=` pre-selection, hub↔post
+cross-linking), then verify it against **temporary test posts** seeded
+directly in Supabase, not the absence of testing just because there's no
+real content yet. Delete the test posts after. This caught real, working
+behavior with confidence before any real content existed to obscure bugs
+in either direction.
+
 ## Generating a logo from a CSS wordmark
 
 If a client's brand is wordmark-only (explicitly no pictorial icon mark)
