@@ -177,6 +177,39 @@ before touching the related code on a future client site.
   done nothing. Check the workflow file, not just `.env.example`, when
   adding any new build-time env var.
 
+## Client dashboard (`/leads` login)
+
+Business decision (2026-08-29): client sites are **rented/managed, not
+sold outright** — the agency keeps the repo/Supabase/hosting and the
+client pays ongoing, with an explicit buyout/export clause offered to
+offset lock-in objections. A dashboard that proves the ongoing work is
+working, without the agency having to manually compile a report, is a
+direct extension of that model — every client site should have one.
+
+**Built (tier 1 — real, no new infrastructure)**: `leads.astro` computes a
+dashboard client-side from the same `leads` fetch the table below it
+already does — total leads, this-month vs. last-month with a trend
+indicator, a 10-week volume bar chart, and a leads-by-page breakdown. No
+new table, no new query, no charting library (plain CSS bars). Reuse this
+pattern (compute from data already being fetched, render with CSS, no new
+dependency) for any future addition to this dashboard.
+
+**Planned, not yet built — add when there's a reason to (a second client,
+or a client asking for more):**
+
+- **Tier 2 — traffic (visitors, pageviews, top pages).** Needs an
+  analytics tool wired in (the site currently has none) — something
+  lightweight and privacy-respecting like Plausible or Cloudflare Web
+  Analytics, not GA4's weight/complexity for a small local-business site.
+  Pairs with lead volume to tell the real story: top-of-funnel traffic
+  next to bottom-of-funnel conversions.
+- **Tier 3 — search rankings/impressions (Google Search Console data).**
+  The most convincing "your SEO is working" evidence, but the most work:
+  needs Search Console API access per client (OAuth/service account), and
+  a scheduled job to snapshot data (can't be queried live from the browser
+  without exposing credentials — Search Console data itself also lags a
+  few days). Treat as a premium-tier differentiator, not a v1 expectation.
+
 ## Generating a logo from a CSS wordmark
 
 If a client's brand is wordmark-only (explicitly no pictorial icon mark)
