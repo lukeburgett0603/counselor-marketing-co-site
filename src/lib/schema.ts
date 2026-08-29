@@ -136,6 +136,25 @@ export function buildWebPageSchema(page: Page, siteUrl: string) {
   };
 }
 
+// Informational only, not a ranking lever (Google retired FAQ rich results
+// in May 2026) — only call this for a page whose `faqs` are actually
+// rendered visibly (see FAQ.astro), never to disguise marketing copy as
+// questions just to get the schema type on the page.
+export function buildFAQSchema(page: Page) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: page.faqs.map((faq) => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
+    })),
+  };
+}
+
 // Generated from the page's real parent_page_id chain — never hand-write
 // breadcrumb text that doesn't match the actual nav hierarchy.
 export function buildBreadcrumbSchema(chain: Page[], siteUrl: string) {
@@ -159,23 +178,32 @@ export function buildPageSchemas(
   siteUrl: string,
   options: { hasBlog?: boolean } = {}
 ): Record<string, unknown>[] {
-  switch (page.page_type) {
-    case 'Homepage':
-      return [buildBusinessSchema(business, siteUrl), buildWebsiteSchema(business, siteUrl)];
-    case 'Service Page':
-      return [buildServiceSchema(page, siteUrl)];
-    case 'Content Pillar':
-      return [buildArticleSchema(page, siteUrl, options.hasBlog ?? false)];
-    case 'Counselor Profile':
-      return [buildPersonSchema(page, siteUrl)];
-    case 'Service Area':
-      return [buildServiceAreaSchema(business, page, siteUrl)];
-    case 'Contact':
-      return [buildContactPageSchema(business, siteUrl)];
-    case 'About':
-    case 'Services Overview':
-    case 'Other':
-    default:
-      return [buildWebPageSchema(page, siteUrl)];
-  }
+  const schemas = ((): Record<string, unknown>[] => {
+    switch (page.page_type) {
+      case 'Homepage':
+        return [buildBusinessSchema(business, siteUrl), buildWebsiteSchema(business, siteUrl)];
+      case 'Service Page':
+        return [buildServiceSchema(page, siteUrl)];
+      case 'Content Pillar':
+        return [buildArticleSchema(page, siteUrl, options.hasBlog ?? false)];
+      case 'Counselor Profile':
+        return [buildPersonSchema(page, siteUrl)];
+      case 'Service Area':
+        return [buildServiceAreaSchema(business, page, siteUrl)];
+      case 'Contact':
+        return [buildContactPageSchema(business, siteUrl)];
+      case 'About':
+      case 'Services Overview':
+      case 'Other':
+      default:
+        return [buildWebPageSchema(page, siteUrl)];
+    }
+  })();
+
+  // Independent of page_type: any page with real, visibly-rendered Q&A
+  // (see FAQ.astro) gets an additional FAQPage node alongside its primary
+  // schema, not instead of it.
+  if (page.faqs.length > 0) schemas.push(buildFAQSchema(page));
+
+  return schemas;
 }
