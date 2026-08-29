@@ -194,6 +194,26 @@ new table, no new query, no charting library (plain CSS bars). Reuse this
 pattern (compute from data already being fetched, render with CSS, no new
 dependency) for any future addition to this dashboard.
 
+**Also built**: the client can mark a lead contacted/closed directly from
+the dashboard (a color-coded `<select>` per row, `.status-select` +
+event delegation on the table body). This needed a new RLS policy —
+`0001_init.sql` only ever granted `authenticated` **read** on `leads`,
+never update, so a naive "just add a select and call `.update()`" would
+have silently failed under RLS. See `0006_leads_status_update.sql`. If
+you add any other write action to this dashboard later, check for an RLS
+policy covering it before assuming the client-side call will work — this
+project has hit "the query looks right but RLS silently blocks it" more
+than once (see the real-bugs list above on `anon` having no write access
+to `pages`/`business` either).
+
+**Verification pattern worth reusing**: to test dashboard changes with
+real (not fake-looking) data, seed temporary leads and a **throwaway
+Supabase Auth user** via the Admin API
+(`POST /auth/v1/admin/users` with the service_role key) rather than
+touching the client's real login — then delete both the test leads and
+the temp user afterward. Never leave test data in a client's live
+`leads` table, and never log in as the client to test something.
+
 **Planned, not yet built — add when there's a reason to (a second client,
 or a client asking for more):**
 

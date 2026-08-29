@@ -185,6 +185,7 @@ export function buildPageSchemas(
       case 'Service Page':
         return [buildServiceSchema(page, siteUrl)];
       case 'Content Pillar':
+      case 'Blog Post':
         return [buildArticleSchema(page, siteUrl, options.hasBlog ?? false)];
       case 'Counselor Profile':
         return [buildPersonSchema(page, siteUrl)];
@@ -194,6 +195,7 @@ export function buildPageSchemas(
         return [buildContactPageSchema(business, siteUrl)];
       case 'About':
       case 'Services Overview':
+      case 'Blog Index':
       case 'Other':
       default:
         return [buildWebPageSchema(page, siteUrl)];

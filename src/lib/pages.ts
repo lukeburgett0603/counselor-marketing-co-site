@@ -9,7 +9,9 @@ export type PageType =
   | 'Counselor Profile'
   | 'Service Area'
   | 'Contact'
-  | 'Other';
+  | 'Other'
+  | 'Blog Post'
+  | 'Blog Index';
 
 export interface ImageSlot {
   url: string;
@@ -50,6 +52,10 @@ export interface Page {
   testimonial_role: string | null;
   plan_steps: { title: string; description: string }[];
   faqs: { question: string; answer: string }[];
+  // Free-text taxonomy — a 'Blog Post' row's own topic, or (on a 'Content
+  // Pillar' hub row) which category feeds its embedded spoke-post section.
+  // Independent of the service list on purpose — see 0007_blog.sql.
+  category: string | null;
 }
 
 export interface Business {

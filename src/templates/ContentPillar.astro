@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
+import BlogPreview from '../components/BlogPreview.astro';
 import CTA from '../components/CTA.astro';
 import LeadGenerator from '../components/LeadGenerator.astro';
 import { renderCopy } from '../lib/markdown';
@@ -16,6 +17,17 @@ interface Props {
 const { page, allPages, business } = Astro.props;
 
 const relatedPages = allPages.filter((p) => page.internal_links.includes(p.slug));
+
+// Hub-and-spoke: only pages acting as a content hub have `category` set
+// (the Case Study, the one other 'Content Pillar' page, doesn't — so this
+// is a no-op there). Never invents a category; renders nothing without one.
+// Sorted by date_published — a Blog Post row is expected to always set
+// this (see frontend-site-builder-supabase's page-templates.md).
+const categoryPosts = page.category
+  ? allPages
+      .filter((p) => p.page_type === 'Blog Post' && p.category === page.category)
+      .sort((a, b) => (b.date_published ?? '').localeCompare(a.date_published ?? ''))
+  : [];
 ---
 
 <BaseLayout page={page} allPages={allPages} business={business}>
@@ -30,6 +42,7 @@ const relatedPages = allPages.filter((p) => page.internal_links.includes(p.slug)
   <article class="prose prose-lg mx-auto max-w-3xl px-6 py-10">
     <Fragment set:html={renderCopy(page.copy)} />
   </article>
+  {page.category && <BlogPreview posts={categoryPosts} category={page.category} />}
   {relatedPages.length > 0 && (
     <section class="mx-auto max-w-3xl px-6 pb-10">
       <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold tracking-tight text-brand-ink">Related</h2>

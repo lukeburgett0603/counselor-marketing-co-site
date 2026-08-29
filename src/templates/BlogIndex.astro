@@ -1,0 +1,131 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Section from '../components/Section.astro';
+import { renderCopy } from '../lib/markdown';
+import { withBase } from '../lib/url';
+import type { Page, Business } from '../lib/pages';
+
+interface Props {
+  page: Page;
+  allPages: Page[];
+  business: Business;
+}
+
+const { page, allPages, business } = Astro.props;
+
+// Sorted by date_published — a Blog Post row is expected to always set
+// this (see frontend-site-builder-supabase's page-templates.md).
+const posts = allPages
+  .filter((p) => p.page_type === 'Blog Post')
+  .sort((a, b) => (b.date_published ?? '').localeCompare(a.date_published ?? ''));
+
+const featured = posts[0];
+const categories = [...new Set(posts.map((p) => p.category).filter((c): c is string => !!c))].sort();
+---
+
+<BaseLayout page={page} allPages={allPages} business={business}>
+  <section class="mx-auto max-w-3xl px-6 pt-10">
+    <h1 class="font-[family-name:var(--font-heading)] text-2xl font-extrabold tracking-tight text-brand-ink">
+      {page.h1 ?? page.title}
+    </h1>
+  </section>
+  <Section tight>
+    <Fragment set:html={renderCopy(page.copy)} />
+  </Section>
+
+  {posts.length > 0 && (
+    <div class="mx-auto max-w-5xl px-6 pb-14">
+      {featured && (
+        <a
+          id="featured-post"
+          href={withBase(`/${featured.slug}`)}
+          class="mb-10 block rounded-lg border border-black/5 bg-white p-8 shadow-sm transition hover:shadow-lg"
+        >
+          <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-accent">Featured</p>
+          <h2 class="mb-2 font-[family-name:var(--font-heading)] text-2xl font-extrabold text-brand-ink">
+            {featured.h1 ?? featured.title}
+          </h2>
+          {featured.meta_description && <p class="text-slate-600">{featured.meta_description}</p>}
+        </a>
+      )}
+
+      {categories.length > 0 && (
+        <div id="category-pills" class="mb-8 flex flex-wrap gap-2">
+          <button type="button" data-category="" class="pill-button rounded-full border px-4 py-1.5 text-sm font-semibold">
+            All
+          </button>
+          {categories.map((c) => (
+            <button type="button" data-category={c} class="pill-button rounded-full border px-4 py-1.5 text-sm font-semibold">
+              {c}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div id="post-grid" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {posts.map((post) => (
+          <a
+            href={withBase(`/${post.slug}`)}
+            data-category={post.category ?? ''}
+            class="post-card block rounded-lg border border-black/5 bg-white p-6 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-xl"
+          >
+            {post.category && (
+              <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-brand-accent">{post.category}</p>
+            )}
+            <h3 class="mb-2 font-[family-name:var(--font-heading)] font-bold text-brand-ink">{post.h1 ?? post.title}</h3>
+            {post.meta_description && <p class="text-sm text-slate-600">{post.meta_description}</p>}
+          </a>
+        ))}
+      </div>
+    </div>
+  )}
+</BaseLayout>
+
+<script>
+  const pills = document.querySelectorAll<HTMLButtonElement>('.pill-button');
+  const cards = document.querySelectorAll<HTMLAnchorElement>('.post-card');
+  const featuredEl = document.getElementById('featured-post');
+
+  function render(category: string) {
+    pills.forEach((p) => {
+      const active = p.dataset.category === category;
+      p.classList.toggle('bg-brand-primary', active);
+      p.classList.toggle('text-white', active);
+      p.classList.toggle('border-brand-primary', active);
+      p.classList.toggle('bg-white', !active);
+      p.classList.toggle('text-brand-ink', !active);
+      p.classList.toggle('border-slate-300', !active);
+    });
+
+    cards.forEach((card) => {
+      const matches = !category || card.dataset.category === category;
+      card.classList.toggle('hidden', !matches);
+    });
+
+    // The featured hero is an "unfiltered homepage" element, not part of
+    // any one category's filtered view — hide it once a real filter is
+    // active so a visitor who clicked through from a hub page's "See all
+    // articles in X" link doesn't see an unrelated post pinned above the
+    // filtered results they came for.
+    if (featuredEl) featuredEl.classList.toggle('hidden', !!category);
+  }
+
+  function setCategory(category: string, push: boolean) {
+    const url = new URL(window.location.href);
+    if (category) url.searchParams.set('category', category);
+    else url.searchParams.delete('category');
+    if (push) history.pushState(null, '', url);
+    else history.replaceState(null, '', url);
+    render(category);
+  }
+
+  pills.forEach((pill) => {
+    pill.addEventListener('click', () => setCategory(pill.dataset.category ?? '', true));
+  });
+
+  window.addEventListener('popstate', () => {
+    render(new URLSearchParams(window.location.search).get('category') ?? '');
+  });
+
+  setCategory(new URLSearchParams(window.location.search).get('category') ?? '', false);
+</script>

@@ -1,0 +1,51 @@
+---
+// Embeds up to 6 blog posts matching a hub page's `category` + a link to
+// the full filtered list on /blog. Used by ContentPillar.astro (hub
+// pages) — never on Service Pages, which stay pure conversion pages by
+// design (see CLAUDE.md's hub-and-spoke section for why). Renders nothing
+// when there are no matching posts yet — never invents content to fill
+// the section.
+import { withBase } from '../lib/url';
+import type { Page } from '../lib/pages';
+
+interface Props {
+  posts: Page[];
+  category: string;
+}
+
+const { posts, category } = Astro.props;
+const shown = posts.slice(0, 6);
+---
+
+{shown.length > 0 && (
+  <section class="bg-brand-neutral py-14">
+    <div class="mx-auto max-w-5xl px-6">
+      <h2 class="mb-8 text-center font-[family-name:var(--font-heading)] text-2xl font-extrabold tracking-tight text-brand-ink">
+        Related articles
+      </h2>
+      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {shown.map((post) => (
+          <a
+            href={withBase(`/${post.slug}`)}
+            class="block rounded-lg border border-black/5 bg-white p-6 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-xl"
+          >
+            <h3 class="mb-2 font-[family-name:var(--font-heading)] font-bold text-brand-ink">
+              {post.h1 ?? post.title}
+            </h3>
+            {post.meta_description && (
+              <p class="text-sm text-slate-600">{post.meta_description}</p>
+            )}
+          </a>
+        ))}
+      </div>
+      <p class="mt-8 text-center">
+        <a
+          href={withBase(`/blog?category=${encodeURIComponent(category)}`)}
+          class="font-semibold text-brand-primary hover:underline"
+        >
+          See all articles in {category} &rarr;
+        </a>
+      </p>
+    </div>
+  </section>
+)}
