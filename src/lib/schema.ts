@@ -77,6 +77,7 @@ export function buildServiceSchema(page: Page, siteUrl: string) {
   // field written for public consumption, same as it is in <head>.
   if (page.meta_description) schema.description = page.meta_description;
   if (page.area_served_name) schema.areaServed = page.area_served_name;
+  schema.url = `${siteUrl}/${page.slug}`;
   return schema;
 }
 
@@ -91,6 +92,22 @@ export function buildArticleSchema(page: Page, siteUrl: string, hasBlog: boolean
   if (page.date_published) schema.datePublished = page.date_published;
   if (page.date_modified) schema.dateModified = page.date_modified;
   if (page.images.hero) schema.image = page.images.hero.url;
+  if (page.meta_description) schema.description = page.meta_description;
+  // Google's own Article structured-data example includes this — an
+  // explicit self-reference declaring this URL as the article's one
+  // canonical location, not left implicit via the <link rel="canonical">
+  // tag alone.
+  if (page.slug) {
+    schema.mainEntityOfPage = { '@type': 'WebPage', '@id': `${siteUrl}/${page.slug}` };
+  }
+  // Real, computed from the actual body — never a hand-typed estimate that
+  // can drift out of sync with the content.
+  if (page.copy) schema.wordCount = page.copy.trim().split(/\s+/).length;
+  // The KeyTakeaways card (see ContentPillar.astro) is genuinely a summary
+  // of the piece — `abstract` is the schema.org property for exactly that,
+  // and only ever reflects what's actually rendered on the page.
+  if (page.key_takeaways.length > 0) schema.abstract = page.key_takeaways.join(' ');
+  if (page.category) schema.about = page.category;
   return schema;
 }
 
@@ -105,6 +122,7 @@ export function buildPersonSchema(page: Page, siteUrl: string) {
   // See buildServiceSchema above — purpose is internal-only, never public.
   if (page.meta_description) schema.description = page.meta_description;
   if (page.images.headshot) schema.image = page.images.headshot.url;
+  schema.url = `${siteUrl}/${page.slug}`;
   return schema;
 }
 
@@ -117,23 +135,30 @@ export function buildServiceAreaSchema(business: Business, page: Page, siteUrl: 
   };
 }
 
-export function buildContactPageSchema(business: Business, siteUrl: string) {
+export function buildContactPageSchema(business: Business, siteUrl: string, page: Page) {
   const schema: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'ContactPage',
     about: { '@id': businessId(siteUrl) },
+    url: `${siteUrl}/${page.slug}`,
   };
   if (business.telephone) schema.telephone = business.telephone;
   return schema;
 }
 
 export function buildWebPageSchema(page: Page, siteUrl: string) {
-  return {
+  const schema: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
     name: page.title,
     url: `${siteUrl}/${page.slug}`,
   };
+  // Every page that reaches this generic fallback (About, Services
+  // Overview, Blog Index, Other) still has a real meta_description written
+  // for its <head> tag — no reason WebPage schema shouldn't carry the same
+  // description Google already reads from the page.
+  if (page.meta_description) schema.description = page.meta_description;
+  return schema;
 }
 
 // Informational only, not a ranking lever (Google retired FAQ rich results
@@ -192,7 +217,7 @@ export function buildPageSchemas(
       case 'Service Area':
         return [buildServiceAreaSchema(business, page, siteUrl)];
       case 'Contact':
-        return [buildContactPageSchema(business, siteUrl)];
+        return [buildContactPageSchema(business, siteUrl, page)];
       case 'About':
       case 'Services Overview':
       case 'Blog Index':
