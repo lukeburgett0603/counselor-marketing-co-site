@@ -87,6 +87,9 @@ export interface Business {
   google_maps_url: string | null;
   collect_website_in_leads: boolean;
   lead_response_time_note: string | null;
+  // A link to the business's EHR client portal (SimplePractice,
+  // TherapyNotes, etc.) for existing clients — see 0009_client_portal_url.sql.
+  client_portal_url: string | null;
 }
 
 // Only content-complete pages are ever rendered — a page left at

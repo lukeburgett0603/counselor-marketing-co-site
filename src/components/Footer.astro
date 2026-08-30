@@ -73,6 +73,14 @@ function hrefFor(page: Page): string {
       &copy; {new Date().getFullYear()} {business.legal_name ?? business.display_name}. All rights reserved.
       {' · '}
       <a href={withBase('/leads')} class="hover:text-white">Admin Login</a>
+      {business.client_portal_url && (
+        <>
+          {' · '}
+          <a href={business.client_portal_url} target="_blank" rel="noopener" class="hover:text-white">
+            Client Portal
+          </a>
+        </>
+      )}
     </p>
   </div>
 </footer>
