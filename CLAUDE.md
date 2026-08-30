@@ -184,8 +184,42 @@ before touching the related code on a future client site.
   passed it to the build, so setting the GitHub secret alone would have
   done nothing. Check the workflow file, not just `.env.example`, when
   adding any new build-time env var.
+- **`rsync -a` (without `--delete`) never removes a file from the client
+  repo that was deleted in the template repo.** Deleting
+  `src/pages/leads.astro` from the template and re-running the standard
+  sync command left the old file sitting untouched in the client repo —
+  it kept building a stale `/leads` route silently (no error, just a
+  route that should be gone still existing) until it was manually
+  deleted there too. Any future page/file *removal* in the template needs
+  a manual matching delete in the client repo — the sync command only
+  ever adds/updates, never subtracts. (Don't reach for `--delete` either:
+  the client repo has its own files the template doesn't know about —
+  `.env`, client copy, images — that a blanket `--delete` would wipe.)
+- **Tailwind's `hidden` class loses to a responsive display utility like
+  `md:flex` on the same element, regardless of JS.** `#admin-content` was
+  `class="hidden md:flex"`, toggled via `classList.remove('hidden')` on
+  login — but Tailwind generates responsive utilities *after* base
+  utilities in the compiled stylesheet, so at `md`+ viewport widths
+  `md:flex` always wins in the cascade, whether or not JS has removed
+  `hidden`. The admin dashboard and the login form rendered simultaneously
+  on any screen ≥768px wide, before login. Fixed by toggling
+  `element.style.display` (inline styles always beat classes) instead of
+  `classList`, in both `adminAuth.ts`'s view-toggle functions and
+  `AdminLayout.astro`'s markup (`style="display: none;"` instead of the
+  `hidden` class). Any element that needs both a JS-controlled show/hide
+  *and* a responsive display value needs this pattern, not `classList` +
+  a `hidden` utility.
+- **A form field existing in the admin UI doesn't mean the public template
+  renders it.** The blog post form (`admin/blog.astro`) collects
+  `author_name`/`credentials` — both real, already-existing `pages`
+  columns, already fed into `Person` schema in `schema.ts` — but
+  `BlogPost.astro` never actually displayed a byline on the rendered page.
+  Caught by publishing a real test post and reading the live HTML rather
+  than just checking the admin form saved correctly. When wiring a new
+  admin-editable field, verify it end-to-end on the *public* page it's
+  supposed to affect, not just that the form round-trips to the database.
 
-## Client dashboard (`/leads` login)
+## Client dashboard (`/admin/leads` login)
 
 Business decision (2026-08-29): client sites are **rented/managed, not
 sold outright** — the agency keeps the repo/Supabase/hosting and the
@@ -265,6 +299,53 @@ Every function gating a real admin action needs its own explicit
 bearer token, not just testing "no auth header" — that weaker test would have missed
 it entirely. See `frontend-site-builder-supabase/references/
 supabase-technical-setup.md` for the exact code pattern.
+
+**Blog post content is a rich-text editor, not a raw markdown textarea**
+(built 2026-08-30, `admin/blog.astro`). Real client feedback on the first
+version: non-technical clients don't know markdown syntax. `pages.copy`
+itself stays plain markdown in the database — unchanged for every other
+page type and for the copywriter pipeline — the admin editor just
+round-trips through it silently: `renderCopy()` (already in
+`lib/markdown.ts`) renders existing markdown to HTML to seed a
+`contenteditable` div on load, and `turndown` converts the edited HTML
+back to markdown on save. The toolbar (a block-style dropdown —
+Paragraph/Heading 2/Heading 3, deliberately no Heading 1 since that's
+reserved for the post title and a page should only have one — plus
+bold/italic/underline/link) is driven by `document.execCommand`. That API
+is deprecated but still the only way to drive a plain `contenteditable`
+without adopting a full editor framework (TipTap/ProseMirror) for a
+five-command feature set on one low-traffic internal page — a deliberate
+scope call, not an oversight. One real wrinkle: clicking a toolbar button
+blurs the editor and collapses the text selection before the click
+handler runs, so the last selection inside the editor has to be tracked
+(on `keyup`/`mouseup`/`input`) and explicitly restored immediately before
+every `execCommand` call — skipping this makes every toolbar button
+silently apply to the wrong place (or nowhere). Markdown has no
+underline syntax, so underline is deliberately kept as inline `<u>` HTML
+in the stored markdown — `marked` (the renderer everywhere else on the
+site) passes inline HTML through untouched, so this doesn't break
+anything downstream. If a future admin field needs the same "non-technical
+person edits markdown-backed content" shape, reuse this pattern rather
+than shipping a raw markdown textarea and rather than migrating the
+storage format.
+
+**Admin shell restructure (built 2026-08-30)**: every admin-facing route
+moved under `/admin/*` — the leads dashboard is now `admin/leads.astro`
+(was `leads.astro`), joined by `admin/blog.astro` for blog post CRUD.
+Both share `layouts/AdminLayout.astro` (login view, invited-user
+set-password view, sidebar nav + slot) and `lib/adminAuth.ts`
+(`initAdminAuth(onAuthed)` — session check, login/logout, invite/recovery
+password setup). Astro has no client-side router, so each `/admin/*`
+page's own inline `<script>` imports and calls `initAdminAuth`
+independently — the persisted Supabase session (localStorage) is what
+makes "stay logged in across pages" work, not shared JS state. Any new
+admin page (Phase 4's website content section, etc.) follows this same
+shape: add a nav entry to `AdminLayout.astro`, use the shared auth module,
+don't reinvent the login flow. `robots.txt.ts` and `astro.config.mjs`'s
+sitemap filter both gate on the `/admin` prefix now, not `/leads`
+specifically. See the real-bugs list above for two issues found while
+building this (the rsync-deletion gap and the Tailwind `hidden`/`md:flex`
+bug) — both are general patterns, not one-off admin-page mistakes.
 
 ## Hub-and-spoke content (Content Pillar + Blog Post + Blog Index)
 
