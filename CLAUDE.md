@@ -238,6 +238,34 @@ or a client asking for more):**
   without exposing credentials — Search Console data itself also lags a
   few days). Treat as a premium-tier differentiator, not a v1 expectation.
 
+## Admin CMS: Edge Functions for anything needing a secret at request time
+
+Being planned/built in phases (business info fields → Edge Function → blog posting →
+website content editing → multi-user roles) so client-site admins can eventually
+manage content from their own login instead of touching Supabase directly. Full
+architecture lives in this project's own memory/CLAUDE.md, not repeated here — this
+section is the durable, template-level pattern worth reusing on every future piece.
+
+**`supabase/functions/publish-site`** (built 2026-08-30) is the first Edge Function
+and the pattern to copy for anything similar: the static site can't run server code,
+so any action needing a secret credential at the moment an admin clicks a button (a
+GitHub token to trigger a rebuild, later the service_role key to invite a staff
+login) has to live in a Supabase Edge Function, never in browser JS. Secrets go in
+via `supabase secrets set KEY=value --project-ref <ref>`, never a repo file, never a
+`.env` shipped to the browser.
+
+**Real bug found and fixed while building it**: the Functions gateway's `verify_jwt`
+(the default — never disable it) blocks a request with no validly-signed JWT at all,
+but that's not the same as "caller is a logged-in user." The public anon key is
+*itself* a validly-signed JWT (role `anon`) and it's shipped in the site's own JS —
+so `verify_jwt` alone would let anyone holding the anon key invoke the function.
+Every function gating a real admin action needs its own explicit
+`supabase.auth.getUser()` check on top of `verify_jwt`, using the request's own
+`Authorization` header. Caught this by actually testing with the anon key as the
+bearer token, not just testing "no auth header" — that weaker test would have missed
+it entirely. See `frontend-site-builder-supabase/references/
+supabase-technical-setup.md` for the exact code pattern.
+
 ## Hub-and-spoke content (Content Pillar + Blog Post + Blog Index)
 
 Built 2026-08-29, first shipped on Counselor Marketing Co. — see

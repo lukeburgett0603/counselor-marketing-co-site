@@ -9,7 +9,7 @@ import { withBase } from '../lib/url';
 // without it this produces a Sitemap: line that 404s on a project path.
 export const GET: APIRoute = ({ site }) => {
   const siteUrl = new URL(withBase('/'), site).toString().replace(/\/$/, '');
-  return new Response(`User-agent: *\nAllow: /\nDisallow: /leads\n\nSitemap: ${siteUrl}/sitemap-index.xml\n`, {
+  return new Response(`User-agent: *\nAllow: /\nDisallow: /admin\n\nSitemap: ${siteUrl}/sitemap-index.xml\n`, {
     headers: { 'Content-Type': 'text/plain' },
   });
 };

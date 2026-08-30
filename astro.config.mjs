@@ -19,9 +19,9 @@ export default defineConfig({
   trailingSlash: 'never',
   integrations: [
     sitemap({
-      // /leads is the internal, auth-gated leads dashboard — never a
-      // public/indexable page.
-      filter: (page) => !page.includes('/leads'),
+      // /admin/* is the internal, auth-gated admin area — never
+      // public/indexable pages.
+      filter: (page) => !page.includes('/admin'),
     }),
   ],
   image: {

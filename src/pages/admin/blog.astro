@@ -1,0 +1,394 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Blog posts | Admin" current="blog">
+  <div id="blog-list-view">
+    <div class="mb-4 flex items-center justify-between">
+      <p id="blog-count" class="text-sm text-slate-600"></p>
+      <button id="new-post-button" class="rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
+        New post
+      </button>
+    </div>
+    <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <table class="w-full text-left text-sm">
+        <thead class="border-b border-slate-200 bg-slate-50">
+          <tr>
+            <th class="px-4 py-3 font-semibold">Title</th>
+            <th class="px-4 py-3 font-semibold">Category</th>
+            <th class="px-4 py-3 font-semibold">Status</th>
+            <th class="px-4 py-3 font-semibold">Date</th>
+            <th class="px-4 py-3 font-semibold"></th>
+          </tr>
+        </thead>
+        <tbody id="blog-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="blog-edit-view" class="hidden max-w-2xl">
+    <button id="back-to-list-button" class="mb-4 text-sm text-brand-primary hover:underline">&larr; Back to all posts</button>
+    <h2 id="edit-heading" class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold text-brand-ink">New post</h2>
+    <form id="post-form" class="space-y-4">
+      <div>
+        <label class="mb-1 block text-sm font-semibold text-slate-700">Title</label>
+        <input id="field-title" name="title" type="text" required class="w-full rounded-md border border-slate-300 px-4 py-2" />
+      </div>
+      <div>
+        <label class="mb-1 block text-sm font-semibold text-slate-700">Slug</label>
+        <div class="flex items-center gap-1 text-sm text-slate-500">
+          <span>/</span>
+          <input id="field-slug" name="slug" type="text" required class="w-full rounded-md border border-slate-300 px-4 py-2" />
+        </div>
+      </div>
+      <div>
+        <label class="mb-1 block text-sm font-semibold text-slate-700">Category</label>
+        <select id="field-category" name="category" required class="w-full rounded-md border border-slate-300 px-4 py-2"></select>
+      </div>
+      <div>
+        <label class="mb-1 block text-sm font-semibold text-slate-700">Hero image (optional)</label>
+        <input id="field-image-file" type="file" accept="image/*" class="w-full text-sm" />
+        <p id="field-image-status" class="mt-1 text-xs text-slate-500"></p>
+        <input id="field-image-alt" name="imageAlt" type="text" placeholder="Describe what's in the photo" class="mt-2 w-full rounded-md border border-slate-300 px-4 py-2 text-sm" />
+      </div>
+      <div>
+        <label class="mb-1 block text-sm font-semibold text-slate-700">Meta description</label>
+        <textarea id="field-meta" name="metaDescription" rows="2" required class="w-full rounded-md border border-slate-300 px-4 py-2"></textarea>
+      </div>
+      <div>
+        <label class="mb-1 block text-sm font-semibold text-slate-700">Post content (markdown)</label>
+        <textarea id="field-copy" name="copy" rows="12" required class="w-full rounded-md border border-slate-300 px-4 py-2 font-mono text-sm"></textarea>
+      </div>
+      <div>
+        <label class="mb-1 block text-sm font-semibold text-slate-700">Key takeaways (one per line, optional)</label>
+        <textarea id="field-takeaways" name="takeaways" rows="3" class="w-full rounded-md border border-slate-300 px-4 py-2"></textarea>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="mb-1 block text-sm font-semibold text-slate-700">Author name</label>
+          <input id="field-author" name="author" type="text" required class="w-full rounded-md border border-slate-300 px-4 py-2" />
+        </div>
+        <div>
+          <label class="mb-1 block text-sm font-semibold text-slate-700">Credentials</label>
+          <input id="field-credentials" name="credentials" type="text" placeholder="LPC, LMFT" class="w-full rounded-md border border-slate-300 px-4 py-2" />
+        </div>
+      </div>
+      <div>
+        <label class="mb-1 block text-sm font-semibold text-slate-700">Publish date</label>
+        <input id="field-date" name="datePublished" type="date" required class="w-full rounded-md border border-slate-300 px-4 py-2" />
+      </div>
+
+      <div class="flex items-center gap-3 pt-2">
+        <button id="save-draft-button" type="button" class="rounded-md border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+          Save draft
+        </button>
+        <button id="publish-button" type="button" class="rounded-md bg-brand-accent px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90">
+          Publish
+        </button>
+        <button id="delete-post-button" type="button" class="ml-auto hidden text-sm text-red-600 hover:underline">
+          Delete post
+        </button>
+      </div>
+      <p id="post-form-status" class="text-sm" role="status"></p>
+    </form>
+  </div>
+</AdminLayout>
+
+<script>
+  import { supabase, initAdminAuth } from '../../lib/adminAuth';
+
+  const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
+  const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+  type BlogPost = {
+    id: string;
+    title: string;
+    slug: string;
+    category: string | null;
+    status: string;
+    date_published: string | null;
+    h1: string | null;
+    meta_description: string | null;
+    copy: string | null;
+    key_takeaways: string[];
+    author_name: string | null;
+    credentials: string | null;
+    images: { hero?: { url: string; alt: string } } | null;
+  };
+
+  const listView = document.getElementById('blog-list-view')!;
+  const editView = document.getElementById('blog-edit-view')!;
+  const blogCount = document.getElementById('blog-count')!;
+  const tableBody = document.getElementById('blog-table-body')!;
+  const newPostButton = document.getElementById('new-post-button')!;
+  const backButton = document.getElementById('back-to-list-button')!;
+  const editHeading = document.getElementById('edit-heading')!;
+  const postForm = document.getElementById('post-form') as HTMLFormElement;
+  const formStatus = document.getElementById('post-form-status')!;
+  const saveDraftButton = document.getElementById('save-draft-button')!;
+  const publishButton = document.getElementById('publish-button')!;
+  const deleteButton = document.getElementById('delete-post-button')!;
+
+  const titleField = document.getElementById('field-title') as HTMLInputElement;
+  const slugField = document.getElementById('field-slug') as HTMLInputElement;
+  const categoryField = document.getElementById('field-category') as HTMLSelectElement;
+  const imageFileField = document.getElementById('field-image-file') as HTMLInputElement;
+  const imageStatus = document.getElementById('field-image-status')!;
+  const imageAltField = document.getElementById('field-image-alt') as HTMLInputElement;
+  const metaField = document.getElementById('field-meta') as HTMLTextAreaElement;
+  const copyField = document.getElementById('field-copy') as HTMLTextAreaElement;
+  const takeawaysField = document.getElementById('field-takeaways') as HTMLTextAreaElement;
+  const authorField = document.getElementById('field-author') as HTMLInputElement;
+  const credentialsField = document.getElementById('field-credentials') as HTMLInputElement;
+  const dateField = document.getElementById('field-date') as HTMLInputElement;
+
+  let posts: BlogPost[] = [];
+  let editingId: string | null = null;
+  let slugTouchedManually = false;
+  let uploadedImageUrl: string | null = null;
+
+  function slugify(text: string): string {
+    return text
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  function escapeHtml(value: string): string {
+    const div = document.createElement('div');
+    div.textContent = value;
+    return div.innerHTML;
+  }
+
+  titleField.addEventListener('input', () => {
+    if (!slugTouchedManually) {
+      slugField.value = slugify(titleField.value);
+    }
+  });
+  slugField.addEventListener('input', () => {
+    slugTouchedManually = true;
+  });
+
+  async function loadCategories() {
+    const { data, error } = await supabase.from('pages').select('category').eq('page_type', 'Content Pillar');
+    const categories = error
+      ? []
+      : [...new Set((data ?? []).map((r) => r.category).filter((c): c is string => !!c))].sort();
+    categoryField.innerHTML = categories.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  }
+
+  async function loadPosts() {
+    const { data, error } = await supabase
+      .from('pages')
+      .select('*')
+      .eq('page_type', 'Blog Post')
+      .order('date_published', { ascending: false });
+
+    if (error) {
+      blogCount.textContent = 'Could not load posts: ' + error.message;
+      return;
+    }
+    posts = data as BlogPost[];
+    blogCount.textContent = `${posts.length} post${posts.length === 1 ? '' : 's'}`;
+    tableBody.innerHTML = posts
+      .map(
+        (post) => `
+      <tr class="border-b border-slate-100 last:border-0">
+        <td class="px-4 py-3">${escapeHtml(post.title)}</td>
+        <td class="px-4 py-3">${escapeHtml(post.category ?? '')}</td>
+        <td class="px-4 py-3">${post.status === 'content-complete' ? '<span class="text-emerald-700">Published</span>' : '<span class="text-slate-500">Draft</span>'}</td>
+        <td class="px-4 py-3">${post.date_published ?? ''}</td>
+        <td class="px-4 py-3 text-right"><button data-edit-id="${post.id}" class="edit-post-button text-brand-primary hover:underline">Edit</button></td>
+      </tr>`
+      )
+      .join('');
+  }
+
+  function showList() {
+    editView.classList.add('hidden');
+    listView.classList.remove('hidden');
+  }
+
+  function showEdit() {
+    listView.classList.add('hidden');
+    editView.classList.remove('hidden');
+  }
+
+  function resetForm() {
+    editingId = null;
+    slugTouchedManually = false;
+    uploadedImageUrl = null;
+    postForm.reset();
+    imageStatus.textContent = '';
+    deleteButton.classList.add('hidden');
+    editHeading.textContent = 'New post';
+    dateField.value = new Date().toISOString().slice(0, 10);
+  }
+
+  function loadPostIntoForm(post: BlogPost) {
+    editingId = post.id;
+    slugTouchedManually = true;
+    uploadedImageUrl = post.images?.hero?.url ?? null;
+    titleField.value = post.title;
+    slugField.value = post.slug.replace(/^blog\//, '');
+    categoryField.value = post.category ?? '';
+    imageAltField.value = post.images?.hero?.alt ?? '';
+    imageStatus.textContent = uploadedImageUrl ? 'Current image on file — choose a new one to replace it.' : '';
+    metaField.value = post.meta_description ?? '';
+    copyField.value = post.copy ?? '';
+    takeawaysField.value = (post.key_takeaways ?? []).join('\n');
+    authorField.value = post.author_name ?? '';
+    credentialsField.value = post.credentials ?? '';
+    dateField.value = post.date_published ?? new Date().toISOString().slice(0, 10);
+    editHeading.textContent = 'Edit post';
+    deleteButton.classList.remove('hidden');
+  }
+
+  newPostButton.addEventListener('click', () => {
+    resetForm();
+    showEdit();
+  });
+
+  backButton.addEventListener('click', showList);
+
+  tableBody.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement;
+    if (!target.classList.contains('edit-post-button')) return;
+    const id = target.dataset.editId!;
+    const post = posts.find((p) => p.id === id);
+    if (post) {
+      loadPostIntoForm(post);
+      showEdit();
+    }
+  });
+
+  imageFileField.addEventListener('change', async () => {
+    const file = imageFileField.files?.[0];
+    if (!file) return;
+    imageStatus.textContent = 'Uploading...';
+    const path = `blog/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const { error } = await supabase.storage.from('site-images').upload(path, file);
+    if (error) {
+      imageStatus.textContent = 'Upload failed: ' + error.message;
+      return;
+    }
+    const { data: urlData } = supabase.storage.from('site-images').getPublicUrl(path);
+    uploadedImageUrl = urlData.publicUrl;
+    imageStatus.textContent = 'Image uploaded.';
+  });
+
+  function validate(): string | null {
+    if (!titleField.value.trim()) return 'Title is required.';
+    if (!slugField.value.trim()) return 'Slug is required.';
+    if (!categoryField.value) return 'Choose a category.';
+    if (!metaField.value.trim()) return 'Meta description is required.';
+    if (!copyField.value.trim()) return 'Post content is required.';
+    if (!authorField.value.trim()) return 'Author name is required.';
+    if (uploadedImageUrl && !imageAltField.value.trim()) return 'Alt text is required for the hero image.';
+    return null;
+  }
+
+  async function savePost(publish: boolean) {
+    const validationError = validate();
+    if (validationError) {
+      formStatus.textContent = validationError;
+      formStatus.className = 'text-sm text-red-600';
+      return;
+    }
+
+    formStatus.textContent = publish ? 'Publishing...' : 'Saving...';
+    formStatus.className = 'text-sm text-slate-600';
+    saveDraftButton.setAttribute('disabled', 'true');
+    publishButton.setAttribute('disabled', 'true');
+
+    const takeaways = takeawaysField.value
+      .split('\n')
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+    const payload = {
+      title: titleField.value.trim(),
+      slug: `blog/${slugify(slugField.value)}`,
+      page_type: 'Blog Post',
+      h1: titleField.value.trim(),
+      meta_title: `${titleField.value.trim()} | Blog`,
+      meta_description: metaField.value.trim(),
+      category: categoryField.value,
+      copy: copyField.value,
+      key_takeaways: takeaways,
+      author_name: authorField.value.trim(),
+      credentials: credentialsField.value.trim() || null,
+      date_published: dateField.value,
+      status: publish ? 'content-complete' : 'in-progress',
+      images: uploadedImageUrl ? { hero: { url: uploadedImageUrl, alt: imageAltField.value.trim() } } : {},
+      nav_placement: 'none',
+      internal_links: [],
+    };
+
+    const { error } = editingId
+      ? await supabase.from('pages').update(payload).eq('id', editingId)
+      : await supabase.from('pages').insert(payload);
+
+    if (error) {
+      formStatus.textContent = 'Could not save: ' + error.message;
+      formStatus.className = 'text-sm text-red-600';
+      saveDraftButton.removeAttribute('disabled');
+      publishButton.removeAttribute('disabled');
+      return;
+    }
+
+    if (publish) {
+      formStatus.textContent = 'Published — triggering rebuild...';
+      const { data: sessionData } = await supabase.auth.getSession();
+      try {
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/publish-site`, {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${sessionData.session?.access_token}`,
+          },
+        });
+        if (response.ok) {
+          formStatus.textContent = 'Published! Your site is rebuilding and should be live within a few minutes.';
+          formStatus.className = 'text-sm text-emerald-700';
+        } else {
+          formStatus.textContent = 'Saved, but the rebuild trigger failed — the post is saved and will appear on the next rebuild.';
+          formStatus.className = 'text-sm text-amber-700';
+        }
+      } catch {
+        formStatus.textContent = 'Saved, but the rebuild trigger failed — the post is saved and will appear on the next rebuild.';
+        formStatus.className = 'text-sm text-amber-700';
+      }
+    } else {
+      formStatus.textContent = 'Draft saved.';
+      formStatus.className = 'text-sm text-emerald-700';
+    }
+
+    saveDraftButton.removeAttribute('disabled');
+    publishButton.removeAttribute('disabled');
+    await loadPosts();
+  }
+
+  saveDraftButton.addEventListener('click', () => savePost(false));
+  publishButton.addEventListener('click', () => savePost(true));
+
+  deleteButton.addEventListener('click', async () => {
+    if (!editingId) return;
+    if (!window.confirm('Delete this post? This cannot be undone.')) return;
+    const { error } = await supabase.from('pages').delete().eq('id', editingId);
+    if (error) {
+      window.alert('Could not delete: ' + error.message);
+      return;
+    }
+    await loadPosts();
+    showList();
+  });
+
+  async function onAuthed() {
+    await Promise.all([loadCategories(), loadPosts()]);
+    resetForm();
+  }
+
+  initAdminAuth(onAuthed);
+</script>
