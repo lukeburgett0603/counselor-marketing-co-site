@@ -1,0 +1,149 @@
+---
+// Counselor Marketing Co.-only — a private directory of every client
+// site's admin URL. Not part of the shared template (see
+// supabase/migrations/0014_client_directory.sql), and deliberately not
+// added to AdminLayout's shared nav — reachable by URL, bookmarked.
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Client directory | Admin" current="directory">
+  <div class="max-w-2xl space-y-10">
+    <section>
+      <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold text-brand-ink">Client sites</h2>
+      <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <table class="w-full text-left text-sm">
+          <thead class="border-b border-slate-200 bg-slate-50">
+            <tr>
+              <th class="px-4 py-3 font-semibold">Name</th>
+              <th class="px-4 py-3 font-semibold">Admin URL</th>
+              <th class="px-4 py-3 font-semibold">Notes</th>
+              <th class="px-4 py-3 font-semibold"></th>
+            </tr>
+          </thead>
+          <tbody id="directory-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold text-brand-ink">Add a client</h2>
+      <form id="add-form" class="space-y-4">
+        <div>
+          <label class="mb-1 block text-sm font-semibold text-slate-700">Name</label>
+          <input id="add-name" type="text" required class="w-full rounded-md border border-slate-300 px-4 py-2" />
+        </div>
+        <div>
+          <label class="mb-1 block text-sm font-semibold text-slate-700">Admin URL</label>
+          <input
+            id="add-url"
+            type="url"
+            placeholder="https://clientdomain.com/admin/leads"
+            required
+            class="w-full rounded-md border border-slate-300 px-4 py-2"
+          />
+        </div>
+        <div>
+          <label class="mb-1 block text-sm font-semibold text-slate-700">Notes (optional)</label>
+          <textarea id="add-notes" rows="2" class="w-full rounded-md border border-slate-300 px-4 py-2"></textarea>
+        </div>
+        <button
+          id="add-button"
+          type="button"
+          class="rounded-md bg-brand-primary px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+        >
+          Add
+        </button>
+        <p id="add-status" class="text-sm" role="status"></p>
+      </form>
+    </section>
+  </div>
+</AdminLayout>
+
+<script>
+  import { supabase, initAdminAuth } from '../../lib/adminAuth';
+
+  type ClientSite = {
+    id: string;
+    name: string;
+    admin_url: string;
+    notes: string | null;
+  };
+
+  const tableBody = document.getElementById('directory-table-body')!;
+  const addName = document.getElementById('add-name') as HTMLInputElement;
+  const addUrl = document.getElementById('add-url') as HTMLInputElement;
+  const addNotes = document.getElementById('add-notes') as HTMLTextAreaElement;
+  const addButton = document.getElementById('add-button')!;
+  const addStatus = document.getElementById('add-status')!;
+
+  function escapeHtml(value: string): string {
+    const div = document.createElement('div');
+    div.textContent = value;
+    return div.innerHTML;
+  }
+
+  async function loadDirectory() {
+    const { data, error } = await supabase.from('client_sites').select('*').order('name');
+    if (error) {
+      tableBody.innerHTML = `<tr><td colspan="4" class="px-4 py-3 text-sm text-red-600">Could not load: ${escapeHtml(error.message)}</td></tr>`;
+      return;
+    }
+    const sites = (data ?? []) as ClientSite[];
+    tableBody.innerHTML = sites
+      .map(
+        (site) => `
+      <tr class="border-b border-slate-100 last:border-0">
+        <td class="px-4 py-3">${escapeHtml(site.name)}</td>
+        <td class="px-4 py-3"><a href="${escapeHtml(site.admin_url)}" target="_blank" rel="noopener" class="text-brand-primary hover:underline">${escapeHtml(site.admin_url)}</a></td>
+        <td class="px-4 py-3 text-slate-600">${escapeHtml(site.notes ?? '')}</td>
+        <td class="px-4 py-3 text-right"><button data-remove-id="${site.id}" class="remove-button text-red-600 hover:underline">Remove</button></td>
+      </tr>`
+      )
+      .join('');
+  }
+
+  tableBody.addEventListener('click', async (event) => {
+    const target = event.target as HTMLElement;
+    const removeId = target.dataset.removeId;
+    if (!removeId) return;
+    if (!window.confirm('Remove this client from the directory?')) return;
+    const { error } = await supabase.from('client_sites').delete().eq('id', removeId);
+    if (error) {
+      window.alert('Could not remove: ' + error.message);
+      return;
+    }
+    await loadDirectory();
+  });
+
+  addButton.addEventListener('click', async () => {
+    const name = addName.value.trim();
+    const url = addUrl.value.trim();
+    if (!name || !url) {
+      addStatus.textContent = 'Name and admin URL are required.';
+      addStatus.className = 'text-sm text-red-600';
+      return;
+    }
+    const { error } = await supabase.from('client_sites').insert({
+      name,
+      admin_url: url,
+      notes: addNotes.value.trim() || null,
+    });
+    if (error) {
+      addStatus.textContent = 'Could not add: ' + error.message;
+      addStatus.className = 'text-sm text-red-600';
+      return;
+    }
+    addStatus.textContent = 'Added.';
+    addStatus.className = 'text-sm text-emerald-700';
+    addName.value = '';
+    addUrl.value = '';
+    addNotes.value = '';
+    await loadDirectory();
+  });
+
+  async function onAuthed() {
+    await loadDirectory();
+  }
+
+  initAdminAuth(onAuthed, { allowedRoles: ['agency'] });
+</script>

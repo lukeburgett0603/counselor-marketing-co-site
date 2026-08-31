@@ -1,22 +1,35 @@
 ---
-// A field that's locked on every content-permission tier (h1,
-// meta_description, focus_keyword) — a read-only value plus the
-// "Suggest an edit" affordance. See admin/content.astro's script for how
-// `[data-field]`/`[data-locked-value]` get populated.
+// A field that's locked on every content-permission tier for a plain
+// `owner` login (h1, meta_description, focus_keyword) — but not for
+// `agency`, which is exempt from the lock entirely (see
+// enforce_content_permission in 0013_agency_role_and_suggestion_review.sql).
+// Renders both a read-only display and an editable input; admin/content.astro's
+// script toggles between them per-field via canEditField(), the same way
+// it already does for the tier-gated hero_subhead/copy/images fields —
+// see `[data-field]`/`[data-locked-value]`/`.editable-view`/`.locked-view`.
 import SuggestEdit from './SuggestEdit.astro';
 
 interface Props {
   fieldKey: string;
   label: string;
+  inputId: string;
+  inputType?: 'text' | 'textarea';
 }
 
-const { fieldKey, label } = Astro.props;
+const { fieldKey, label, inputId, inputType = 'text' } = Astro.props;
 ---
 
 <div data-field={fieldKey}>
   <label class="mb-1 block text-sm font-semibold text-slate-700">{label}</label>
+  {
+    inputType === 'textarea' ? (
+      <textarea id={inputId} rows="2" class="editable-view w-full rounded-md border border-slate-300 px-4 py-2" />
+    ) : (
+      <input id={inputId} type="text" class="editable-view w-full rounded-md border border-slate-300 px-4 py-2" />
+    )
+  }
   <p class="locked-view rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700" data-locked-value>
   </p>
-  <p class="mt-1 text-xs text-slate-500">Your SEO strategist manages this to protect your rankings.</p>
+  <p class="tier-note mt-1 text-xs text-slate-500">Your SEO strategist manages this to protect your rankings.</p>
   <SuggestEdit fieldLabel={label} />
 </div>

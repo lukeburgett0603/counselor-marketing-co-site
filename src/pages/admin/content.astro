@@ -103,9 +103,14 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
         </div>
 
         <div id="content-fields" class="hidden space-y-6">
-          <LockedField fieldKey="h1" label="Page heading (H1)" />
-          <LockedField fieldKey="meta_description" label="Meta description" />
-          <LockedField fieldKey="focus_keyword" label="Focus keyword" />
+          <LockedField fieldKey="h1" label="Page heading (H1)" inputId="content-h1" />
+          <LockedField
+            fieldKey="meta_description"
+            label="Meta description"
+            inputId="content-meta-description"
+            inputType="textarea"
+          />
+          <LockedField fieldKey="focus_keyword" label="Focus keyword" inputId="content-focus-keyword" />
 
           <div data-field="hero_subhead">
             <label class="mb-1 block text-sm font-semibold text-slate-700">Hero subheading</label>
@@ -160,13 +165,22 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
         </div>
       </div>
     </section>
+
+    <section id="your-suggestions-section" class="hidden">
+      <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold text-brand-ink">Your suggestions</h2>
+      <p class="mb-4 text-sm text-slate-600">
+        Edits you've suggested for locked fields, and their status.
+      </p>
+      <div id="your-suggestions-list" class="space-y-3"></div>
+    </section>
   </div>
 </AdminLayout>
 
 <script>
-  import { supabase, initAdminAuth } from '../../lib/adminAuth';
+  import { supabase, initAdminAuth, type AdminUser } from '../../lib/adminAuth';
   import { initRichTextEditor } from '../../lib/richTextEditor';
   import { renderCopy } from '../../lib/markdown';
+  import { triggerRebuild } from '../../lib/publishFunction';
 
   type ContentPage = {
     id: string;
@@ -204,6 +218,7 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
   let business: Business | null = null;
   let pages: ContentPage[] = [];
   let currentUserId: string | null = null;
+  let currentAdminUser: AdminUser | null = null;
   let selectedTestimonialPage: ContentPage | null = null;
   let selectedContentPage: ContentPage | null = null;
   let uploadedImageUrl: string | null = null;
@@ -253,8 +268,12 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
       businessStatus.className = 'text-sm text-red-600';
       return;
     }
-    businessStatus.textContent = 'Saved.';
-    businessStatus.className = 'text-sm text-emerald-700';
+    businessStatus.textContent = 'Saving your site...';
+    const result = await triggerRebuild();
+    businessStatus.textContent = result.ok
+      ? 'Saved! Your site will update shortly.'
+      : 'Saved, but the update trigger failed — it will go live on the next rebuild.';
+    businessStatus.className = result.ok ? 'text-sm text-emerald-700' : 'text-sm text-amber-700';
   });
 
   // ---------------------------------------------------------------------
@@ -307,8 +326,12 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
     selectedTestimonialPage.testimonial_quote = testimonialQuote.value.trim() || null;
     selectedTestimonialPage.testimonial_author = testimonialAuthor.value.trim() || null;
     selectedTestimonialPage.testimonial_role = testimonialRole.value.trim() || null;
-    testimonialStatus.textContent = 'Saved.';
-    testimonialStatus.className = 'text-sm text-emerald-700';
+    testimonialStatus.textContent = 'Saving your site...';
+    const result = await triggerRebuild();
+    testimonialStatus.textContent = result.ok
+      ? 'Saved! Your site will update shortly.'
+      : 'Saved, but the update trigger failed — it will go live on the next rebuild.';
+    testimonialStatus.className = result.ok ? 'text-sm text-emerald-700' : 'text-sm text-amber-700';
   });
 
   // ---------------------------------------------------------------------
@@ -322,6 +345,9 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
   const contentTierNote = document.getElementById('content-tier-note')!;
   const contentPageSelect = document.getElementById('content-page-select') as HTMLSelectElement;
   const contentFields = document.getElementById('content-fields')!;
+  const contentH1 = document.getElementById('content-h1') as HTMLInputElement;
+  const contentMetaDescription = document.getElementById('content-meta-description') as HTMLTextAreaElement;
+  const contentFocusKeyword = document.getElementById('content-focus-keyword') as HTMLInputElement;
   const contentHeroSubhead = document.getElementById('content-hero-subhead') as HTMLInputElement;
   const copyEditor = initRichTextEditor('content-copy-editor');
   const contentImageFile = document.getElementById('content-image-file') as HTMLInputElement;
@@ -330,8 +356,24 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
   const contentSaveButton = document.getElementById('content-save-button')!;
   const contentSaveStatus = document.getElementById('content-save-status')!;
 
+  const ALWAYS_LOCKED_FIELDS = ['h1', 'meta_description', 'focus_keyword'];
+
   function isFullTier(): boolean {
     return business?.content_permission_level === 'full';
+  }
+
+  // Agency is exempt from the content-permission lock entirely (see the
+  // enforce_content_permission trigger) — h1/meta_description/
+  // focus_keyword are never owner-editable regardless of tier;
+  // hero_subhead/copy/images follow the tier.
+  function canEditField(fieldKey: string): boolean {
+    if (currentAdminUser?.role === 'agency') return true;
+    if (ALWAYS_LOCKED_FIELDS.includes(fieldKey)) return false;
+    return isFullTier();
+  }
+
+  function canEditAnyField(): boolean {
+    return currentAdminUser?.role === 'agency' || isFullTier();
   }
 
   function getCurrentValueText(fieldKey: string): string {
@@ -403,16 +445,22 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
   }
 
   function renderTierUI() {
-    const full = isFullTier();
-    contentTierNote.textContent = full
-      ? 'Your plan includes full editing access to hero text, page copy, and images.'
-      : "Page heading, meta description, and focus keyword are always managed by your SEO strategist. On your current plan, hero text, page copy, and images are too — suggest a change and we'll take care of it.";
-    document.querySelectorAll<HTMLElement>('[data-field="hero_subhead"], [data-field="copy"], [data-field="images"]').forEach((fieldEl) => {
-      fieldEl.querySelectorAll<HTMLElement>('.editable-view').forEach((el) => el.classList.toggle('hidden', !full));
-      fieldEl.querySelectorAll<HTMLElement>('.locked-view').forEach((el) => el.classList.toggle('hidden', full));
-      fieldEl.querySelectorAll<HTMLElement>('.tier-note, .suggest-edit-wrap').forEach((el) => el.classList.toggle('hidden', full));
+    if (currentAdminUser?.role === 'agency') {
+      contentTierNote.textContent = 'You have full editing access to every field as the agency admin.';
+    } else if (isFullTier()) {
+      contentTierNote.textContent = 'Your plan includes full editing access to hero text, page copy, and images.';
+    } else {
+      contentTierNote.textContent =
+        "Page heading, meta description, and focus keyword are always managed by your SEO strategist. On your current plan, hero text, page copy, and images are too — suggest a change and we'll take care of it.";
+    }
+    document.querySelectorAll<HTMLElement>('[data-field]').forEach((fieldEl) => {
+      const fieldKey = fieldEl.dataset.field!;
+      const editable = canEditField(fieldKey);
+      fieldEl.querySelectorAll<HTMLElement>('.editable-view').forEach((el) => el.classList.toggle('hidden', !editable));
+      fieldEl.querySelectorAll<HTMLElement>('.locked-view').forEach((el) => el.classList.toggle('hidden', editable));
+      fieldEl.querySelectorAll<HTMLElement>('.tier-note, .suggest-edit-wrap').forEach((el) => el.classList.toggle('hidden', editable));
     });
-    contentSaveButton.classList.toggle('hidden', !full);
+    contentSaveButton.classList.toggle('hidden', !canEditAnyField());
   }
 
   function loadContentForm() {
@@ -423,9 +471,12 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
     }
     contentFields.classList.remove('hidden');
 
+    contentH1.value = selectedContentPage.h1 ?? '';
     document.querySelector('[data-field="h1"] [data-locked-value]')!.textContent = selectedContentPage.h1 ?? '(not set)';
+    contentMetaDescription.value = selectedContentPage.meta_description ?? '';
     document.querySelector('[data-field="meta_description"] [data-locked-value]')!.textContent =
       selectedContentPage.meta_description ?? '(not set)';
+    contentFocusKeyword.value = selectedContentPage.focus_keyword ?? '';
     document.querySelector('[data-field="focus_keyword"] [data-locked-value]')!.textContent =
       selectedContentPage.focus_keyword ?? '(not set)';
 
@@ -465,19 +516,30 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
   });
 
   contentSaveButton.addEventListener('click', async () => {
-    if (!selectedContentPage || !isFullTier()) return;
-    if (uploadedImageUrl && !contentImageAlt.value.trim()) {
+    if (!selectedContentPage || !canEditAnyField()) return;
+    if (canEditField('images') && uploadedImageUrl && !contentImageAlt.value.trim()) {
       contentSaveStatus.textContent = 'Alt text is required for the hero image.';
       contentSaveStatus.className = 'text-sm text-red-600';
       return;
     }
     contentSaveStatus.textContent = 'Saving...';
     contentSaveStatus.className = 'text-sm text-slate-600';
-    const payload = {
-      hero_subhead: contentHeroSubhead.value.trim() || null,
-      copy: copyEditor.getMarkdown(),
-      images: uploadedImageUrl ? { hero: { url: uploadedImageUrl, alt: contentImageAlt.value.trim() } } : {},
-    };
+
+    // Only ever send the fields this role is actually allowed to touch —
+    // h1/meta_description/focus_keyword only for agency; hero_subhead/
+    // copy/images for agency or a full-tier owner. Sending a locked field
+    // would just be rejected by the enforce_content_permission trigger
+    // anyway, but there's no reason to try.
+    const payload: Record<string, unknown> = {};
+    if (canEditField('h1')) payload.h1 = contentH1.value.trim();
+    if (canEditField('meta_description')) payload.meta_description = contentMetaDescription.value.trim() || null;
+    if (canEditField('focus_keyword')) payload.focus_keyword = contentFocusKeyword.value.trim() || null;
+    if (canEditField('hero_subhead')) payload.hero_subhead = contentHeroSubhead.value.trim() || null;
+    if (canEditField('copy')) payload.copy = copyEditor.getMarkdown();
+    if (canEditField('images')) {
+      payload.images = uploadedImageUrl ? { hero: { url: uploadedImageUrl, alt: contentImageAlt.value.trim() } } : {};
+    }
+
     const { error } = await supabase.from('pages').update(payload).eq('id', selectedContentPage.id);
     if (error) {
       contentSaveStatus.textContent = 'Could not save: ' + error.message;
@@ -485,12 +547,87 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
       return;
     }
     Object.assign(selectedContentPage, payload);
-    contentSaveStatus.textContent = 'Saved.';
-    contentSaveStatus.className = 'text-sm text-emerald-700';
+    contentSaveStatus.textContent = 'Saving your site...';
+    const result = await triggerRebuild();
+    contentSaveStatus.textContent = result.ok
+      ? 'Saved! Your site will update shortly.'
+      : 'Saved, but the update trigger failed — it will go live on the next rebuild.';
+    contentSaveStatus.className = result.ok ? 'text-sm text-emerald-700' : 'text-sm text-amber-700';
   });
 
   // ---------------------------------------------------------------------
-  async function onAuthed() {
+  // Your suggestions — a client-facing status list of what they've
+  // submitted (owner only; agency has the dedicated Suggestions review
+  // screen instead). Shows the agency's reviewer_note, most important on
+  // a rejection so the client knows why.
+  // ---------------------------------------------------------------------
+  const FIELD_LABELS: Record<string, string> = {
+    h1: 'Page heading (H1)',
+    meta_description: 'Meta description',
+    focus_keyword: 'Focus keyword',
+    hero_subhead: 'Hero subheading',
+    copy: 'Page copy',
+    images: 'Hero image',
+  };
+
+  type ContentSuggestion = {
+    id: string;
+    page_id: string;
+    field_name: string;
+    suggested_value: string;
+    status: 'pending' | 'approved' | 'rejected';
+    reviewer_note: string | null;
+    created_at: string;
+  };
+
+  const yourSuggestionsSection = document.getElementById('your-suggestions-section')!;
+  const yourSuggestionsList = document.getElementById('your-suggestions-list')!;
+
+  const STATUS_BADGE: Record<ContentSuggestion['status'], string> = {
+    pending: '<span class="text-amber-700">Pending</span>',
+    approved: '<span class="text-emerald-700">Approved</span>',
+    rejected: '<span class="text-red-600">Rejected</span>',
+  };
+
+  async function loadYourSuggestions() {
+    if (!currentUserId) return;
+    const { data, error } = await supabase
+      .from('content_suggestions')
+      .select('*')
+      .eq('submitted_by', currentUserId)
+      .order('created_at', { ascending: false });
+    if (error || !data || data.length === 0) {
+      yourSuggestionsSection.classList.add('hidden');
+      return;
+    }
+    yourSuggestionsSection.classList.remove('hidden');
+    const suggestions = data as ContentSuggestion[];
+    yourSuggestionsList.innerHTML = suggestions
+      .map((s) => {
+        const page = pages.find((p) => p.id === s.page_id);
+        const fieldLabel = FIELD_LABELS[s.field_name] ?? s.field_name;
+        const date = new Date(s.created_at).toLocaleDateString();
+        return `
+      <div class="rounded-md border border-slate-200 bg-white px-4 py-3 text-sm">
+        <div class="flex items-center justify-between">
+          <span class="font-semibold text-slate-700">${escapeHtml(page?.title ?? 'Page')} — ${escapeHtml(fieldLabel)}</span>
+          ${STATUS_BADGE[s.status]}
+        </div>
+        <p class="mt-1 text-slate-600">"${escapeHtml(s.suggested_value)}"</p>
+        <p class="mt-1 text-xs text-slate-400">Submitted ${date}</p>
+        ${
+          s.reviewer_note
+            ? `<p class="mt-2 rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600"><span class="font-semibold">Note: </span>${escapeHtml(s.reviewer_note)}</p>`
+            : ''
+        }
+      </div>`;
+      })
+      .join('');
+  }
+
+  // ---------------------------------------------------------------------
+  async function onAuthed(adminUser: AdminUser) {
+    currentAdminUser = adminUser;
     const [{ data: userData }, { data: businessData }, { data: pagesData }] = await Promise.all([
       supabase.auth.getUser(),
       supabase.from('business').select('*').single(),
@@ -506,7 +643,10 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
     loadTestimonialForm();
     loadContentForm();
     wireSuggestButtons();
+    if (adminUser.role === 'owner') {
+      await loadYourSuggestions();
+    }
   }
 
-  initAdminAuth(onAuthed, { ownerOnly: true });
+  initAdminAuth(onAuthed, { allowedRoles: ['owner', 'agency'] });
 </script>

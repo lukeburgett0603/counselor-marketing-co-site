@@ -218,6 +218,18 @@ before touching the related code on a future client site.
   than just checking the admin form saved correctly. When wiring a new
   admin-editable field, verify it end-to-end on the *public* page it's
   supposed to affect, not just that the form round-trips to the database.
+- **A Supabase content edit doesn't rebuild the live site on its own —
+  every admin screen that edits content needs to trigger a rebuild
+  itself.** `admin/blog.astro`'s Publish button always called the
+  `publish-site` Edge Function, but Phase 4's `admin/content.astro`
+  (business info, testimonials, page copy) never did — saving a change
+  there silently never went live until something unrelated happened to
+  trigger a rebuild (a blog publish, or a manual `gh workflow run`).
+  Found while building Phase 6, not by testing Phase 4 itself. Fixed by
+  having every save handler call the shared `triggerRebuild()`
+  (`lib/publishFunction.ts`). Any *new* content-editing save action needs
+  this too — it's easy to add a save button and forget the site doesn't
+  rebuild itself just because Supabase accepted the write.
 
 ## Client dashboard (`/admin/leads` login)
 
@@ -489,6 +501,89 @@ a staff member's login and their byline won't always match.
   Counselor Marketing Co. owner login was backfilled directly into
   `admin_users` (`role = 'owner'`, `status = 'active'`) via service_role
   — never touched or logged into for any of this testing.
+
+**A third admin role, `agency` (Phase 6, built 2026-08-31) — the
+agency's own super-admin identity on every client site, not another
+instance of `owner`.** Planned in a dedicated conversation before
+building (same discipline as the original Admin CMS plan) after the
+first version of Phase 6 — a "mark reviewed, edit manually" suggestion
+screen gated to plain `owner` — turned out to not match the real
+business need: the agency needs to log into *any* client's site as
+themselves, distinctly from that client's own owner, with the review
+screen able to apply an approved edit immediately rather than requiring
+a manual SQL workaround afterward.
+
+- **Why this isn't (and can't be) one universal login across every
+  client project.** Each client site has its own separate, isolated
+  Supabase project — deliberately, for real data isolation — and Supabase
+  Auth is inherently per-project; a session token from one project means
+  nothing to another. True single-sign-on across every client site would
+  need real federated-auth infrastructure (Supabase's third-party-auth
+  support, or similar) — possible, but not worth building with zero real
+  clients yet. What Phase 6 actually delivers instead: one consistent
+  identity (same email/password) seeded as an `agency`-role `admin_users`
+  row on every client project at onboarding, so logging into any given
+  client's `/admin` feels the same each time even though it's technically
+  a separate login per project. **Security tradeoff worth knowing**:
+  reusing the same password across every client project means a breach
+  of any one client's project exposes a password worth trying against the
+  others — use a strong password you don't reuse anywhere else, even
+  though the same one gets seeded everywhere.
+- **`agency` is exempt from the `enforce_content_permission` trigger
+  entirely** (`0013_agency_role_and_suggestion_review.sql`) — they're the
+  ones enforcing the content-permission lock on everyone else, not
+  subject to it. This is what lets approving a suggestion write the new
+  value straight to the page in the same action, instead of a two-step
+  "mark reviewed, then separately hack around the lock" flow.
+- **Every RLS policy that was `owner`-gated in Phases 3-5 was widened to
+  `is_owner() or is_agency()`** (business, non-blog pages, blog CRUD,
+  leads, admin_users read) — `agency` is a strict superset of `owner`,
+  never narrower. `content_suggestions` is the one exception with
+  deliberately asymmetric read access: `owner` can only ever read their
+  *own* submissions (`auth.uid() = submitted_by`) — that's the "Your
+  suggestions" status list on `admin/content.astro` — while `agency`
+  reads and manages everything, for the review screen.
+- **An owner can never revoke an `agency` row — enforced by RLS, not a
+  hidden button.** `"owner can delete non-agency admin_users rows"`
+  explicitly excludes `role = 'agency'` from what a plain owner's delete
+  policy covers; only another `agency` login can revoke one. Without this,
+  a client could accidentally (or deliberately) lock the agency out of
+  their own site by clicking Revoke on what looks like just another team
+  member.
+- **Granting the `agency` role itself is checked in the Edge Function,
+  narrower than the general owner-or-agency invite check**: only an
+  *existing* `agency` caller can invite a new `agency`-role user — a
+  client's own `owner` login can invite `staff` or `owner`, never
+  `agency`. Otherwise a client could grant themselves (or anyone) the
+  same lock-bypassing super-admin access the agency has.
+- **The Suggestions review screen (`admin/suggestions.astro`,
+  agency-only) applies an approved edit immediately** by writing the
+  edited value straight to the corresponding `pages` column (a small
+  field→column map; the reviewer can tweak the suggested value before
+  approving, not just accept it verbatim) and triggering a rebuild —
+  **except image suggestions**, which stay informational-only (a
+  suggestion for `images` is free text, not a structured `{url, alt}`
+  value, so there's nothing to auto-apply — the note explains this
+  in-UI, and the agency still swaps the actual photo via Website
+  content). Rejecting requires a note; approving's is optional. Both are
+  shown back to the client on their own "Your suggestions" list — most
+  important on a rejection, so they know why.
+- **Notification strategy is deliberately the cheapest option, not a
+  webhook**: a pending-count badge on the Suggestions nav item (any
+  `agency` login sees it on login, on any admin page — not just when they
+  happen to visit Suggestions). Real email/Slack alerts are backlogged
+  for when checking in on client sites regularly stops being enough — see
+  project memory.
+- **The client directory (a private list of every client's admin URL) is
+  a client-repo-only feature, not template code** — it's a business tool
+  specific to running the agency, with no meaning on a generic client
+  site, so it doesn't belong in the shared template at all (same
+  reasoning as the original plan's "review UI is Counselor-Marketing-Co-
+  only," just now actually followed through on for this one piece — the
+  review screen itself ended up generic/reusable per-client instead, per
+  the locked Phase 6 plan). Lives at `admin/directory.astro` in the
+  client repo only, reachable by URL (bookmarked), deliberately not added
+  to the shared nav.
 
 ## Hub-and-spoke content (Content Pillar + Blog Post + Blog Index)
 

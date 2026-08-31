@@ -10,19 +10,27 @@ import { withBase } from '../lib/url';
 
 interface Props {
   title: string;
-  current: 'leads' | 'blog' | 'content' | 'team';
+  // 'directory' is a CLIENT-REPO-ONLY addition (admin/directory.astro,
+  // migration 0014) — not part of the shared template, not in navItems
+  // below (it's reachable by URL, not linked in nav). This file is
+  // therefore excluded from the template→client sync from here on, same
+  // as global.css/BaseLayout.astro — do not let a future sync overwrite
+  // this line back to the template's narrower type.
+  current: 'leads' | 'blog' | 'content' | 'team' | 'suggestions' | 'directory';
 }
 
 const { title, current } = Astro.props;
 
 // Every item renders for every role — adminAuth.ts's applyNavAccess()
-// hides the ones a `staff` login can't use (data-nav-key below) once the
+// hides the ones a given role can't use (data-nav-key below) once the
 // caller's role is known, rather than baking role awareness into this
-// static markup.
+// static markup. "Suggestions" is agency-only — the client's own review
+// of what they submitted lives on Website content instead.
 const navItems = [
   { key: 'leads', label: 'Leads and analytics', href: withBase('/admin/leads') },
   { key: 'blog', label: 'Blog posts', href: withBase('/admin/blog') },
   { key: 'content', label: 'Website content', href: withBase('/admin/content') },
+  { key: 'suggestions', label: 'Suggestions', href: withBase('/admin/suggestions') },
   { key: 'team', label: 'Team', href: withBase('/admin/team') },
 ] as const;
 ---
@@ -111,13 +119,19 @@ const navItems = [
               <a
                 href={item.href}
                 class:list={[
-                  'block rounded-md px-3 py-2 text-sm',
+                  'flex items-center justify-between rounded-md px-3 py-2 text-sm',
                   current === item.key
                     ? 'bg-brand-neutral font-semibold text-brand-ink'
                     : 'text-slate-600 hover:bg-brand-neutral',
                 ]}
               >
                 {item.label}
+                {item.key === 'suggestions' && (
+                  <span
+                    data-suggestions-badge
+                    class="hidden rounded-full bg-brand-accent px-1.5 py-0.5 text-xs font-semibold text-white"
+                  ></span>
+                )}
               </a>
             </li>
           ))}

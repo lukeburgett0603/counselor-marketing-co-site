@@ -1,11 +1,10 @@
 // Secure middleman for anything the admin dashboard needs a secret
-// credential to do: triggering a rebuild, and (Phase 5) inviting/
-// resending an invite for a team member. One function, routed by an
-// `action` field in the JSON body (defaults to "publish" for the
-// original zero-body call site) — kept as one function rather than
-// splitting each action into its own, since they share the same
-// "verify_jwt isn't enough, check the caller's own session" auth
-// preamble below.
+// credential to do: triggering a rebuild, and inviting/resending an
+// invite for a team member. One function, routed by an `action` field in
+// the JSON body (defaults to "publish" for the original zero-body call
+// site) — kept as one function rather than splitting each action into
+// its own, since they share the same "verify_jwt isn't enough, check the
+// caller's own session" auth preamble below.
 //
 // Why "publish" exists at all: the site is static (built once by GitHub
 // Actions, not rendered live), so "publish" from the admin dashboard has
@@ -28,13 +27,15 @@
 // the anon key trigger a rebuild. So this handler does its own explicit
 // check via supabase.auth.getUser() — that only succeeds for a real,
 // currently-logged-in user's session token, not any other validly-signed
-// JWT. "publish" stops there on purpose: any authenticated admin — owner
-// or staff — can trigger a rebuild, the same way they'd trigger one by
-// editing content themselves. "invite"/"resend" go one step further and
-// also check the caller is an *active owner* in admin_users (via the
-// service_role client, bypassing RLS) — those actions can create or
-// re-invite other admin logins, so "is a real logged-in admin" isn't a
-// tight enough check on its own.
+// JWT. "publish" stops there on purpose: any authenticated admin —
+// owner, staff, or agency — can trigger a rebuild, the same way they'd
+// trigger one by editing content themselves. "invite"/"resend" go one
+// step further and also check the caller is an *active owner or agency
+// admin* in admin_users (via the service_role client, bypassing RLS) —
+// those actions can create or re-invite other admin logins, so "is a
+// real logged-in admin" isn't a tight enough check on its own. Granting
+// the 'agency' role itself is checked even more narrowly, inline below
+// — only an existing agency admin can create another one.
 //
 // Config (set via `supabase secrets set`, per-client — never hardcoded,
 // since each client's Supabase project points at a different repo):
@@ -158,15 +159,21 @@ Deno.serve(async (req: Request) => {
     .select('role, status')
     .eq('id', user.id)
     .maybeSingle();
-  if (!callerRow || callerRow.role !== 'owner' || callerRow.status !== 'active') {
-    return jsonResponse({ error: 'Only an active owner can manage team access' }, 403);
+  if (!callerRow || (callerRow.role !== 'owner' && callerRow.role !== 'agency') || callerRow.status !== 'active') {
+    return jsonResponse({ error: 'Only an active owner or agency admin can manage team access' }, 403);
   }
 
   if (action === 'invite') {
     const email = typeof body.email === 'string' ? body.email.trim() : '';
-    const role = body.role === 'staff' ? 'staff' : 'owner';
+    const role = body.role === 'staff' ? 'staff' : body.role === 'agency' ? 'agency' : 'owner';
     if (!email) {
       return jsonResponse({ error: 'Email is required' }, 400);
+    }
+    // Agency-level access is the agency's own super-admin identity — only
+    // an existing agency admin can grant more of it, so a client's owner
+    // login can't invite themselves (or anyone else) into that role.
+    if (role === 'agency' && callerRow.role !== 'agency') {
+      return jsonResponse({ error: 'Only an existing agency admin can grant agency-level access' }, 403);
     }
 
     const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email);

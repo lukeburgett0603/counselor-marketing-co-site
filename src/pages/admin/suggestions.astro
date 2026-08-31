@@ -1,0 +1,266 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Suggestions | Admin" current="suggestions">
+  <div class="max-w-3xl space-y-10">
+    <section>
+      <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold text-brand-ink">Pending</h2>
+      <p id="pending-empty" class="text-sm text-slate-600">No pending suggestions.</p>
+      <div id="pending-list" class="space-y-4"></div>
+    </section>
+
+    <section>
+      <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold text-brand-ink">Reviewed</h2>
+      <p id="reviewed-empty" class="text-sm text-slate-600">Nothing reviewed yet.</p>
+      <div id="reviewed-list" class="space-y-3"></div>
+    </section>
+  </div>
+</AdminLayout>
+
+<script>
+  import { supabase, initAdminAuth, type AdminUser } from '../../lib/adminAuth';
+  import { triggerRebuild } from '../../lib/publishFunction';
+
+  type ContentSuggestion = {
+    id: string;
+    page_id: string;
+    field_name: string;
+    current_value: string | null;
+    suggested_value: string;
+    status: 'pending' | 'approved' | 'rejected';
+    reviewer_note: string | null;
+    reviewed_by: string | null;
+    reviewed_at: string | null;
+    submitted_by: string | null;
+    created_at: string;
+  };
+
+  type PageInfo = { id: string; title: string };
+
+  const FIELD_LABELS: Record<string, string> = {
+    h1: 'Page heading (H1)',
+    meta_description: 'Meta description',
+    focus_keyword: 'Focus keyword',
+    hero_subhead: 'Hero subheading',
+    copy: 'Page copy',
+    images: 'Hero image',
+  };
+
+  // The pages column each field maps to — 'images' is intentionally
+  // absent: a suggestion for it is a free-text description (see
+  // admin/content.astro's SuggestEdit usage), not a structured
+  // {url, alt} value, so there's nothing to write directly. Approving an
+  // image suggestion is informational only; the actual photo still gets
+  // swapped via Website content.
+  const FIELD_COLUMNS: Record<string, string> = {
+    h1: 'h1',
+    meta_description: 'meta_description',
+    focus_keyword: 'focus_keyword',
+    hero_subhead: 'hero_subhead',
+    copy: 'copy',
+  };
+
+  const pendingList = document.getElementById('pending-list')!;
+  const pendingEmpty = document.getElementById('pending-empty')!;
+  const reviewedList = document.getElementById('reviewed-list')!;
+  const reviewedEmpty = document.getElementById('reviewed-empty')!;
+
+  let currentAdminUser: AdminUser | null = null;
+  let pagesById = new Map<string, PageInfo>();
+
+  function escapeHtml(value: string): string {
+    const div = document.createElement('div');
+    div.textContent = value;
+    return div.innerHTML;
+  }
+
+  function pageTitle(pageId: string): string {
+    return pagesById.get(pageId)?.title ?? 'Page';
+  }
+
+  function renderPending(suggestions: ContentSuggestion[]) {
+    pendingEmpty.classList.toggle('hidden', suggestions.length > 0);
+    pendingList.innerHTML = suggestions
+      .map((s) => {
+        const fieldLabel = FIELD_LABELS[s.field_name] ?? s.field_name;
+        const canAutoApply = s.field_name in FIELD_COLUMNS;
+        const date = new Date(s.created_at).toLocaleDateString();
+        return `
+      <div class="rounded-lg border border-slate-200 bg-white p-4" data-suggestion-id="${s.id}">
+        <div class="flex items-center justify-between text-sm">
+          <span class="font-semibold text-slate-700">${escapeHtml(pageTitle(s.page_id))} — ${escapeHtml(fieldLabel)}</span>
+          <span class="text-xs text-slate-400">Submitted ${date}</span>
+        </div>
+        <div class="mt-3 grid gap-3 sm:grid-cols-2">
+          <div>
+            <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Current</p>
+            <p class="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">${escapeHtml(s.current_value ?? '(not set)')}</p>
+          </div>
+          <div>
+            <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Suggested</p>
+            ${
+              canAutoApply
+                ? `<textarea class="apply-value-input w-full rounded-md border border-slate-300 px-3 py-2 text-sm" rows="3">${escapeHtml(s.suggested_value)}</textarea>`
+                : `<p class="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">${escapeHtml(s.suggested_value)}</p>`
+            }
+          </div>
+        </div>
+        ${!canAutoApply ? '<p class="mt-2 text-xs text-slate-500">Image suggestions aren\'t applied automatically — update the photo in Website content, then approve this to close it out.</p>' : ''}
+        <div class="mt-3">
+          <label class="mb-1 block text-xs font-semibold text-slate-700">Note (required if rejecting)</label>
+          <textarea class="review-note-input w-full rounded-md border border-slate-300 px-3 py-2 text-sm" rows="2"></textarea>
+        </div>
+        <div class="mt-3 flex items-center gap-3">
+          <button type="button" class="approve-button rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
+            Approve${canAutoApply ? ' and apply' : ''}
+          </button>
+          <button type="button" class="reject-button rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+            Reject
+          </button>
+          <span class="review-status text-sm"></span>
+        </div>
+      </div>`;
+      })
+      .join('');
+  }
+
+  function renderReviewed(suggestions: ContentSuggestion[]) {
+    reviewedEmpty.classList.toggle('hidden', suggestions.length > 0);
+    reviewedList.innerHTML = suggestions
+      .map((s) => {
+        const fieldLabel = FIELD_LABELS[s.field_name] ?? s.field_name;
+        const statusLabel =
+          s.status === 'approved' ? '<span class="text-emerald-700">Approved</span>' : '<span class="text-red-600">Rejected</span>';
+        const date = s.reviewed_at ? new Date(s.reviewed_at).toLocaleDateString() : '';
+        return `
+      <div class="rounded-md border border-slate-200 bg-white px-4 py-3 text-sm">
+        <div class="flex items-center justify-between">
+          <span class="font-semibold text-slate-700">${escapeHtml(pageTitle(s.page_id))} — ${escapeHtml(fieldLabel)}</span>
+          ${statusLabel}
+        </div>
+        <p class="mt-1 text-slate-600">"${escapeHtml(s.suggested_value)}"</p>
+        <p class="mt-1 text-xs text-slate-400">Reviewed ${date}</p>
+        ${s.reviewer_note ? `<p class="mt-2 rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600"><span class="font-semibold">Note: </span>${escapeHtml(s.reviewer_note)}</p>` : ''}
+      </div>`;
+      })
+      .join('');
+  }
+
+  async function loadSuggestions() {
+    const { data, error } = await supabase.from('content_suggestions').select('*').order('created_at', { ascending: false });
+    if (error) {
+      pendingList.innerHTML = `<p class="text-sm text-red-600">Could not load suggestions: ${escapeHtml(error.message)}</p>`;
+      return;
+    }
+    const suggestions = (data ?? []) as ContentSuggestion[];
+
+    const pageIds = [...new Set(suggestions.map((s) => s.page_id))];
+    if (pageIds.length > 0) {
+      const { data: pagesData } = await supabase.from('pages').select('id, title').in('id', pageIds);
+      pagesById = new Map((pagesData ?? []).map((p) => [p.id, p as PageInfo]));
+    }
+
+    renderPending(suggestions.filter((s) => s.status === 'pending'));
+    renderReviewed(suggestions.filter((s) => s.status !== 'pending'));
+  }
+
+  pendingList.addEventListener('click', async (event) => {
+    const target = event.target as HTMLElement;
+    const card = target.closest<HTMLElement>('[data-suggestion-id]');
+    if (!card) return;
+    const suggestionId = card.dataset.suggestionId!;
+    const noteInput = card.querySelector('.review-note-input') as HTMLTextAreaElement;
+    const statusEl = card.querySelector('.review-status') as HTMLElement;
+    const applyInput = card.querySelector('.apply-value-input') as HTMLTextAreaElement | null;
+
+    if (target.classList.contains('approve-button')) {
+      statusEl.textContent = 'Applying...';
+      statusEl.className = 'review-status text-sm text-slate-600';
+
+      // Look up the suggestion's own field_name/page_id fresh, rather than
+      // re-deriving it from the DOM — the card's data attribute only
+      // carries the id.
+      const { data: suggestion } = await supabase
+        .from('content_suggestions')
+        .select('page_id, field_name')
+        .eq('id', suggestionId)
+        .single();
+      if (!suggestion) {
+        statusEl.textContent = 'Could not find this suggestion.';
+        statusEl.className = 'review-status text-sm text-red-600';
+        return;
+      }
+
+      const column = FIELD_COLUMNS[suggestion.field_name];
+      if (column && applyInput) {
+        const { error: pageError } = await supabase
+          .from('pages')
+          .update({ [column]: applyInput.value.trim() || null })
+          .eq('id', suggestion.page_id);
+        if (pageError) {
+          statusEl.textContent = 'Could not apply: ' + pageError.message;
+          statusEl.className = 'review-status text-sm text-red-600';
+          return;
+        }
+      }
+
+      const { error } = await supabase
+        .from('content_suggestions')
+        .update({
+          status: 'approved',
+          reviewer_note: noteInput.value.trim() || null,
+          reviewed_by: currentAdminUser?.id,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', suggestionId);
+      if (error) {
+        statusEl.textContent = 'Could not save review: ' + error.message;
+        statusEl.className = 'review-status text-sm text-red-600';
+        return;
+      }
+
+      if (column) {
+        statusEl.textContent = 'Applied — updating your site...';
+        const result = await triggerRebuild();
+        if (!result.ok) {
+          statusEl.textContent = 'Applied, but the update trigger failed — it will go live on the next rebuild.';
+        }
+      }
+      await loadSuggestions();
+      return;
+    }
+
+    if (target.classList.contains('reject-button')) {
+      if (!noteInput.value.trim()) {
+        statusEl.textContent = 'A note is required when rejecting.';
+        statusEl.className = 'review-status text-sm text-red-600';
+        return;
+      }
+      statusEl.textContent = 'Saving...';
+      statusEl.className = 'review-status text-sm text-slate-600';
+      const { error } = await supabase
+        .from('content_suggestions')
+        .update({
+          status: 'rejected',
+          reviewer_note: noteInput.value.trim(),
+          reviewed_by: currentAdminUser?.id,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', suggestionId);
+      if (error) {
+        statusEl.textContent = 'Could not save review: ' + error.message;
+        statusEl.className = 'review-status text-sm text-red-600';
+        return;
+      }
+      await loadSuggestions();
+    }
+  });
+
+  async function onAuthed(adminUser: AdminUser) {
+    currentAdminUser = adminUser;
+    await loadSuggestions();
+  }
+
+  initAdminAuth(onAuthed, { allowedRoles: ['agency'] });
+</script>

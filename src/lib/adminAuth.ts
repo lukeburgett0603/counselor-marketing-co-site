@@ -13,21 +13,29 @@ export { supabase };
 export interface AdminUser {
   id: string;
   email: string;
-  role: 'owner' | 'staff';
+  // 'owner' is the client's own business owner. 'staff' is scoped to
+  // blog posts only. 'agency' is the agency's own super-admin access to
+  // this site — a distinct identity from 'owner', not just another
+  // instance of it, seeded directly (not through the normal invite flow
+  // a client would use) and exempt from the content-permission lock
+  // (see the enforce_content_permission trigger).
+  role: 'owner' | 'staff' | 'agency';
   status: 'pending' | 'active';
 }
 
 const ROLE_NAV_ACCESS: Record<AdminUser['role'], string[]> = {
   owner: ['leads', 'blog', 'content', 'team'],
   staff: ['blog'],
+  agency: ['leads', 'blog', 'content', 'team', 'suggestions'],
 };
 
 interface InitAdminAuthOptions {
-  // Set on any page that only an owner should ever see (leads, content,
-  // team) — a staff login that lands here gets redirected to /admin/blog
-  // rather than shown a page whose data RLS would mostly hide from them
-  // anyway. Blog, being usable by both roles, omits this.
-  ownerOnly?: boolean;
+  // Set on any page that only some roles should ever see (leads, content,
+  // team are owner+agency; suggestions is agency-only) — a login whose
+  // role isn't listed gets redirected to /admin/blog rather than shown a
+  // page whose data RLS would mostly hide from them anyway. Blog, being
+  // usable by every role, omits this.
+  allowedRoles?: AdminUser['role'][];
 }
 
 // Standard element ids every admin page's markup provides (see
@@ -79,6 +87,25 @@ export function initAdminAuth(
     });
   }
 
+  // "Check when you log in" is the whole notification strategy for
+  // Phase 6 (no email/Slack alert, deliberately deferred) — a pending
+  // count badge on the Suggestions nav item is what makes that work
+  // instead of the agency having to remember to click in and check.
+  async function updateSuggestionsBadge() {
+    const badge = document.querySelector<HTMLElement>('[data-suggestions-badge]');
+    if (!badge) return;
+    const { count } = await supabase
+      .from('content_suggestions')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending');
+    if (count && count > 0) {
+      badge.textContent = String(count);
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  }
+
   function showLoginState() {
     hideAllViews();
     loginView.style.display = '';
@@ -100,13 +127,16 @@ export function initAdminAuth(
       showNoAccessState();
       return;
     }
-    if (options.ownerOnly && adminUser.role !== 'owner') {
+    if (options.allowedRoles && !options.allowedRoles.includes(adminUser.role)) {
       window.location.href = withBase('/admin/blog');
       return;
     }
     hideAllViews();
     adminContent.style.display = '';
     applyNavAccess(adminUser.role);
+    if (adminUser.role === 'agency') {
+      updateSuggestionsBadge();
+    }
     await onAuthed(adminUser);
   }
 

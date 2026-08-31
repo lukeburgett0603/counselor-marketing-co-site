@@ -104,9 +104,7 @@ import RichTextEditor from '../../components/RichTextEditor.astro';
 <script>
   import { supabase, initAdminAuth, type AdminUser } from '../../lib/adminAuth';
   import { initRichTextEditor } from '../../lib/richTextEditor';
-
-  const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
-  const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+  import { triggerRebuild } from '../../lib/publishFunction';
 
   type BlogPost = {
     id: string;
@@ -159,7 +157,11 @@ import RichTextEditor from '../../components/RichTextEditor.astro';
   let currentAdminUser: AdminUser | null = null;
 
   function canEditPost(post: BlogPost): boolean {
-    return currentAdminUser?.role === 'owner' || post.created_by === currentAdminUser?.id;
+    return (
+      currentAdminUser?.role === 'owner' ||
+      currentAdminUser?.role === 'agency' ||
+      post.created_by === currentAdminUser?.id
+    );
   }
 
   function slugify(text: string): string {
@@ -379,25 +381,11 @@ import RichTextEditor from '../../components/RichTextEditor.astro';
 
     if (publish) {
       formStatus.textContent = 'Publishing your post...';
-      const { data: sessionData } = await supabase.auth.getSession();
-      try {
-        const response = await fetch(`${SUPABASE_URL}/functions/v1/publish-site`, {
-          method: 'POST',
-          headers: {
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${sessionData.session?.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ action: 'publish' }),
-        });
-        if (response.ok) {
-          formStatus.textContent = 'Published! Your blog post will be live on your site shortly.';
-          formStatus.className = 'text-sm text-emerald-700';
-        } else {
-          formStatus.textContent = "Saved, but we couldn't start an update automatically — your post will go live the next time the site updates.";
-          formStatus.className = 'text-sm text-amber-700';
-        }
-      } catch {
+      const result = await triggerRebuild();
+      if (result.ok) {
+        formStatus.textContent = 'Published! Your blog post will be live on your site shortly.';
+        formStatus.className = 'text-sm text-emerald-700';
+      } else {
         formStatus.textContent = "Saved, but we couldn't start an update automatically — your post will go live the next time the site updates.";
         formStatus.className = 'text-sm text-amber-700';
       }

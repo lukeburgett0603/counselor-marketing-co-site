@@ -7,7 +7,8 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     <section>
       <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold text-brand-ink">Team</h2>
       <p class="mb-4 text-sm text-slate-600">
-        Owners have full access. Staff can only create and manage their own blog posts.
+        Owners have full access. Staff can only create and manage their own blog posts. Agency support access can't
+        be revoked from here.
       </p>
       <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
         <table class="w-full text-left text-sm">
@@ -53,14 +54,12 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 
 <script>
   import { supabase, initAdminAuth, type AdminUser } from '../../lib/adminAuth';
-
-  const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
-  const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+  import { callPublishFunction } from '../../lib/publishFunction';
 
   type TeamMember = {
     id: string;
     email: string;
-    role: 'owner' | 'staff';
+    role: 'owner' | 'staff' | 'agency';
     status: 'pending' | 'active';
   };
 
@@ -76,28 +75,6 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     const div = document.createElement('div');
     div.textContent = value;
     return div.innerHTML;
-  }
-
-  async function callTeamAction(body: Record<string, unknown>): Promise<{ ok: boolean; error?: string }> {
-    const { data: sessionData } = await supabase.auth.getSession();
-    try {
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/publish-site`, {
-        method: 'POST',
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${sessionData.session?.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        return { ok: false, error: result.error ?? 'Something went wrong.' };
-      }
-      return { ok: true };
-    } catch (err) {
-      return { ok: false, error: String(err) };
-    }
   }
 
   async function loadTeam() {
@@ -118,7 +95,11 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         if (member.status === 'pending') {
           actions.push(`<button data-resend-id="${member.id}" class="resend-button text-brand-primary hover:underline">Resend invite</button>`);
         }
-        if (!isSelf) {
+        // An agency row can only ever be revoked by another agency login
+        // — matches the RLS policy (see 0013), which is the real
+        // boundary; this just avoids offering a button that would fail.
+        const canRevoke = !isSelf && (member.role !== 'agency' || currentAdminUser?.role === 'agency');
+        if (canRevoke) {
           actions.push(`<button data-revoke-id="${member.id}" class="revoke-button text-red-600 hover:underline">Revoke</button>`);
         }
         return `
@@ -138,7 +119,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     const resendId = target.dataset.resendId;
     if (resendId) {
       target.textContent = 'Resending...';
-      const result = await callTeamAction({ action: 'resend', userId: resendId });
+      const result = await callPublishFunction({ action: 'resend', userId: resendId });
       if (!result.ok) {
         window.alert('Could not resend: ' + result.error);
       }
@@ -169,7 +150,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     inviteStatus.className = 'text-sm text-slate-600';
     inviteSubmitButton.disabled = true;
 
-    const result = await callTeamAction({ action: 'invite', email, role: inviteRole.value });
+    const result = await callPublishFunction({ action: 'invite', email, role: inviteRole.value });
 
     inviteSubmitButton.disabled = false;
     if (!result.ok) {
@@ -185,8 +166,17 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 
   async function onAuthed(adminUser: AdminUser) {
     currentAdminUser = adminUser;
+    // Only an existing agency admin can grant agency-level access —
+    // matches the Edge Function's own check — so a plain owner never
+    // even sees the option.
+    if (adminUser.role === 'agency') {
+      const agencyOption = document.createElement('option');
+      agencyOption.value = 'agency';
+      agencyOption.textContent = 'Agency — full CMC support access';
+      inviteRole.appendChild(agencyOption);
+    }
     await loadTeam();
   }
 
-  initAdminAuth(onAuthed, { ownerOnly: true });
+  initAdminAuth(onAuthed, { allowedRoles: ['owner', 'agency'] });
 </script>
