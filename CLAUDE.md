@@ -230,6 +230,33 @@ before touching the related code on a future client site.
   (`lib/publishFunction.ts`). Any *new* content-editing save action needs
   this too — it's easy to add a save button and forget the site doesn't
   rebuild itself just because Supabase accepted the write.
+- **An invite/recovery email's destination silently depends on the
+  Supabase dashboard's "Site URL" setting, which has no connection to
+  the actual code and goes stale the moment a route changes.** Found in
+  production, not testing: a real password-reset link sent the client
+  to `/leads` — the pre-Phase-3 route — because Site URL had been set
+  once, early on, and never updated when Phase 3 moved that page to
+  `/admin/leads`. First click 404'd; the second attempt (after fixing
+  Site URL in the dashboard) also failed because the original token had
+  since expired, requiring a fresh email. **The real fix isn't "remember
+  to keep Site URL updated" — it's not depending on it at all.** Every
+  call that sends an invite/recovery email now passes an explicit
+  `redirectTo`, computed client-side via `window.location.origin +
+  withBase('/admin/leads')` at the moment of the call (see
+  `admin/team.astro`'s `inviteRedirectTo` and `adminAuth.ts`'s
+  "Forgot password?" handler) — this can never drift out of sync with
+  the actual app, unlike a dashboard field nobody remembers to revisit.
+  `supabase/functions/publish-site`'s `invite`/`resend` actions forward
+  whatever `redirectTo` the caller provides straight into
+  `inviteUserByEmail(email, { redirectTo })` rather than guessing at a
+  fixed value themselves — the function has no reliable way to know the
+  site's own public URL from its own environment anyway. Site URL still
+  exists as a fallback for anything that doesn't pass `redirectTo`
+  explicitly, but nothing in this app depends on it being correct
+  anymore. Also added a real self-service "Forgot password?" link to the
+  login form itself (previously the agency had to manually trigger a
+  reset via script) — same `redirectTo` pattern, so it was the natural
+  place to fix this properly rather than as a one-off patch.
 
 ## Client dashboard (`/admin/leads` login)
 

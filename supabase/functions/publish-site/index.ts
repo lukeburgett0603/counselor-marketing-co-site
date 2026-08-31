@@ -176,7 +176,14 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: 'Only an existing agency admin can grant agency-level access' }, 403);
     }
 
-    const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email);
+    // The caller computes this via withBase() from wherever it's actually
+    // running, rather than this function guessing — see the comment on
+    // 'resend' below for why that matters.
+    const redirectTo = typeof body.redirectTo === 'string' ? body.redirectTo : undefined;
+    const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(
+      email,
+      redirectTo ? { redirectTo } : undefined
+    );
     if (inviteError || !inviteData.user) {
       return jsonResponse({ error: inviteError?.message ?? 'Could not send invite' }, 400);
     }
@@ -212,7 +219,19 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: 'This person has already activated their login' }, 400);
   }
 
-  const { error: resendError } = await adminClient.auth.admin.inviteUserByEmail(targetRow.email);
+  // This function has no reliable way to know the site's own public URL
+  // on its own (it only has Supabase config in its environment) — the
+  // caller knows it, via window.location + withBase(), so it's passed
+  // through here rather than this function guessing at a fixed value or
+  // depending on the Supabase dashboard's "Site URL" setting. Without
+  // this, an invite/reset link silently falls back to whatever that
+  // dashboard setting happens to be, which has no connection to the
+  // actual app code and can go stale the moment a route changes (see
+  // CLAUDE.md's real-bugs list — this is exactly what happened once).
+  const redirectTo = typeof body.redirectTo === 'string' ? body.redirectTo : undefined;
+  const inviteOptions = redirectTo ? { redirectTo } : undefined;
+
+  const { error: resendError } = await adminClient.auth.admin.inviteUserByEmail(targetRow.email, inviteOptions);
   if (!resendError) {
     return jsonResponse({ ok: true });
   }
@@ -229,7 +248,8 @@ Deno.serve(async (req: Request) => {
   await adminClient.from('admin_users').delete().eq('id', userId);
 
   const { data: reinviteData, error: reinviteError } = await adminClient.auth.admin.inviteUserByEmail(
-    targetRow.email
+    targetRow.email,
+    inviteOptions
   );
   if (reinviteError || !reinviteData.user) {
     return jsonResponse({ error: reinviteError?.message ?? 'Could not resend invite' }, 400);

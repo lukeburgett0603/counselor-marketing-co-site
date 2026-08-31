@@ -70,6 +70,25 @@ const navItems = [
         </button>
         <p id="login-status" class="text-center text-sm text-red-600" role="status"></p>
       </form>
+      <button id="forgot-password-link" type="button" class="mt-4 block w-full text-center text-sm text-brand-primary hover:underline">
+        Forgot password?
+      </button>
+      <form id="forgot-password-form" class="mt-4 hidden space-y-4">
+        <input
+          name="email"
+          type="email"
+          placeholder="Email"
+          required
+          class="w-full rounded-md border border-slate-300 px-4 py-2"
+        />
+        <button
+          type="submit"
+          class="w-full rounded-md border border-slate-300 px-6 py-3 font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          Send reset link
+        </button>
+        <p id="forgot-password-status" class="text-center text-sm" role="status"></p>
+      </form>
     </div>
 
     <div id="set-password-view" class="mx-auto max-w-sm px-6 py-16" style="display: none;">

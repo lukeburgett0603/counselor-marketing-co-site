@@ -55,6 +55,14 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 <script>
   import { supabase, initAdminAuth, type AdminUser } from '../../lib/adminAuth';
   import { callPublishFunction } from '../../lib/publishFunction';
+  import { withBase } from '../../lib/url';
+
+  // Computed here (with the browser's own origin, since withBase() alone
+  // only returns a path — Supabase needs a full absolute URL for its
+  // email template), not guessed by the Edge Function — see the comment
+  // in supabase/functions/publish-site/index.ts for why relying on the
+  // Supabase dashboard's "Site URL" setting instead was a real bug.
+  const inviteRedirectTo = window.location.origin + withBase('/admin/leads');
 
   type TeamMember = {
     id: string;
@@ -119,7 +127,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     const resendId = target.dataset.resendId;
     if (resendId) {
       target.textContent = 'Resending...';
-      const result = await callPublishFunction({ action: 'resend', userId: resendId });
+      const result = await callPublishFunction({ action: 'resend', userId: resendId, redirectTo: inviteRedirectTo });
       if (!result.ok) {
         window.alert('Could not resend: ' + result.error);
       }
@@ -150,7 +158,12 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     inviteStatus.className = 'text-sm text-slate-600';
     inviteSubmitButton.disabled = true;
 
-    const result = await callPublishFunction({ action: 'invite', email, role: inviteRole.value });
+    const result = await callPublishFunction({
+      action: 'invite',
+      email,
+      role: inviteRole.value,
+      redirectTo: inviteRedirectTo,
+    });
 
     inviteSubmitButton.disabled = false;
     if (!result.ok) {

@@ -56,6 +56,9 @@ export function initAdminAuth(
   const setPasswordStatus = document.getElementById('set-password-status')!;
   const logoutButton = document.getElementById('logout-button');
   const noAccessLogoutButton = document.getElementById('no-access-logout-button');
+  const forgotPasswordLink = document.getElementById('forgot-password-link');
+  const forgotPasswordForm = document.getElementById('forgot-password-form') as HTMLFormElement | null;
+  const forgotPasswordStatus = document.getElementById('forgot-password-status');
 
   // Inline style, not classList — see the comment on #admin-content in
   // AdminLayout.astro for why toggling Tailwind's `hidden` class doesn't
@@ -197,6 +200,31 @@ export function initAdminAuth(
     }
     history.replaceState(null, '', window.location.pathname);
     await tryShowAuthed();
+  });
+
+  // A real self-service "Forgot password?" flow — this is also the fix
+  // for the recovery-link-lands-on-a-404 class of bug: rather than
+  // depending on the Supabase dashboard's "Site URL" setting (which has
+  // no connection to the actual code and silently goes stale whenever a
+  // route changes — see CLAUDE.md), this tells Supabase explicitly where
+  // to send the link, computed via withBase() the same way every other
+  // link in the app is, so it's always correct.
+  forgotPasswordLink?.addEventListener('click', () => {
+    forgotPasswordForm?.classList.toggle('hidden');
+  });
+
+  forgotPasswordForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (forgotPasswordStatus) forgotPasswordStatus.textContent = '';
+    const formData = new FormData(forgotPasswordForm);
+    const { error } = await supabase.auth.resetPasswordForEmail(formData.get('email') as string, {
+      redirectTo: window.location.origin + withBase('/admin/leads'),
+    });
+    if (!forgotPasswordStatus) return;
+    forgotPasswordStatus.textContent = error
+      ? error.message
+      : 'If an account exists for that email, a reset link is on its way.';
+    forgotPasswordStatus.className = 'text-center text-sm ' + (error ? 'text-red-600' : 'text-emerald-700');
   });
 
   logoutButton?.addEventListener('click', async () => {
