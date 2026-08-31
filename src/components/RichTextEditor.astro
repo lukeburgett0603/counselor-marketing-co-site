@@ -1,0 +1,45 @@
+---
+// Toolbar + contenteditable box for any admin field backed by a markdown
+// `copy`-style column. Pairs with lib/richTextEditor.ts's
+// initRichTextEditor(id), which wires up every element below by the same
+// `id` — see that file for the full reasoning (non-technical clients don't
+// know markdown; the stored format stays markdown for every other reader
+// of it, so this round-trips through markdown silently rather than
+// changing the storage format).
+interface Props {
+  id: string;
+  helpText?: string;
+}
+
+const { id, helpText } = Astro.props;
+---
+
+<div>
+  <div class="flex flex-wrap items-center gap-1 rounded-t-md border border-b-0 border-slate-300 bg-slate-50 px-2 py-1.5">
+    <select id={`${id}-style`} title="Text style" class="rounded border border-slate-300 bg-white px-2 py-1 text-sm">
+      <option value="<p>">Paragraph</option>
+      <option value="<h2>">Heading 2</option>
+      <option value="<h3>">Heading 3</option>
+    </select>
+    <div class="mx-1 h-5 w-px bg-slate-300"></div>
+    <button type="button" id={`${id}-bold`} title="Bold" class="rounded px-2.5 py-1 text-sm font-bold hover:bg-slate-200">
+      B
+    </button>
+    <button type="button" id={`${id}-italic`} title="Italic" class="rounded px-2.5 py-1 text-sm italic hover:bg-slate-200">
+      I
+    </button>
+    <button type="button" id={`${id}-underline`} title="Underline" class="rounded px-2.5 py-1 text-sm underline hover:bg-slate-200">
+      U
+    </button>
+    <button type="button" id={`${id}-link`} title="Insert link" class="rounded px-2.5 py-1 text-sm hover:bg-slate-200">
+      Link
+    </button>
+  </div>
+  <div
+    id={id}
+    contenteditable="true"
+    class="prose prose-sm min-h-[240px] max-w-none rounded-b-md border border-slate-300 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary/30"
+  >
+  </div>
+  {helpText && <p class="mt-1 text-xs text-slate-500">{helpText}</p>}
+</div>

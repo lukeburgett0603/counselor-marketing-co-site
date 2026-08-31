@@ -1,0 +1,22 @@
+---
+// A field that's locked on every content-permission tier (h1,
+// meta_description, focus_keyword) — a read-only value plus the
+// "Suggest an edit" affordance. See admin/content.astro's script for how
+// `[data-field]`/`[data-locked-value]` get populated.
+import SuggestEdit from './SuggestEdit.astro';
+
+interface Props {
+  fieldKey: string;
+  label: string;
+}
+
+const { fieldKey, label } = Astro.props;
+---
+
+<div data-field={fieldKey}>
+  <label class="mb-1 block text-sm font-semibold text-slate-700">{label}</label>
+  <p class="locked-view rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700" data-locked-value>
+  </p>
+  <p class="mt-1 text-xs text-slate-500">Your SEO strategist manages this to protect your rankings.</p>
+  <SuggestEdit fieldLabel={label} />
+</div>

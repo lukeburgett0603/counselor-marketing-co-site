@@ -1,0 +1,31 @@
+---
+// The "Suggest an edit" affordance for one locked/tier-gated admin/content
+// field: a toggle that reveals a small textarea + submit button, wired up
+// generically in admin/content.astro's script (it looks up these elements
+// by class within the nearest `[data-field]` ancestor, so this component
+// carries no id of its own — every field on the page can reuse it).
+interface Props {
+  fieldLabel: string;
+}
+
+const { fieldLabel } = Astro.props;
+---
+
+<div class="suggest-edit-wrap">
+  <button type="button" class="suggest-edit-button mt-1 text-xs text-brand-primary hover:underline">
+    Suggest an edit
+  </button>
+  <div class="suggest-form mt-2 hidden space-y-2">
+    <textarea
+      rows="2"
+      class="suggest-textarea w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      placeholder={`What would you like "${fieldLabel}" changed to?`}
+    ></textarea>
+    <div class="flex items-center gap-2">
+      <button type="button" class="submit-suggestion-button rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+        Submit suggestion
+      </button>
+      <span class="suggest-status text-xs"></span>
+    </div>
+  </div>
+</div>

@@ -347,6 +347,67 @@ specifically. See the real-bugs list above for two issues found while
 building this (the rsync-deletion gap and the Tailwind `hidden`/`md:flex`
 bug) — both are general patterns, not one-off admin-page mistakes.
 
+**Website content section (`admin/content.astro`, built 2026-08-30) —
+content-permission tiers are enforced server-side, not just hidden in the
+UI.** `business.content_permission_level` (`'restricted'` | `'full'`,
+default `'restricted'`) drives which fields render editable vs.
+locked-with-a-suggestion. Three sub-areas on one page:
+- **Business info** (phone, email, address, `client_portal_url`) — safe on
+  every tier, a plain form, direct `business` UPDATE.
+- **Testimonials** — a page picker + quote/author/role, safe on every
+  tier, direct `pages` UPDATE (these columns aren't covered by the trigger
+  below, so this works regardless of tier).
+- **Page copy** — a page picker (every page type except Blog Post/Blog
+  Index, which have their own section) showing: `h1`/`meta_description`/
+  `focus_keyword` always locked, on every tier; `hero_subhead`/`copy`/
+  `images` locked unless the tier is `'full'`. The `copy` field reuses the
+  same rich-text-editor-backed-by-markdown pattern as the blog editor
+  (see below) — extracted into `components/RichTextEditor.astro` +
+  `lib/richTextEditor.ts` specifically so this section didn't have to
+  duplicate it.
+
+**The tier restriction is enforced by a Postgres trigger
+(`enforce_content_permission()`, `0011_content_permission_and_suggestions.sql`),
+not merely by which controls the UI renders.** RLS alone can't do
+column-level checks (`USING`/`WITH CHECK` only see the row, not which
+columns changed), so a `BEFORE UPDATE` trigger on `pages` compares
+`NEW`/`OLD` per protected column and raises an exception if a locked field
+changed — `h1`/`meta_description`/`focus_keyword` unconditionally, `hero_subhead`/
+`copy`/`images` only when `business.content_permission_level <> 'full'`.
+Blog Post rows are exempt from the trigger entirely (`new.page_type =
+'Blog Post' then return new`) — that's new additive content the client
+fully owns creating via `admin/blog.astro`, not part of this tiered system
+for editing *existing* pages. Verified this is real enforcement, not just
+UI theater, by calling the REST API directly with a valid authenticated
+session and no admin UI involved: got back the trigger's own Postgres
+exception (`P0001`), not a silent no-op or a UI-only block.
+
+**Locked fields get a "Suggest an edit" affordance
+(`components/SuggestEdit.astro`, the `content_suggestions` table)
+instead of a save button.** Every client site gets the ability to
+*submit* a suggestion (`page_id`, `field_name`, `current_value` snapshot,
+`suggested_value`, `submitted_by`); nobody has a *review* UI yet — that's
+explicitly backlogged, Counselor-Marketing-Co-only (see project memory).
+The submit-side RLS policy is intentionally simple: any authenticated
+user can insert, and can read back only their own submissions
+(`auth.uid() = submitted_by`) — good enough for a single-owner-login site;
+Phase 5's multi-user roles may need to revisit the read policy so an
+`owner` can see suggestions submitted by `staff`.
+
+**Verification pattern for this section, since (unlike blog posts) it
+edits real existing page content, not disposable new rows**: capture the
+exact current value of every field about to be touched *before* testing,
+make the edit, verify it saved (including a direct REST bypass attempt
+with the temp user's own session to confirm the trigger really blocks a
+locked field — got the `P0001` exception back), then restore the exact
+original value and verify that too, rather than just trusting an "it
+looked right" pass. Confirmed the rich-text editor's markdown round-trip
+is lossless against real production copy (bold text, multiple headings),
+not just synthetic test content. `content_permission_level` was flipped
+to `'full'` temporarily to test that path, then reverted — CMC's own site
+stays on the schema default (`'restricted'`) since it isn't a real tiered
+client of its own product.
+
 ## Hub-and-spoke content (Content Pillar + Blog Post + Blog Index)
 
 Built 2026-08-29, first shipped on Counselor Marketing Co. — see

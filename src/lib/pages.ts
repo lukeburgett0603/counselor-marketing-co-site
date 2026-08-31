@@ -90,6 +90,10 @@ export interface Business {
   // A link to the business's EHR client portal (SimplePractice,
   // TherapyNotes, etc.) for existing clients — see 0009_client_portal_url.sql.
   client_portal_url: string | null;
+  // Drives which /admin/content fields render as directly editable vs.
+  // locked-with-a-suggestion — see 0011_content_permission_and_suggestions.sql
+  // and CLAUDE.md's Admin CMS content-permission-tier section.
+  content_permission_level: 'restricted' | 'full';
 }
 
 // Only content-complete pages are ever rendered — a page left at

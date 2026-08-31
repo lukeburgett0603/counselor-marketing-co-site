@@ -1,5 +1,6 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
+import RichTextEditor from '../../components/RichTextEditor.astro';
 ---
 
 <AdminLayout title="Blog posts | Admin" current="blog">
@@ -57,40 +58,10 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       </div>
       <div>
         <label class="mb-1 block text-sm font-semibold text-slate-700">Post content</label>
-        <div class="flex flex-wrap items-center gap-1 rounded-t-md border border-b-0 border-slate-300 bg-slate-50 px-2 py-1.5">
-          <select
-            id="editor-style-select"
-            title="Text style"
-            class="rounded border border-slate-300 bg-white px-2 py-1 text-sm"
-          >
-            <option value="<p>">Paragraph</option>
-            <option value="<h2>">Heading 2</option>
-            <option value="<h3>">Heading 3</option>
-          </select>
-          <div class="mx-1 h-5 w-px bg-slate-300"></div>
-          <button type="button" id="editor-bold-button" title="Bold" class="rounded px-2.5 py-1 text-sm font-bold hover:bg-slate-200">
-            B
-          </button>
-          <button type="button" id="editor-italic-button" title="Italic" class="rounded px-2.5 py-1 text-sm italic hover:bg-slate-200">
-            I
-          </button>
-          <button type="button" id="editor-underline-button" title="Underline" class="rounded px-2.5 py-1 text-sm underline hover:bg-slate-200">
-            U
-          </button>
-          <button type="button" id="editor-link-button" title="Insert link" class="rounded px-2.5 py-1 text-sm hover:bg-slate-200">
-            Link
-          </button>
-        </div>
-        <div
+        <RichTextEditor
           id="field-copy"
-          contenteditable="true"
-          class="prose prose-sm min-h-[240px] max-w-none rounded-b-md border border-slate-300 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary/30"
-        >
-        </div>
-        <p class="mt-1 text-xs text-slate-500">
-          Heading 1 is reserved for the post title — use Heading 2 and Heading 3 for
-          section headings within the post.
-        </p>
+          helpText="Heading 1 is reserved for the post title — use Heading 2 and Heading 3 for section headings within the post."
+        />
       </div>
       <div>
         <label class="mb-1 block text-sm font-semibold text-slate-700">Key takeaways (one per line, optional)</label>
@@ -128,23 +99,8 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 </AdminLayout>
 
 <script>
-  import TurndownService from 'turndown';
   import { supabase, initAdminAuth } from '../../lib/adminAuth';
-  import { renderCopy } from '../../lib/markdown';
-
-  // Clients write posts in a plain rich-text box, not raw markdown — the
-  // `pages.copy` column stays markdown regardless (every other page type
-  // in the CMS, and the rendering pipeline in lib/markdown.ts, assumes
-  // that), so this editor round-trips through it silently: an existing
-  // post's markdown is rendered to HTML to seed the editor, and the
-  // edited HTML is converted back to markdown via turndown on save.
-  const turndownService = new TurndownService({ headingStyle: 'atx' });
-  // Markdown has no native underline syntax; keep it as inline HTML,
-  // which marked.parse() (lib/markdown.ts) passes through untouched.
-  turndownService.addRule('underline', {
-    filter: ['u'],
-    replacement: (content) => `<u>${content}</u>`,
-  });
+  import { initRichTextEditor } from '../../lib/richTextEditor';
 
   const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
   const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
@@ -185,12 +141,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   const imageStatus = document.getElementById('field-image-status')!;
   const imageAltField = document.getElementById('field-image-alt') as HTMLInputElement;
   const metaField = document.getElementById('field-meta') as HTMLTextAreaElement;
-  const copyEditor = document.getElementById('field-copy') as HTMLDivElement;
-  const styleSelect = document.getElementById('editor-style-select') as HTMLSelectElement;
-  const boldButton = document.getElementById('editor-bold-button')!;
-  const italicButton = document.getElementById('editor-italic-button')!;
-  const underlineButton = document.getElementById('editor-underline-button')!;
-  const linkButton = document.getElementById('editor-link-button')!;
+  const copyEditor = initRichTextEditor('field-copy');
   const takeawaysField = document.getElementById('field-takeaways') as HTMLTextAreaElement;
   const authorField = document.getElementById('field-author') as HTMLInputElement;
   const credentialsField = document.getElementById('field-credentials') as HTMLInputElement;
@@ -222,55 +173,6 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   });
   slugField.addEventListener('input', () => {
     slugTouchedManually = true;
-  });
-
-  // execCommand is deprecated but still the only way to drive a plain
-  // contenteditable without pulling in a full editor framework — fine
-  // for this small, fixed feature set (style/bold/italic/underline/link)
-  // on an internal admin tool. Clicking a toolbar button would otherwise
-  // blur the editor and collapse the selection before the command runs,
-  // so the last selection inside the editor is tracked and restored
-  // immediately before every command.
-  document.execCommand('defaultParagraphSeparator', false, 'p');
-  let savedRange: Range | null = null;
-
-  function saveSelection() {
-    const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0 && copyEditor.contains(selection.anchorNode)) {
-      savedRange = selection.getRangeAt(0).cloneRange();
-    }
-  }
-
-  function applyCommand(command: string, value?: string) {
-    copyEditor.focus();
-    if (savedRange) {
-      const selection = window.getSelection();
-      selection?.removeAllRanges();
-      selection?.addRange(savedRange);
-    }
-    document.execCommand(command, false, value);
-    saveSelection();
-  }
-
-  copyEditor.addEventListener('keyup', saveSelection);
-  copyEditor.addEventListener('mouseup', saveSelection);
-  copyEditor.addEventListener('input', saveSelection);
-
-  for (const button of [boldButton, italicButton, underlineButton, linkButton]) {
-    button.addEventListener('mousedown', (event) => event.preventDefault());
-  }
-  boldButton.addEventListener('click', () => applyCommand('bold'));
-  italicButton.addEventListener('click', () => applyCommand('italic'));
-  underlineButton.addEventListener('click', () => applyCommand('underline'));
-  linkButton.addEventListener('click', () => {
-    const url = window.prompt('Link URL:');
-    if (!url) return;
-    applyCommand('createLink', url);
-  });
-  styleSelect.addEventListener('mousedown', saveSelection);
-  styleSelect.addEventListener('change', () => {
-    applyCommand('formatBlock', styleSelect.value);
-    styleSelect.value = '<p>';
   });
 
   async function loadCategories() {
@@ -323,7 +225,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     slugTouchedManually = false;
     uploadedImageUrl = null;
     postForm.reset();
-    copyEditor.innerHTML = '';
+    copyEditor.setMarkdown(null);
     imageStatus.textContent = '';
     deleteButton.classList.add('hidden');
     editHeading.textContent = 'New post';
@@ -340,7 +242,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     imageAltField.value = post.images?.hero?.alt ?? '';
     imageStatus.textContent = uploadedImageUrl ? 'Current image on file — choose a new one to replace it.' : '';
     metaField.value = post.meta_description ?? '';
-    copyEditor.innerHTML = renderCopy(post.copy);
+    copyEditor.setMarkdown(post.copy);
     takeawaysField.value = (post.key_takeaways ?? []).join('\n');
     authorField.value = post.author_name ?? '';
     credentialsField.value = post.credentials ?? '';
@@ -387,7 +289,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     if (!slugField.value.trim()) return 'Slug is required.';
     if (!categoryField.value) return 'Choose a category.';
     if (!metaField.value.trim()) return 'Meta description is required.';
-    if (!copyEditor.textContent?.trim()) return 'Post content is required.';
+    if (!copyEditor.editor.textContent?.trim()) return 'Post content is required.';
     if (!authorField.value.trim()) return 'Author name is required.';
     if (uploadedImageUrl && !imageAltField.value.trim()) return 'Alt text is required for the hero image.';
     return null;
@@ -419,7 +321,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       meta_title: `${titleField.value.trim()} | Blog`,
       meta_description: metaField.value.trim(),
       category: categoryField.value,
-      copy: turndownService.turndown(copyEditor.innerHTML),
+      copy: copyEditor.getMarkdown(),
       key_takeaways: takeaways,
       author_name: authorField.value.trim(),
       credentials: credentialsField.value.trim() || null,
