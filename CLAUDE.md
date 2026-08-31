@@ -408,6 +408,88 @@ to `'full'` temporarily to test that path, then reverted — CMC's own site
 stays on the schema default (`'restricted'`) since it isn't a real tiered
 client of its own product.
 
+**Multi-user roles (`admin_users`, built 2026-08-31) — two roles only,
+`owner` and `staff`.** Owner has full access; staff is scoped to blog
+posts only, and only their own (owner can edit/delete anyone's).
+`admin_users` (`id` referencing `auth.users`, `email`, `role`, `status`
+`'pending'`/`'active'`) is a real Postgres table, not JWT metadata, so
+"who has access" is a normal query the Team screen renders directly.
+`pages.created_by` records which admin login actually created a Blog Post
+row, kept separate from `author_name`/`credentials` (the public byline) —
+a staff member's login and their byline won't always match.
+
+- **Self-referential RLS via a `SECURITY DEFINER` helper, not a raw
+  subquery.** A policy on `admin_users` that needs "is the caller an
+  owner?" can't safely query `admin_users` again in its own `USING`
+  clause (that re-triggers `admin_users`' own RLS on the inner query).
+  `is_owner()` is `SECURITY DEFINER`, so it looks itself up bypassing
+  RLS — the standard pattern for this, reused by every other role check
+  in `0012_multi_user_roles.sql` (blog CRUD, business/non-blog-pages
+  UPDATE, leads, content_suggestions).
+- **Every existing "any authenticated user" policy from Phases 3-4 got
+  rewritten to be role-aware** — blog CRUD now checks `is_owner() OR
+  created_by = auth.uid()`; business/non-blog-pages/leads/
+  content_suggestions all became owner-only (`is_owner()`). Any *new*
+  write policy added later needs the same treatment — "authenticated"
+  alone is no longer a sufficient check anywhere admin roles matter.
+- **An invited user activating their own account is the one
+  client-reachable write path onto `admin_users`**, and it's narrowed to
+  exactly that by a trigger (`enforce_admin_user_self_activation`), not
+  just the RLS policy — RLS alone can't stop someone from flipping their
+  own `role` to `'owner'` in the same UPDATE call that legitimately
+  flips `status` from `pending` to `active`. Same "RLS can't do
+  column-level checks, use a trigger" pattern as Phase 4's
+  `enforce_content_permission`.
+- **The invite/resend Edge Function is the same `publish-site` function
+  from Phase 2, extended with an `action` field** (`'publish'` |
+  `'invite'` | `'resend'`), not a new function — this was deliberately
+  left as a seam in Phase 2's own code comment, since invite/resend need
+  the identical "verify_jwt isn't enough, check the caller's own
+  session" preamble `publish` already has, plus one more check:
+  `invite`/`resend` also confirm the caller is an *active owner* in
+  `admin_users` (via the service_role client, bypassing RLS) — "is a
+  real logged-in admin" isn't tight enough for an action that can create
+  other admin logins.
+- **This project's Supabase instance uses the default shared email
+  service, which has a low, easy-to-hit send rate limit** (a few emails
+  per hour) — discovered while testing the invite flow, not from
+  documentation. A real client sending several staff invites in a short
+  window will hit "email rate limit exceeded." Worth flagging to a
+  client who plans to invite more than one or two people at once —
+  configuring custom SMTP (Resend, Postmark, etc.) in Supabase's Auth
+  settings removes this ceiling, but isn't set up by default and wasn't
+  part of this phase's scope.
+- **Resend is written to work whether or not Supabase's API resends
+  cleanly for an already-invited-but-unconfirmed email** (behavior that
+  turned out to be untestable live, due to the rate limit above): try
+  `inviteUserByEmail` again first, and if that errors, fall back to
+  deleting the stale unconfirmed Auth user + `admin_users` row and
+  inviting fresh — so "Resend" works either way rather than depending on
+  one specific undocumented API behavior.
+- **Nav access and page redirects are enforced in `adminAuth.ts`, not
+  per-page** — `initAdminAuth`'s `{ ownerOnly: true }` option (set on
+  leads/content/team, omitted on blog) redirects a `staff` login to
+  `/admin/blog` before it ever renders an owner-only page, and
+  `applyNavAccess()` hides sidebar nav items (`data-nav-key` on each
+  `<li>` in `AdminLayout.astro`) a role can't use. RLS is still the real
+  boundary (a staff login hitting `/admin/content` directly would just
+  see a page whose writes silently fail otherwise) — this is the good
+  UX layered on top of it, not a substitute for it.
+- **Verification pattern**: temporary throwaway `owner` and `staff`
+  Auth users + `admin_users` rows (created directly via service_role,
+  bypassing the real invite email entirely, specifically to avoid the
+  rate limit above) — logged in as each through the real browser to
+  confirm nav filtering and redirects, then confirmed the RLS boundaries
+  hold even when bypassing the UI entirely: a direct REST call as the
+  staff session attempting to update/delete an owner-authored blog post,
+  update `business`, or read `leads` all came back as either a hard
+  rejection or an empty/no-op result, never a silent success. Revoked
+  the temp staff mid-session and confirmed they landed on the new "No
+  access" view on their next load, not a broken or stuck state. The real
+  Counselor Marketing Co. owner login was backfilled directly into
+  `admin_users` (`role = 'owner'`, `status = 'active'`) via service_role
+  — never touched or logged into for any of this testing.
+
 ## Hub-and-spoke content (Content Pillar + Blog Post + Blog Index)
 
 Built 2026-08-29, first shipped on Counselor Marketing Co. — see

@@ -30,6 +30,9 @@ import RichTextEditor from '../../components/RichTextEditor.astro';
   <div id="blog-edit-view" class="hidden max-w-2xl">
     <button id="back-to-list-button" class="mb-4 text-sm text-brand-primary hover:underline">&larr; Back to all posts</button>
     <h2 id="edit-heading" class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold text-brand-ink">New post</h2>
+    <p id="not-your-post-note" class="mb-4 hidden text-sm text-amber-700">
+      This post was created by someone else — you can view it, but only its owner or the site owner can edit it.
+    </p>
     <form id="post-form" class="space-y-4">
       <div>
         <label class="mb-1 block text-sm font-semibold text-slate-700">Title</label>
@@ -99,7 +102,7 @@ import RichTextEditor from '../../components/RichTextEditor.astro';
 </AdminLayout>
 
 <script>
-  import { supabase, initAdminAuth } from '../../lib/adminAuth';
+  import { supabase, initAdminAuth, type AdminUser } from '../../lib/adminAuth';
   import { initRichTextEditor } from '../../lib/richTextEditor';
 
   const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
@@ -119,6 +122,7 @@ import RichTextEditor from '../../components/RichTextEditor.astro';
     author_name: string | null;
     credentials: string | null;
     images: { hero?: { url: string; alt: string } } | null;
+    created_by: string | null;
   };
 
   const listView = document.getElementById('blog-list-view')!;
@@ -130,9 +134,10 @@ import RichTextEditor from '../../components/RichTextEditor.astro';
   const editHeading = document.getElementById('edit-heading')!;
   const postForm = document.getElementById('post-form') as HTMLFormElement;
   const formStatus = document.getElementById('post-form-status')!;
-  const saveDraftButton = document.getElementById('save-draft-button')!;
-  const publishButton = document.getElementById('publish-button')!;
-  const deleteButton = document.getElementById('delete-post-button')!;
+  const saveDraftButton = document.getElementById('save-draft-button')! as HTMLButtonElement;
+  const publishButton = document.getElementById('publish-button')! as HTMLButtonElement;
+  const deleteButton = document.getElementById('delete-post-button')! as HTMLButtonElement;
+  const notYourPostNote = document.getElementById('not-your-post-note')!;
 
   const titleField = document.getElementById('field-title') as HTMLInputElement;
   const slugField = document.getElementById('field-slug') as HTMLInputElement;
@@ -151,6 +156,11 @@ import RichTextEditor from '../../components/RichTextEditor.astro';
   let editingId: string | null = null;
   let slugTouchedManually = false;
   let uploadedImageUrl: string | null = null;
+  let currentAdminUser: AdminUser | null = null;
+
+  function canEditPost(post: BlogPost): boolean {
+    return currentAdminUser?.role === 'owner' || post.created_by === currentAdminUser?.id;
+  }
 
   function slugify(text: string): string {
     return text
@@ -230,6 +240,25 @@ import RichTextEditor from '../../components/RichTextEditor.astro';
     deleteButton.classList.add('hidden');
     editHeading.textContent = 'New post';
     dateField.value = new Date().toISOString().slice(0, 10);
+    setFormReadOnly(false);
+  }
+
+  // Staff can view any post (the list itself, and the pages SELECT
+  // policy, are unrestricted) but only ever write their own — RLS would
+  // reject a write to someone else's post anyway, but disabling the
+  // controls up front avoids sending someone through the whole edit flow
+  // just to hit an opaque rejected-write error at the end.
+  function setFormReadOnly(readOnly: boolean) {
+    notYourPostNote.classList.toggle('hidden', !readOnly);
+    saveDraftButton.disabled = readOnly;
+    publishButton.disabled = readOnly;
+    deleteButton.disabled = readOnly;
+    for (const field of postForm.elements) {
+      if (field instanceof HTMLInputElement || field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement) {
+        field.disabled = readOnly;
+      }
+    }
+    copyEditor.editor.contentEditable = readOnly ? 'false' : 'true';
   }
 
   function loadPostIntoForm(post: BlogPost) {
@@ -249,6 +278,7 @@ import RichTextEditor from '../../components/RichTextEditor.astro';
     dateField.value = post.date_published ?? new Date().toISOString().slice(0, 10);
     editHeading.textContent = 'Edit post';
     deleteButton.classList.remove('hidden');
+    setFormReadOnly(!canEditPost(post));
   }
 
   newPostButton.addEventListener('click', () => {
@@ -332,9 +362,12 @@ import RichTextEditor from '../../components/RichTextEditor.astro';
       internal_links: [],
     };
 
+    // created_by is set once, at creation — never touched on an update,
+    // so an owner editing a staff member's post doesn't reassign it to
+    // themselves.
     const { error } = editingId
       ? await supabase.from('pages').update(payload).eq('id', editingId)
-      : await supabase.from('pages').insert(payload);
+      : await supabase.from('pages').insert({ ...payload, created_by: currentAdminUser?.id ?? null });
 
     if (error) {
       formStatus.textContent = 'Could not save: ' + error.message;
@@ -353,7 +386,9 @@ import RichTextEditor from '../../components/RichTextEditor.astro';
           headers: {
             apikey: SUPABASE_ANON_KEY,
             Authorization: `Bearer ${sessionData.session?.access_token}`,
+            'Content-Type': 'application/json',
           },
+          body: JSON.stringify({ action: 'publish' }),
         });
         if (response.ok) {
           formStatus.textContent = 'Published! Your blog post will be live on your site shortly.';
@@ -391,7 +426,8 @@ import RichTextEditor from '../../components/RichTextEditor.astro';
     showList();
   });
 
-  async function onAuthed() {
+  async function onAuthed(adminUser: AdminUser) {
+    currentAdminUser = adminUser;
     await Promise.all([loadCategories(), loadPosts()]);
     resetForm();
   }

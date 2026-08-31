@@ -247,5 +247,5 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       .join('');
   }
 
-  initAdminAuth(loadLeads);
+  initAdminAuth(loadLeads, { ownerOnly: true });
 </script>

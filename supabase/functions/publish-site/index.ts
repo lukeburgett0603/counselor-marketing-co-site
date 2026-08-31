@@ -1,12 +1,23 @@
-// Secure middleman for triggering a rebuild of the static site.
+// Secure middleman for anything the admin dashboard needs a secret
+// credential to do: triggering a rebuild, and (Phase 5) inviting/
+// resending an invite for a team member. One function, routed by an
+// `action` field in the JSON body (defaults to "publish" for the
+// original zero-body call site) — kept as one function rather than
+// splitting each action into its own, since they share the same
+// "verify_jwt isn't enough, check the caller's own session" auth
+// preamble below.
 //
-// Why this exists at all: the site is static (built once by GitHub
+// Why "publish" exists at all: the site is static (built once by GitHub
 // Actions, not rendered live), so "publish" from the admin dashboard has
 // to mean "save to Supabase, then trigger a rebuild" — and triggering a
 // GitHub Actions workflow needs a GitHub token. That token can never touch
 // the browser (anyone could read it out of the page and push to the
 // repo), so this function holds it server-side instead, and the browser
 // calls this function rather than GitHub directly.
+//
+// Why "invite"/"resend" exist here too: creating or re-inviting a Supabase
+// Auth user needs the service_role key, which is just as browser-unsafe as
+// the GitHub token — same shape of problem, same fix.
 //
 // Auth: Supabase's Functions gateway (`verify_jwt`, the project default —
 // never set this to false) rejects a request with no valid, correctly
@@ -17,14 +28,13 @@
 // the anon key trigger a rebuild. So this handler does its own explicit
 // check via supabase.auth.getUser() — that only succeeds for a real,
 // currently-logged-in user's session token, not any other validly-signed
-// JWT. No further role check beyond "is a real logged-in admin" on
-// purpose: any authenticated admin — owner today, staff once Phase 5
-// ships — can trigger a rebuild, the same way they'd trigger one by
-// editing content themselves. Only actions that need to know *which*
-// admin is calling (inviting/removing other admins) need a role check,
-// and those aren't built here yet — see the "invite"/"resend" note in the
-// project's own planning notes for why they're deferred to when the
-// admin_users table exists.
+// JWT. "publish" stops there on purpose: any authenticated admin — owner
+// or staff — can trigger a rebuild, the same way they'd trigger one by
+// editing content themselves. "invite"/"resend" go one step further and
+// also check the caller is an *active owner* in admin_users (via the
+// service_role client, bypassing RLS) — those actions can create or
+// re-invite other admin logins, so "is a real logged-in admin" isn't a
+// tight enough check on its own.
 //
 // Config (set via `supabase secrets set`, per-client — never hardcoded,
 // since each client's Supabase project points at a different repo):
@@ -35,8 +45,9 @@
 //   GITHUB_REPO          - "owner/repo", e.g. "lukeburgett0603/counselor-marketing-co-site"
 //   GITHUB_WORKFLOW_FILE - defaults to "deploy.yml" if unset
 //
-// SUPABASE_URL and SUPABASE_ANON_KEY are injected automatically into
-// every Edge Function's environment — not something to set as a secret.
+// SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY are
+// injected automatically into every Edge Function's environment — not
+// something to set as a secret.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -52,30 +63,7 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
-  if (req.method !== 'POST') {
-    return jsonResponse({ error: 'Method not allowed' }, 405);
-  }
-
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader) {
-    return jsonResponse({ error: 'Missing Authorization header' }, 401);
-  }
-
-  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
-    global: { headers: { Authorization: authHeader } },
-  });
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return jsonResponse({ error: 'Not authenticated' }, 401);
-  }
-
+async function publish(): Promise<Response> {
   const githubToken = Deno.env.get('GITHUB_TOKEN');
   const repo = Deno.env.get('GITHUB_REPO');
   const workflowFile = Deno.env.get('GITHUB_WORKFLOW_FILE') ?? 'deploy.yml';
@@ -107,4 +95,147 @@ Deno.serve(async (req: Request) => {
   } catch (err) {
     return jsonResponse({ error: 'Unexpected error triggering rebuild', detail: String(err) }, 500);
   }
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+  if (req.method !== 'POST') {
+    return jsonResponse({ error: 'Method not allowed' }, 405);
+  }
+
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader) {
+    return jsonResponse({ error: 'Missing Authorization header' }, 401);
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+  // The caller's own identity, established via their own JWT — not the
+  // service_role key. This is the check verify_jwt alone doesn't give
+  // you (see the file header comment).
+  const callerClient = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const {
+    data: { user },
+    error: authError,
+  } = await callerClient.auth.getUser();
+  if (authError || !user) {
+    return jsonResponse({ error: 'Not authenticated' }, 401);
+  }
+
+  let body: Record<string, unknown> = {};
+  try {
+    body = await req.json();
+  } catch {
+    // The original "publish" call site sends no body at all — treat
+    // anything unparseable as "no action specified" rather than a
+    // hard error.
+    body = {};
+  }
+  const action = typeof body.action === 'string' ? body.action : 'publish';
+
+  if (action === 'publish') {
+    return publish();
+  }
+
+  if (action !== 'invite' && action !== 'resend') {
+    return jsonResponse({ error: `Unknown action "${action}"` }, 400);
+  }
+
+  // invite/resend both need to create or re-invite an Auth user, which
+  // needs the service_role key — and both need to know the caller is an
+  // active owner, checked here (bypassing RLS) rather than trusted from
+  // the client.
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
+  const { data: callerRow } = await adminClient
+    .from('admin_users')
+    .select('role, status')
+    .eq('id', user.id)
+    .maybeSingle();
+  if (!callerRow || callerRow.role !== 'owner' || callerRow.status !== 'active') {
+    return jsonResponse({ error: 'Only an active owner can manage team access' }, 403);
+  }
+
+  if (action === 'invite') {
+    const email = typeof body.email === 'string' ? body.email.trim() : '';
+    const role = body.role === 'staff' ? 'staff' : 'owner';
+    if (!email) {
+      return jsonResponse({ error: 'Email is required' }, 400);
+    }
+
+    const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email);
+    if (inviteError || !inviteData.user) {
+      return jsonResponse({ error: inviteError?.message ?? 'Could not send invite' }, 400);
+    }
+
+    const { error: insertError } = await adminClient.from('admin_users').insert({
+      id: inviteData.user.id,
+      email,
+      role,
+      status: 'pending',
+    });
+    if (insertError) {
+      return jsonResponse({ error: insertError.message }, 500);
+    }
+
+    return jsonResponse({ ok: true });
+  }
+
+  // action === 'resend'
+  const userId = typeof body.userId === 'string' ? body.userId : '';
+  if (!userId) {
+    return jsonResponse({ error: 'userId is required' }, 400);
+  }
+
+  const { data: targetRow } = await adminClient
+    .from('admin_users')
+    .select('email, role, status')
+    .eq('id', userId)
+    .maybeSingle();
+  if (!targetRow) {
+    return jsonResponse({ error: 'No such team member' }, 404);
+  }
+  if (targetRow.status !== 'pending') {
+    return jsonResponse({ error: 'This person has already activated their login' }, 400);
+  }
+
+  const { error: resendError } = await adminClient.auth.admin.inviteUserByEmail(targetRow.email);
+  if (!resendError) {
+    return jsonResponse({ ok: true });
+  }
+
+  // Some Supabase versions reject re-inviting an email that already has
+  // an (unconfirmed) Auth user instead of just resending — fall back to
+  // deleting the stale unconfirmed account and admin_users row, then
+  // inviting fresh, so "Resend" works from the owner's point of view
+  // either way.
+  const { error: deleteAuthError } = await adminClient.auth.admin.deleteUser(userId);
+  if (deleteAuthError) {
+    return jsonResponse({ error: resendError.message }, 400);
+  }
+  await adminClient.from('admin_users').delete().eq('id', userId);
+
+  const { data: reinviteData, error: reinviteError } = await adminClient.auth.admin.inviteUserByEmail(
+    targetRow.email
+  );
+  if (reinviteError || !reinviteData.user) {
+    return jsonResponse({ error: reinviteError?.message ?? 'Could not resend invite' }, 400);
+  }
+  const { error: reinsertError } = await adminClient.from('admin_users').insert({
+    id: reinviteData.user.id,
+    email: targetRow.email,
+    role: targetRow.role,
+    status: 'pending',
+  });
+  if (reinsertError) {
+    return jsonResponse({ error: reinsertError.message }, 500);
+  }
+
+  return jsonResponse({ ok: true });
 });

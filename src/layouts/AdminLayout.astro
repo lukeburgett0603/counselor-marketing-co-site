@@ -10,15 +10,20 @@ import { withBase } from '../lib/url';
 
 interface Props {
   title: string;
-  current: 'leads' | 'blog' | 'content';
+  current: 'leads' | 'blog' | 'content' | 'team';
 }
 
 const { title, current } = Astro.props;
 
+// Every item renders for every role — adminAuth.ts's applyNavAccess()
+// hides the ones a `staff` login can't use (data-nav-key below) once the
+// caller's role is known, rather than baking role awareness into this
+// static markup.
 const navItems = [
   { key: 'leads', label: 'Leads and analytics', href: withBase('/admin/leads') },
   { key: 'blog', label: 'Blog posts', href: withBase('/admin/blog') },
   { key: 'content', label: 'Website content', href: withBase('/admin/content') },
+  { key: 'team', label: 'Team', href: withBase('/admin/team') },
 ] as const;
 ---
 
@@ -80,6 +85,14 @@ const navItems = [
       </form>
     </div>
 
+    <div id="no-access-view" class="mx-auto max-w-sm px-6 py-16 text-center" style="display: none;">
+      <h1 class="mb-4 font-[family-name:var(--font-heading)] text-2xl font-bold text-brand-ink">No access</h1>
+      <p class="mb-6 text-sm text-slate-600">
+        Your login doesn't have admin access on this site. Contact the site owner if you think this is a mistake.
+      </p>
+      <button id="no-access-logout-button" class="text-sm text-brand-primary hover:underline">Log out</button>
+    </div>
+
     <!--
       Deliberately not `class="hidden md:flex"` — Tailwind's responsive
       utilities are generated after the base `hidden` utility in the
@@ -94,7 +107,7 @@ const navItems = [
         <p class="mb-2 px-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Admin</p>
         <ul class="flex flex-1 flex-col gap-1">
           {navItems.map((item) => (
-            <li>
+            <li data-nav-key={item.key}>
               <a
                 href={item.href}
                 class:list={[

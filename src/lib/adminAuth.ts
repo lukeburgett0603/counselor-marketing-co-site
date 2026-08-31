@@ -1,27 +1,53 @@
 // Shared login/session wiring for every /admin/* page — extracted so
 // leads.astro's original auth flow (login, invited-user password setup,
-// logout) doesn't get duplicated across leads, blog, and (Phase 4)
-// website content. Each admin page still checks its own session
-// independently on load (no client-side router to share state through),
-// but Supabase persists the session in localStorage, so logging in once
-// on any /admin/* page keeps you logged in when navigating to another.
+// logout) doesn't get duplicated across leads, blog, content, and (Phase
+// 5) team. Each admin page still checks its own session independently on
+// load (no client-side router to share state through), but Supabase
+// persists the session in localStorage, so logging in once on any
+// /admin/* page keeps you logged in when navigating to another.
 import { supabase } from './supabase';
+import { withBase } from './url';
 
 export { supabase };
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  role: 'owner' | 'staff';
+  status: 'pending' | 'active';
+}
+
+const ROLE_NAV_ACCESS: Record<AdminUser['role'], string[]> = {
+  owner: ['leads', 'blog', 'content', 'team'],
+  staff: ['blog'],
+};
+
+interface InitAdminAuthOptions {
+  // Set on any page that only an owner should ever see (leads, content,
+  // team) — a staff login that lands here gets redirected to /admin/blog
+  // rather than shown a page whose data RLS would mostly hide from them
+  // anyway. Blog, being usable by both roles, omits this.
+  ownerOnly?: boolean;
+}
 
 // Standard element ids every admin page's markup provides (see
 // AdminLayout.astro) — kept as plain getElementById lookups, not a
 // component prop, since this runs in a page's own <script> after
 // AdminLayout has already rendered the DOM.
-export function initAdminAuth(onAuthed: () => void | Promise<void>) {
+export function initAdminAuth(
+  onAuthed: (adminUser: AdminUser) => void | Promise<void>,
+  options: InitAdminAuthOptions = {}
+) {
   const loginView = document.getElementById('login-view')!;
   const setPasswordView = document.getElementById('set-password-view')!;
+  const noAccessView = document.getElementById('no-access-view')!;
   const adminContent = document.getElementById('admin-content')!;
   const loginForm = document.getElementById('login-form') as HTMLFormElement;
   const setPasswordForm = document.getElementById('set-password-form') as HTMLFormElement;
   const loginStatus = document.getElementById('login-status')!;
   const setPasswordStatus = document.getElementById('set-password-status')!;
   const logoutButton = document.getElementById('logout-button');
+  const noAccessLogoutButton = document.getElementById('no-access-logout-button');
 
   // Inline style, not classList — see the comment on #admin-content in
   // AdminLayout.astro for why toggling Tailwind's `hidden` class doesn't
@@ -32,13 +58,25 @@ export function initAdminAuth(onAuthed: () => void | Promise<void>) {
   function hideAllViews() {
     loginView.style.display = 'none';
     setPasswordView.style.display = 'none';
+    noAccessView.style.display = 'none';
     adminContent.style.display = 'none';
   }
 
-  async function showAuthedState() {
-    hideAllViews();
-    adminContent.style.display = '';
-    await onAuthed();
+  async function resolveAdminUser(): Promise<AdminUser | null> {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) return null;
+    const { data } = await supabase.from('admin_users').select('*').eq('id', userData.user.id).maybeSingle();
+    return (data as AdminUser | null) ?? null;
+  }
+
+  // Every /admin/* page's sidebar nav item carries data-nav-key (see
+  // AdminLayout.astro) — hide the ones this role can't use rather than
+  // relying on the RLS-rejected-write UX alone for "you can't do this."
+  function applyNavAccess(role: AdminUser['role']) {
+    const allowed = ROLE_NAV_ACCESS[role];
+    document.querySelectorAll<HTMLElement>('[data-nav-key]').forEach((el) => {
+      el.classList.toggle('hidden', !allowed.includes(el.dataset.navKey!));
+    });
   }
 
   function showLoginState() {
@@ -49,6 +87,27 @@ export function initAdminAuth(onAuthed: () => void | Promise<void>) {
   function showSetPasswordState() {
     hideAllViews();
     setPasswordView.style.display = '';
+  }
+
+  function showNoAccessState() {
+    hideAllViews();
+    noAccessView.style.display = '';
+  }
+
+  async function tryShowAuthed() {
+    const adminUser = await resolveAdminUser();
+    if (!adminUser || adminUser.status !== 'active') {
+      showNoAccessState();
+      return;
+    }
+    if (options.ownerOnly && adminUser.role !== 'owner') {
+      window.location.href = withBase('/admin/blog');
+      return;
+    }
+    hideAllViews();
+    adminContent.style.display = '';
+    applyNavAccess(adminUser.role);
+    await onAuthed(adminUser);
   }
 
   // An invite/recovery email link lands here with `type=invite` or
@@ -63,7 +122,7 @@ export function initAdminAuth(onAuthed: () => void | Promise<void>) {
     if (isPasswordSetupLink && data.session) {
       showSetPasswordState();
     } else if (data.session) {
-      showAuthedState();
+      tryShowAuthed();
     } else {
       showLoginState();
     }
@@ -81,7 +140,7 @@ export function initAdminAuth(onAuthed: () => void | Promise<void>) {
       loginStatus.textContent = error.message;
       return;
     }
-    await showAuthedState();
+    await tryShowAuthed();
   });
 
   setPasswordForm.addEventListener('submit', async (event) => {
@@ -95,11 +154,27 @@ export function initAdminAuth(onAuthed: () => void | Promise<void>) {
       setPasswordStatus.textContent = error.message;
       return;
     }
+    // Flip this invited user's own admin_users row from pending to
+    // active — the only client-reachable UPDATE path onto admin_users
+    // (see 0012_multi_user_roles.sql's "user can activate own admin_users
+    // row" policy + the trigger that restricts it to exactly this
+    // transition). A brand-new user's row already exists at this point —
+    // the invite Edge Function inserted it (status 'pending') at invite
+    // time, using the same auth user id this session now belongs to.
+    const { data: userData } = await supabase.auth.getUser();
+    if (userData.user) {
+      await supabase.from('admin_users').update({ status: 'active' }).eq('id', userData.user.id);
+    }
     history.replaceState(null, '', window.location.pathname);
-    await showAuthedState();
+    await tryShowAuthed();
   });
 
   logoutButton?.addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    showLoginState();
+  });
+
+  noAccessLogoutButton?.addEventListener('click', async () => {
     await supabase.auth.signOut();
     showLoginState();
   });

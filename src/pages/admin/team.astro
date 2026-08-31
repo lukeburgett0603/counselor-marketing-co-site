@@ -1,0 +1,192 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Team | Admin" current="team">
+  <div class="max-w-2xl space-y-10">
+    <section>
+      <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold text-brand-ink">Team</h2>
+      <p class="mb-4 text-sm text-slate-600">
+        Owners have full access. Staff can only create and manage their own blog posts.
+      </p>
+      <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <table class="w-full text-left text-sm">
+          <thead class="border-b border-slate-200 bg-slate-50">
+            <tr>
+              <th class="px-4 py-3 font-semibold">Email</th>
+              <th class="px-4 py-3 font-semibold">Role</th>
+              <th class="px-4 py-3 font-semibold">Status</th>
+              <th class="px-4 py-3 font-semibold"></th>
+            </tr>
+          </thead>
+          <tbody id="team-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold text-brand-ink">Invite someone</h2>
+      <form id="invite-form" class="space-y-4">
+        <div>
+          <label class="mb-1 block text-sm font-semibold text-slate-700">Email</label>
+          <input id="invite-email" type="email" required class="w-full rounded-md border border-slate-300 px-4 py-2" />
+        </div>
+        <div>
+          <label class="mb-1 block text-sm font-semibold text-slate-700">Role</label>
+          <select id="invite-role" class="w-full rounded-md border border-slate-300 px-4 py-2">
+            <option value="staff">Staff — blog posts only</option>
+            <option value="owner">Owner — full access</option>
+          </select>
+        </div>
+        <button
+          id="invite-submit-button"
+          type="button"
+          class="rounded-md bg-brand-primary px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+        >
+          Send invite
+        </button>
+        <p id="invite-status" class="text-sm" role="status"></p>
+      </form>
+    </section>
+  </div>
+</AdminLayout>
+
+<script>
+  import { supabase, initAdminAuth, type AdminUser } from '../../lib/adminAuth';
+
+  const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
+  const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+  type TeamMember = {
+    id: string;
+    email: string;
+    role: 'owner' | 'staff';
+    status: 'pending' | 'active';
+  };
+
+  const tableBody = document.getElementById('team-table-body')!;
+  const inviteEmail = document.getElementById('invite-email') as HTMLInputElement;
+  const inviteRole = document.getElementById('invite-role') as HTMLSelectElement;
+  const inviteSubmitButton = document.getElementById('invite-submit-button') as HTMLButtonElement;
+  const inviteStatus = document.getElementById('invite-status')!;
+
+  let currentAdminUser: AdminUser | null = null;
+
+  function escapeHtml(value: string): string {
+    const div = document.createElement('div');
+    div.textContent = value;
+    return div.innerHTML;
+  }
+
+  async function callTeamAction(body: Record<string, unknown>): Promise<{ ok: boolean; error?: string }> {
+    const { data: sessionData } = await supabase.auth.getSession();
+    try {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/publish-site`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${sessionData.session?.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        return { ok: false, error: result.error ?? 'Something went wrong.' };
+      }
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: String(err) };
+    }
+  }
+
+  async function loadTeam() {
+    const { data, error } = await supabase.from('admin_users').select('*').order('created_at');
+    if (error) {
+      tableBody.innerHTML = `<tr><td colspan="4" class="px-4 py-3 text-sm text-red-600">Could not load team: ${escapeHtml(error.message)}</td></tr>`;
+      return;
+    }
+    const members = (data ?? []) as TeamMember[];
+    tableBody.innerHTML = members
+      .map((member) => {
+        const isSelf = member.id === currentAdminUser?.id;
+        const statusLabel =
+          member.status === 'active'
+            ? '<span class="text-emerald-700">Active</span>'
+            : '<span class="text-amber-700">Pending</span>';
+        const actions: string[] = [];
+        if (member.status === 'pending') {
+          actions.push(`<button data-resend-id="${member.id}" class="resend-button text-brand-primary hover:underline">Resend invite</button>`);
+        }
+        if (!isSelf) {
+          actions.push(`<button data-revoke-id="${member.id}" class="revoke-button text-red-600 hover:underline">Revoke</button>`);
+        }
+        return `
+      <tr class="border-b border-slate-100 last:border-0">
+        <td class="px-4 py-3">${escapeHtml(member.email)}${isSelf ? ' <span class="text-xs text-slate-400">(you)</span>' : ''}</td>
+        <td class="px-4 py-3 capitalize">${escapeHtml(member.role)}</td>
+        <td class="px-4 py-3">${statusLabel}</td>
+        <td class="px-4 py-3 text-right space-x-3">${actions.join('')}</td>
+      </tr>`;
+      })
+      .join('');
+  }
+
+  tableBody.addEventListener('click', async (event) => {
+    const target = event.target as HTMLElement;
+
+    const resendId = target.dataset.resendId;
+    if (resendId) {
+      target.textContent = 'Resending...';
+      const result = await callTeamAction({ action: 'resend', userId: resendId });
+      if (!result.ok) {
+        window.alert('Could not resend: ' + result.error);
+      }
+      await loadTeam();
+      return;
+    }
+
+    const revokeId = target.dataset.revokeId;
+    if (revokeId) {
+      if (!window.confirm('Revoke this person\'s admin access? They will no longer be able to log in to the admin dashboard.')) return;
+      const { error } = await supabase.from('admin_users').delete().eq('id', revokeId);
+      if (error) {
+        window.alert('Could not revoke access: ' + error.message);
+        return;
+      }
+      await loadTeam();
+    }
+  });
+
+  inviteSubmitButton.addEventListener('click', async () => {
+    const email = inviteEmail.value.trim();
+    if (!email) {
+      inviteStatus.textContent = 'Enter an email address.';
+      inviteStatus.className = 'text-sm text-red-600';
+      return;
+    }
+    inviteStatus.textContent = 'Sending invite...';
+    inviteStatus.className = 'text-sm text-slate-600';
+    inviteSubmitButton.disabled = true;
+
+    const result = await callTeamAction({ action: 'invite', email, role: inviteRole.value });
+
+    inviteSubmitButton.disabled = false;
+    if (!result.ok) {
+      inviteStatus.textContent = 'Could not send invite: ' + result.error;
+      inviteStatus.className = 'text-sm text-red-600';
+      return;
+    }
+    inviteStatus.textContent = 'Invite sent.';
+    inviteStatus.className = 'text-sm text-emerald-700';
+    inviteEmail.value = '';
+    await loadTeam();
+  });
+
+  async function onAuthed(adminUser: AdminUser) {
+    currentAdminUser = adminUser;
+    await loadTeam();
+  }
+
+  initAdminAuth(onAuthed, { ownerOnly: true });
+</script>
