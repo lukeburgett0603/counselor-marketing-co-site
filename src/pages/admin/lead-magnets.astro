@@ -53,7 +53,13 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       </div>
       <div>
         <label class="mb-1 block text-sm font-semibold text-slate-700">File</label>
-        <input id="field-file" type="file" accept=".pdf,.doc,.docx,.zip" class="w-full text-sm" />
+        <label
+          for="field-file"
+          class="inline-block cursor-pointer rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          Choose File
+        </label>
+        <input id="field-file" type="file" accept=".pdf,.doc,.docx,.zip" class="sr-only" />
         <p id="field-file-status" class="mt-1 text-xs text-slate-500"></p>
       </div>
       <div>
@@ -67,7 +73,13 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
             Search Unsplash
           </button>
           <span class="text-xs text-slate-400">or</span>
-          <input id="field-image-file" type="file" accept="image/*" class="text-sm" />
+          <label
+            for="field-image-file"
+            class="inline-block cursor-pointer rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Choose File
+          </label>
+          <input id="field-image-file" type="file" accept="image/*" class="sr-only" />
         </div>
         <p id="field-image-status" class="mt-2 text-xs text-slate-500"></p>
         <img id="field-image-preview" class="mt-2 hidden h-32 w-auto rounded-md border border-slate-200 object-cover" />
