@@ -311,6 +311,71 @@ or a client asking for more):**
   without exposing credentials — Search Console data itself also lags a
   few days). Treat as a premium-tier differentiator, not a v1 expectation.
 
+## Lead CRM (`/admin/crm`, built 2026-09-01)
+
+Day-to-day lead management — notes, follow-up dates, a per-lead detail
+view, search/filter, CSV export — built as a **separate admin nav item
+from `admin/leads.astro`**, not a tab or section bolted onto it. Explicit
+client decision: Leads and analytics needs to stay a clean, numbers-only
+"proof of value" view — when a client's own customer logs in and sees
+the dashboard, that's what shows them their marketing is working. Mixing
+in CRM controls (status editing beyond what's already there, note-taking
+UI, filters) would clutter that. Same `leads` table, same owner+agency
+access level as the rest of lead management — `staff` is out of scope
+here until "assign leads to staff" (backlogged, see below) is built.
+
+- **Data model**: `leads.follow_up_date` (nullable `date`) plus a new
+  `lead_notes` table (`lead_id`, `note`, `created_by`, `created_at`) —
+  see `0017_lead_crm.sql`. Notes are **append-only in v1**: no
+  update/delete policy, matching a call-log/activity-log mental model
+  rather than an editable field. RLS is the same `is_owner() or
+  is_agency()` pattern as everything else lead-related.
+- **Status-select markup + the optimistic-update wiring was extracted
+  into `lib/leadStatus.ts`** (`renderStatusSelect`,
+  `initStatusSelectHandler`) the moment a second page needed the
+  identical color-coded-select-with-event-delegation behavior — `admin/
+  leads.astro` was refactored to use it too, rather than leaving two
+  copies of the same status-update logic to drift apart. Reuse this for
+  any third place that ever needs a lead's status editable inline.
+- **"Due this week"** surfaces any lead with a `follow_up_date` within
+  the next 7 days, with **no lower bound** — an overdue follow-up keeps
+  showing (marked "Overdue") instead of silently disappearing once its
+  date passes, since a missed follow-up is exactly the thing this
+  feature exists to prevent. Closed leads are excluded — no point being
+  reminded to follow up with someone already handled. Pure in-app,
+  computed client-side from the same `leads` fetch — no email/SMS,
+  consistent with holding off on SMTP setup until there's a paying
+  client (see the multi-user-roles section's invite-rate-limit note).
+- **CSV export respects the current search/filter state**, not the
+  whole table — exporting "what's on screen" matches what a client
+  filtering down to e.g. "last 30 days, new leads" actually expects.
+  Client-side `Blob` + a temporary `<a download>` click, no backend
+  involved.
+- **Detail view follows the established list/edit-view toggle pattern**
+  (`#crm-list-view`/`#crm-detail-view`, `classList.add/remove('hidden')`
+  on click) already used by `admin/blog.astro` and `admin/lead-
+  magnets.astro`, not a modal — consistent with how every other
+  multi-record admin screen in this app handles "show one record in
+  full."
+- **Verification pattern**: same as the original leads dashboard —
+  temporary throwaway leads (name-prefixed `ZZTEST` for easy bulk
+  cleanup) and a temporary agency Auth user, both deleted after. Also
+  directly confirmed the `lead_notes` RLS policy actually blocks the
+  anon key (a `POST` with the anon key came back `401`/`42501`, and a
+  `SELECT` came back an empty array rather than real rows) — the same
+  "don't just trust the UI, hit the REST API directly" discipline used
+  throughout Phases 4-6 of the Admin CMS.
+- **Backlogged, explicitly not built in this pass** (client's own
+  call, revisit if a real need shows up): assigning a lead to a specific
+  staff member (ties into the existing role system, most useful once a
+  group-practice client exists); tagging/categorizing leads by service
+  interest or urgency; a full contacts-vs-leads relational remodel (one
+  contact, many interactions/lead events, instead of today's flat
+  `leads` rows); two-way email reply from the dashboard (needs real
+  SMTP infrastructure — see the invite-rate-limit note in the
+  multi-user-roles section, held off until there's a paying client to
+  justify the Resend/Postmark cost).
+
 ## Admin CMS: Edge Functions for anything needing a secret at request time
 
 Being planned/built in phases (business info fields → Edge Function → blog posting →
