@@ -1,0 +1,484 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Lead magnets | Admin" current="lead-magnets">
+  <div id="magnets-list-view">
+    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div class="rounded-lg border border-slate-200 bg-white p-4">
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Total leads captured</p>
+        <p id="total-leads-count" class="mt-1 text-3xl font-bold text-brand-ink">0</p>
+      </div>
+    </div>
+    <div class="mb-4 flex items-center justify-between">
+      <p id="magnets-count" class="text-sm text-slate-600"></p>
+      <button id="new-magnet-button" class="rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
+        New lead magnet
+      </button>
+    </div>
+    <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <table class="w-full text-left text-sm">
+        <thead class="border-b border-slate-200 bg-slate-50">
+          <tr>
+            <th class="px-4 py-3 font-semibold">Title</th>
+            <th class="px-4 py-3 font-semibold">Page</th>
+            <th class="px-4 py-3 font-semibold">Leads captured</th>
+            <th class="px-4 py-3 font-semibold"></th>
+          </tr>
+        </thead>
+        <tbody id="magnets-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="magnets-edit-view" class="hidden max-w-2xl">
+    <button id="back-to-list-button" class="mb-4 text-sm text-brand-primary hover:underline">&larr; Back to all lead magnets</button>
+    <h2 id="edit-heading" class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold text-brand-ink">New lead magnet</h2>
+    <form id="magnet-form" class="space-y-4">
+      <div>
+        <label class="mb-1 block text-sm font-semibold text-slate-700">Title</label>
+        <input id="field-title" type="text" required class="w-full rounded-md border border-slate-300 px-4 py-2" />
+      </div>
+      <div>
+        <label class="mb-1 block text-sm font-semibold text-slate-700">Description</label>
+        <textarea id="field-description" rows="3" required class="w-full rounded-md border border-slate-300 px-4 py-2"></textarea>
+        <p class="mt-1 text-xs text-slate-500">Shown on the page, next to the download form.</p>
+      </div>
+      <div>
+        <label class="mb-1 block text-sm font-semibold text-slate-700">Page</label>
+        <select id="field-page" required class="w-full rounded-md border border-slate-300 px-4 py-2"></select>
+        <p class="mt-1 text-xs text-slate-500">
+          Only pages without a lead magnet already assigned are shown. Pick the page whose topic this download matches.
+        </p>
+      </div>
+      <div>
+        <label class="mb-1 block text-sm font-semibold text-slate-700">File</label>
+        <input id="field-file" type="file" accept=".pdf,.doc,.docx,.zip" class="w-full text-sm" />
+        <p id="field-file-status" class="mt-1 text-xs text-slate-500"></p>
+      </div>
+      <div>
+        <label class="mb-1 block text-sm font-semibold text-slate-700">Image</label>
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            id="search-unsplash-button"
+            type="button"
+            class="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Search Unsplash
+          </button>
+          <span class="text-xs text-slate-400">or</span>
+          <input id="field-image-file" type="file" accept="image/*" class="text-sm" />
+        </div>
+        <p id="field-image-status" class="mt-2 text-xs text-slate-500"></p>
+        <img id="field-image-preview" class="mt-2 hidden h-32 w-auto rounded-md border border-slate-200 object-cover" />
+      </div>
+      <div class="flex items-center gap-3 pt-2">
+        <button id="save-button" type="button" class="rounded-md bg-brand-primary px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90">
+          Save
+        </button>
+        <button id="delete-button" type="button" class="ml-auto hidden text-sm text-red-600 hover:underline">Delete</button>
+      </div>
+      <p id="form-status" class="text-sm" role="status"></p>
+    </form>
+  </div>
+
+  <!-- Unsplash search modal -->
+  <div id="unsplash-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+    <div class="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6">
+      <div class="mb-4 flex items-center justify-between">
+        <h3 class="font-[family-name:var(--font-heading)] text-lg font-bold text-brand-ink">Search Unsplash</h3>
+        <button id="unsplash-close-button" type="button" class="text-sm text-slate-500 hover:text-slate-800">Close</button>
+      </div>
+      <div class="mb-4 flex gap-2">
+        <input
+          id="unsplash-query"
+          type="text"
+          placeholder="e.g. counseling, therapy office, family"
+          class="w-full rounded-md border border-slate-300 px-4 py-2 text-sm"
+        />
+        <button id="unsplash-search-button" type="button" class="rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
+          Search
+        </button>
+      </div>
+      <p id="unsplash-status" class="mb-2 text-sm text-slate-500"></p>
+      <div id="unsplash-results" class="grid grid-cols-3 gap-2 sm:grid-cols-4"></div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  import { supabase, initAdminAuth } from '../../lib/adminAuth';
+  import { callPublishFunction } from '../../lib/publishFunction';
+
+  type LeadMagnet = {
+    id: string;
+    page_id: string;
+    title: string;
+    description: string;
+    file_url: string;
+    file_name: string;
+    image_url: string | null;
+    image_alt: string | null;
+    image_credit_name: string | null;
+    image_credit_url: string | null;
+  };
+
+  type PageOption = { id: string; title: string };
+
+  const listView = document.getElementById('magnets-list-view')!;
+  const editView = document.getElementById('magnets-edit-view')!;
+  const totalLeadsCount = document.getElementById('total-leads-count')!;
+  const magnetsCount = document.getElementById('magnets-count')!;
+  const tableBody = document.getElementById('magnets-table-body')!;
+  const newMagnetButton = document.getElementById('new-magnet-button')!;
+  const backButton = document.getElementById('back-to-list-button')!;
+  const editHeading = document.getElementById('edit-heading')!;
+  const saveButton = document.getElementById('save-button')!;
+  const deleteButton = document.getElementById('delete-button')!;
+  const formStatus = document.getElementById('form-status')!;
+
+  const titleField = document.getElementById('field-title') as HTMLInputElement;
+  const descriptionField = document.getElementById('field-description') as HTMLTextAreaElement;
+  const pageField = document.getElementById('field-page') as HTMLSelectElement;
+  const fileField = document.getElementById('field-file') as HTMLInputElement;
+  const fileStatus = document.getElementById('field-file-status')!;
+  const imageFileField = document.getElementById('field-image-file') as HTMLInputElement;
+  const imageStatus = document.getElementById('field-image-status')!;
+  const imagePreview = document.getElementById('field-image-preview') as HTMLImageElement;
+  const searchUnsplashButton = document.getElementById('search-unsplash-button')!;
+
+  const unsplashModal = document.getElementById('unsplash-modal')!;
+  const unsplashCloseButton = document.getElementById('unsplash-close-button')!;
+  const unsplashQuery = document.getElementById('unsplash-query') as HTMLInputElement;
+  const unsplashSearchButton = document.getElementById('unsplash-search-button')!;
+  const unsplashStatus = document.getElementById('unsplash-status')!;
+  const unsplashResults = document.getElementById('unsplash-results')!;
+
+  let magnets: LeadMagnet[] = [];
+  let pages: PageOption[] = [];
+  let leadCountsByMagnet = new Map<string, number>();
+  let editingId: string | null = null;
+  let uploadedFileUrl: string | null = null;
+  let uploadedFileName: string | null = null;
+  let selectedImage: { url: string; alt: string; creditName: string | null; creditUrl: string | null } | null = null;
+
+  function escapeHtml(value: string): string {
+    const div = document.createElement('div');
+    div.textContent = value;
+    return div.innerHTML;
+  }
+
+  function showList() {
+    editView.classList.add('hidden');
+    listView.classList.remove('hidden');
+  }
+
+  function showEdit() {
+    listView.classList.add('hidden');
+    editView.classList.remove('hidden');
+  }
+
+  async function loadLeadCounts() {
+    const { data } = await supabase.from('leads').select('lead_magnet_id').not('lead_magnet_id', 'is', null);
+    leadCountsByMagnet = new Map();
+    for (const row of data ?? []) {
+      const id = row.lead_magnet_id as string;
+      leadCountsByMagnet.set(id, (leadCountsByMagnet.get(id) ?? 0) + 1);
+    }
+    const total = [...leadCountsByMagnet.values()].reduce((sum, n) => sum + n, 0);
+    totalLeadsCount.textContent = String(total);
+  }
+
+  async function loadMagnets() {
+    const { data, error } = await supabase.from('lead_magnets').select('*').order('title');
+    if (error) {
+      magnetsCount.textContent = 'Could not load lead magnets: ' + error.message;
+      return;
+    }
+    magnets = data as LeadMagnet[];
+    magnetsCount.textContent = `${magnets.length} lead magnet${magnets.length === 1 ? '' : 's'}`;
+    tableBody.innerHTML = magnets
+      .map((magnet) => {
+        const page = pages.find((p) => p.id === magnet.page_id);
+        const leadCount = leadCountsByMagnet.get(magnet.id) ?? 0;
+        return `
+      <tr class="border-b border-slate-100 last:border-0">
+        <td class="px-4 py-3">${escapeHtml(magnet.title)}</td>
+        <td class="px-4 py-3">${escapeHtml(page?.title ?? '(page not found)')}</td>
+        <td class="px-4 py-3">${leadCount}</td>
+        <td class="px-4 py-3 text-right"><button data-edit-id="${magnet.id}" class="edit-magnet-button text-brand-primary hover:underline">Edit</button></td>
+      </tr>`;
+      })
+      .join('');
+  }
+
+  function populatePagePicker() {
+    // Only pages with no magnet, plus the page currently being edited (so
+    // editing an existing magnet doesn't require re-picking a now-taken page).
+    const takenPageIds = new Set(magnets.filter((m) => m.id !== editingId).map((m) => m.page_id));
+    const available = pages.filter((p) => !takenPageIds.has(p.id));
+    pageField.innerHTML = available.map((p) => `<option value="${p.id}">${escapeHtml(p.title)}</option>`).join('');
+  }
+
+  function resetForm() {
+    editingId = null;
+    uploadedFileUrl = null;
+    uploadedFileName = null;
+    selectedImage = null;
+    titleField.value = '';
+    descriptionField.value = '';
+    fileField.value = '';
+    fileStatus.textContent = '';
+    imageFileField.value = '';
+    imageStatus.textContent = '';
+    imagePreview.classList.add('hidden');
+    imagePreview.src = '';
+    deleteButton.classList.add('hidden');
+    editHeading.textContent = 'New lead magnet';
+    formStatus.textContent = '';
+    populatePagePicker();
+  }
+
+  function loadMagnetIntoForm(magnet: LeadMagnet) {
+    editingId = magnet.id;
+    titleField.value = magnet.title;
+    descriptionField.value = magnet.description;
+    uploadedFileUrl = magnet.file_url;
+    uploadedFileName = magnet.file_name;
+    fileStatus.textContent = `Current file: ${magnet.file_name} — choose a new one to replace it.`;
+    if (magnet.image_url) {
+      selectedImage = {
+        url: magnet.image_url,
+        alt: magnet.image_alt ?? '',
+        creditName: magnet.image_credit_name,
+        creditUrl: magnet.image_credit_url,
+      };
+      imagePreview.src = magnet.image_url;
+      imagePreview.classList.remove('hidden');
+      imageStatus.textContent = 'Current image — choose a new one to replace it.';
+    }
+    editHeading.textContent = 'Edit lead magnet';
+    deleteButton.classList.remove('hidden');
+    populatePagePicker();
+    pageField.value = magnet.page_id;
+  }
+
+  newMagnetButton.addEventListener('click', () => {
+    resetForm();
+    showEdit();
+  });
+
+  backButton.addEventListener('click', showList);
+
+  tableBody.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement;
+    if (!target.classList.contains('edit-magnet-button')) return;
+    const id = target.dataset.editId!;
+    const magnet = magnets.find((m) => m.id === id);
+    if (magnet) {
+      loadMagnetIntoForm(magnet);
+      showEdit();
+    }
+  });
+
+  fileField.addEventListener('change', async () => {
+    const file = fileField.files?.[0];
+    if (!file) return;
+    fileStatus.textContent = 'Uploading...';
+    const path = `${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const { error } = await supabase.storage.from('lead-magnet-files').upload(path, file);
+    if (error) {
+      fileStatus.textContent = 'Upload failed: ' + error.message;
+      return;
+    }
+    const { data: urlData } = supabase.storage.from('lead-magnet-files').getPublicUrl(path);
+    uploadedFileUrl = urlData.publicUrl;
+    uploadedFileName = file.name;
+    fileStatus.textContent = `Uploaded: ${file.name}`;
+  });
+
+  imageFileField.addEventListener('change', async () => {
+    const file = imageFileField.files?.[0];
+    if (!file) return;
+    imageStatus.textContent = 'Uploading...';
+    const path = `lead-magnets/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const { error } = await supabase.storage.from('site-images').upload(path, file);
+    if (error) {
+      imageStatus.textContent = 'Upload failed: ' + error.message;
+      return;
+    }
+    const { data: urlData } = supabase.storage.from('site-images').getPublicUrl(path);
+    selectedImage = { url: urlData.publicUrl, alt: '', creditName: null, creditUrl: null };
+    imagePreview.src = urlData.publicUrl;
+    imagePreview.classList.remove('hidden');
+    imageStatus.textContent = 'Image uploaded.';
+  });
+
+  // ---------------------------------------------------------------------
+  // Unsplash search modal
+  // ---------------------------------------------------------------------
+  searchUnsplashButton.addEventListener('click', () => {
+    unsplashModal.classList.remove('hidden');
+    unsplashModal.classList.add('flex');
+    unsplashQuery.focus();
+  });
+  unsplashCloseButton.addEventListener('click', () => {
+    unsplashModal.classList.add('hidden');
+    unsplashModal.classList.remove('flex');
+  });
+
+  async function runUnsplashSearch() {
+    const query = unsplashQuery.value.trim();
+    if (!query) return;
+    unsplashStatus.textContent = 'Searching...';
+    unsplashResults.innerHTML = '';
+    const result = await callPublishFunctionDirect({ action: 'search', query });
+    if (!result.ok) {
+      unsplashStatus.textContent =
+        result.error === 'Live image search is not configured for this site'
+          ? "Live search isn't set up for this site — upload an image instead."
+          : 'Could not search: ' + result.error;
+      return;
+    }
+    unsplashStatus.textContent = `${result.results.length} results`;
+    unsplashResults.innerHTML = result.results
+      .map(
+        (photo: any, i: number) => `
+      <button type="button" class="unsplash-result-button overflow-hidden rounded-md border border-slate-200 hover:ring-2 hover:ring-brand-primary" data-index="${i}">
+        <img src="${photo.thumbUrl}" alt="" class="h-24 w-full object-cover" />
+      </button>`
+      )
+      .join('');
+    (unsplashResults as any)._results = result.results;
+  }
+
+  unsplashSearchButton.addEventListener('click', runUnsplashSearch);
+  unsplashQuery.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') runUnsplashSearch();
+  });
+
+  unsplashResults.addEventListener('click', async (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLElement>('.unsplash-result-button');
+    if (!button) return;
+    const results = (unsplashResults as any)._results ?? [];
+    const photo = results[Number(button.dataset.index)];
+    if (!photo) return;
+
+    selectedImage = { url: photo.fullUrl, alt: photo.alt, creditName: photo.creditName, creditUrl: photo.creditUrl };
+    imagePreview.src = photo.fullUrl;
+    imagePreview.classList.remove('hidden');
+    imageStatus.textContent = photo.creditName ? `Selected — photo by ${photo.creditName} on Unsplash.` : 'Selected.';
+    unsplashModal.classList.add('hidden');
+    unsplashModal.classList.remove('flex');
+
+    if (photo.downloadLocation) {
+      callPublishFunctionDirect({ action: 'trackDownload', downloadLocation: photo.downloadLocation });
+    }
+  });
+
+  // search-unsplash is a separate Edge Function from publish-site (see
+  // its own file header for why) — a tiny local wrapper mirroring
+  // callPublishFunction's shape rather than adding a second export there.
+  async function callPublishFunctionDirect(body: Record<string, unknown>): Promise<any> {
+    const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
+    const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+    const { data: sessionData } = await supabase.auth.getSession();
+    try {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/search-unsplash`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${sessionData.session?.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) return { ok: false, error: result.error ?? 'Something went wrong.' };
+      return { ok: true, ...result };
+    } catch (err) {
+      return { ok: false, error: String(err) };
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  function validate(): string | null {
+    if (!titleField.value.trim()) return 'Title is required.';
+    if (!descriptionField.value.trim()) return 'Description is required.';
+    if (!pageField.value) return 'Choose a page.';
+    if (!uploadedFileUrl || !uploadedFileName) return 'Upload a file.';
+    return null;
+  }
+
+  saveButton.addEventListener('click', async () => {
+    const validationError = validate();
+    if (validationError) {
+      formStatus.textContent = validationError;
+      formStatus.className = 'text-sm text-red-600';
+      return;
+    }
+    formStatus.textContent = 'Saving...';
+    formStatus.className = 'text-sm text-slate-600';
+    saveButton.setAttribute('disabled', 'true');
+
+    const payload = {
+      title: titleField.value.trim(),
+      description: descriptionField.value.trim(),
+      page_id: pageField.value,
+      file_url: uploadedFileUrl,
+      file_name: uploadedFileName,
+      image_url: selectedImage?.url ?? null,
+      image_alt: selectedImage?.alt ?? null,
+      image_credit_name: selectedImage?.creditName ?? null,
+      image_credit_url: selectedImage?.creditUrl ?? null,
+    };
+
+    const { error } = editingId
+      ? await supabase.from('lead_magnets').update(payload).eq('id', editingId)
+      : await supabase.from('lead_magnets').insert(payload);
+
+    saveButton.removeAttribute('disabled');
+    if (error) {
+      formStatus.textContent = 'Could not save: ' + error.message;
+      formStatus.className = 'text-sm text-red-600';
+      return;
+    }
+
+    formStatus.textContent = 'Saving your site...';
+    const result = await callPublishFunction({ action: 'publish' });
+    formStatus.textContent = result.ok
+      ? 'Saved! Your site will update shortly.'
+      : "Saved, but the update trigger failed — it will go live on the next rebuild.";
+    formStatus.className = result.ok ? 'text-sm text-emerald-700' : 'text-sm text-amber-700';
+
+    await Promise.all([loadMagnets(), loadLeadCounts()]);
+    showList();
+  });
+
+  deleteButton.addEventListener('click', async () => {
+    if (!editingId) return;
+    if (!window.confirm('Delete this lead magnet? This cannot be undone.')) return;
+    const { error } = await supabase.from('lead_magnets').delete().eq('id', editingId);
+    if (error) {
+      window.alert('Could not delete: ' + error.message);
+      return;
+    }
+    await callPublishFunction({ action: 'publish' });
+    await Promise.all([loadMagnets(), loadLeadCounts()]);
+    showList();
+  });
+
+  async function onAuthed() {
+    const { data: pagesData } = await supabase
+      .from('pages')
+      .select('id, title')
+      .neq('page_type', 'Blog Index')
+      .order('title');
+    pages = (pagesData ?? []) as PageOption[];
+    await loadLeadCounts();
+    await loadMagnets();
+    resetForm();
+  }
+
+  initAdminAuth(onAuthed, { allowedRoles: ['owner', 'agency'] });
+</script>

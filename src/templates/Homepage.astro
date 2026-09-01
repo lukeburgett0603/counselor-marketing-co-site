@@ -6,6 +6,7 @@ import CTA from '../components/CTA.astro';
 import Testimonial from '../components/Testimonial.astro';
 import PlanSteps from '../components/PlanSteps.astro';
 import LeadGenerator from '../components/LeadGenerator.astro';
+import LeadMagnet from '../components/LeadMagnet.astro';
 import { renderCopy } from '../lib/markdown';
 import type { Page, Business } from '../lib/pages';
 
@@ -54,6 +55,7 @@ const { page, allPages, business } = Astro.props;
   )}
   <PlanSteps steps={page.plan_steps} />
   <CTA heading={page.cta_heading ?? `Ready to work with ${business.display_name}?`} buttonText={page.cta_button_text ?? undefined} />
+  <LeadMagnet pageId={page.id} />
   <LeadGenerator
     slug={page.slug}
     heading={page.cta_button_text ?? undefined}

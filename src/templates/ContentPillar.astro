@@ -6,6 +6,7 @@ import TableOfContents from '../components/TableOfContents.astro';
 import BlogPreview from '../components/BlogPreview.astro';
 import CTA from '../components/CTA.astro';
 import LeadGenerator from '../components/LeadGenerator.astro';
+import LeadMagnet from '../components/LeadMagnet.astro';
 import { renderCopy, extractTableOfContents } from '../lib/markdown';
 import { withBase } from '../lib/url';
 import type { Page, Business } from '../lib/pages';
@@ -66,6 +67,7 @@ const tocItems = extractTableOfContents(page.copy);
     </section>
   )}
   <CTA heading={page.cta_heading ?? `Want help from ${business.display_name}?`} buttonText={page.cta_button_text ?? undefined} />
+  <LeadMagnet pageId={page.id} />
   <LeadGenerator
     slug={page.slug}
     collectWebsiteUrl={business.collect_website_in_leads}

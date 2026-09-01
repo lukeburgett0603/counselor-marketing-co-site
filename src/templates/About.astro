@@ -4,6 +4,7 @@ import Hero from '../components/Hero.astro';
 import Section from '../components/Section.astro';
 import CTA from '../components/CTA.astro';
 import LeadGenerator from '../components/LeadGenerator.astro';
+import LeadMagnet from '../components/LeadMagnet.astro';
 import { renderCopy } from '../lib/markdown';
 import type { Page, Business } from '../lib/pages';
 
@@ -29,6 +30,7 @@ const { page, allPages, business } = Astro.props;
     <Fragment set:html={renderCopy(page.copy)} />
   </Section>
   <CTA heading={page.cta_heading ?? 'Get to know how we can help'} buttonText={page.cta_button_text ?? 'Contact Us'} />
+  <LeadMagnet pageId={page.id} />
   <LeadGenerator
     slug={page.slug}
     collectWebsiteUrl={business.collect_website_in_leads}

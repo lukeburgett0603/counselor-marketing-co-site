@@ -16,7 +16,7 @@ interface Props {
   // therefore excluded from the template→client sync from here on, same
   // as global.css/BaseLayout.astro — do not let a future sync overwrite
   // this line back to the template's narrower type.
-  current: 'leads' | 'blog' | 'content' | 'team' | 'suggestions' | 'directory';
+  current: 'leads' | 'blog' | 'content' | 'lead-magnets' | 'team' | 'suggestions' | 'directory';
 }
 
 const { title, current } = Astro.props;
@@ -30,6 +30,7 @@ const navItems = [
   { key: 'leads', label: 'Leads and analytics', href: withBase('/admin/leads') },
   { key: 'blog', label: 'Blog posts', href: withBase('/admin/blog') },
   { key: 'content', label: 'Website content', href: withBase('/admin/content') },
+  { key: 'lead-magnets', label: 'Lead magnets', href: withBase('/admin/lead-magnets') },
   { key: 'suggestions', label: 'Suggestions', href: withBase('/admin/suggestions') },
   { key: 'team', label: 'Team', href: withBase('/admin/team') },
 ] as const;

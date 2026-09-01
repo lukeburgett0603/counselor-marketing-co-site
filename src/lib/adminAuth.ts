@@ -24,9 +24,9 @@ export interface AdminUser {
 }
 
 const ROLE_NAV_ACCESS: Record<AdminUser['role'], string[]> = {
-  owner: ['leads', 'blog', 'content', 'team'],
+  owner: ['leads', 'blog', 'content', 'lead-magnets', 'team'],
   staff: ['blog'],
-  agency: ['leads', 'blog', 'content', 'team', 'suggestions'],
+  agency: ['leads', 'blog', 'content', 'lead-magnets', 'suggestions', 'team'],
 };
 
 interface InitAdminAuthOptions {

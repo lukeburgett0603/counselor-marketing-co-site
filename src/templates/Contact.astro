@@ -2,6 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Section from '../components/Section.astro';
 import LeadGenerator from '../components/LeadGenerator.astro';
+import LeadMagnet from '../components/LeadMagnet.astro';
 import { renderCopy } from '../lib/markdown';
 import type { Page, Business } from '../lib/pages';
 
@@ -40,6 +41,7 @@ const { page, allPages, business } = Astro.props;
       </p>
     )}
   </div>
+  <LeadMagnet pageId={page.id} />
   <LeadGenerator
     slug={page.slug}
     heading="Send us a message"

@@ -612,6 +612,81 @@ a manual SQL workaround afterward.
   client repo only, reachable by URL (bookmarked), deliberately not added
   to the shared nav.
 
+## Lead Magnets (gated content downloads, built 2026-08-31)
+
+Planned in a dedicated conversation before building, same discipline as
+the Admin CMS phases. A **`LeadMagnet`** — deliberately not called "Lead
+Generator," which was already taken by `LeadGenerator.astro`, the site's
+plain contact-request form used across 9 templates — is a gated-download
+widget an owner/agency assigns to at most one page at a time: a visitor
+trades name+email for an instant download link to a file (a PDF guide,
+typically). Genuinely new infrastructure, not just another admin screen:
+
+- **`lead_magnets` table, one row per page (`unique` on `page_id`)** —
+  the public template has exactly one fixed slot for this widget, so two
+  magnets on the same page would be ambiguous about which renders.
+  `admin/lead-magnets.astro`'s page picker only offers pages that don't
+  already have one assigned (except the page the magnet being edited is
+  already on).
+- **Reuses the existing `leads` table rather than a separate one** — a
+  new nullable `leads.lead_magnet_id` column ties a captured lead back to
+  which magnet produced it. This was the whole point: a magnet
+  submission is just a normal `leads` row, so it shows up in the
+  Leads and analytics dashboard that already existed, for free, and
+  per-magnet capture counts are a one-line `count(*) where
+  lead_magnet_id = X` — no new dashboard plumbing needed there.
+- **Placement is standardized, not left to vary per page**: every
+  template that has the CTA → LeadGenerator pattern gets
+  `<LeadMagnet pageId={page.id} />` inserted immediately before the
+  final `LeadGenerator` (after the mid-page `CTA`, not competing with
+  it). Considered placing it mid-body-copy instead (closer to the
+  specific content it's related to, a legitimate content-marketing
+  pattern) but rejected for v1: `page.copy` is one opaque markdown blob
+  rendered as a single HTML dump with no existing seam to split it at,
+  and this project has an explicit rule against letting two CTAs compete
+  on the same view (see `Hero.astro`'s `showAside` pattern) — a second
+  ask mid-flow through the StoryBrand arc risks diluting the main one.
+  `LeadMagnet.astro` does its own build-time Supabase query
+  (`getLeadMagnetForPage`, `lib/leadMagnets.ts`) rather than being
+  threaded through `[...slug].astro`'s existing prop chain — it renders
+  nothing when the page has no magnet assigned, so it's safe to drop
+  into every template unconditionally.
+- **Delivery is an instant on-page download link, deliberately not an
+  emailed PDF.** Emailing would need real transactional email sending,
+  which this template has zero infrastructure for and which the user has
+  already decided to hold off setting up (custom SMTP) until there's a
+  paying client to justify the cost — see the email-rate-limit backlog
+  item in project memory. Revisit once that's set up anyway.
+- **The file bucket (`lead-magnet-files`) is public, same reasoning as
+  `site-images`** — this app has no signed-URL delivery mechanism
+  anywhere, and building one just for this would be real new complexity
+  for content that isn't actually sensitive. A random-UUID-prefixed
+  storage path (not the original filename) is the actual gate — not
+  cryptographically secure, but proportionate for a marketing PDF.
+- **Live Unsplash search is genuinely new infrastructure, not a UI
+  addition to an existing feature.** Every other image picker in this
+  app (`admin/blog.astro`, `admin/content.astro`) only ever supported
+  direct upload — Unsplash sourcing elsewhere in this project is a
+  one-time, offline/local step done during content authoring, never a
+  live in-app feature (see "Handling the Unsplash API key" in
+  `frontend-site-builder-supabase`'s reference doc). A live search needs
+  a *real* secret (the Unsplash Access Key can call their API on the
+  caller's behalf) unlike `PUBLIC_UNSPLASH_APP_NAME` (just an
+  attribution label, already safe in the browser) — so it needed its own
+  Edge Function (`search-unsplash`, a sibling to `publish-site`, kept
+  separate since it's an unrelated concern) to hold that key
+  server-side. Also implements Unsplash's required download-tracking
+  ping (`links.download_location`) the moment an admin actually *picks*
+  a photo, not just when it appears in search results — a compliance
+  requirement of their API guidelines, not optional. Degrades gracefully
+  if a client's project never gets `UNSPLASH_ACCESS_KEY` set as an Edge
+  Function secret: the search button returns a clear "not configured"
+  message and direct upload still works, rather than a hard error.
+- **No new admin role** — management is owner/agency only, same as
+  Website content, deliberately not building a narrower role for a need
+  the user described as still hypothetical ("maybe we need..."). Add one
+  later if a client actually asks to hand this off to specific staff.
+
 ## Hub-and-spoke content (Content Pillar + Blog Post + Blog Index)
 
 Built 2026-08-29, first shipped on Counselor Marketing Co. — see

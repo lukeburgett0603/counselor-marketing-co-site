@@ -3,6 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Section from '../components/Section.astro';
 import CTA from '../components/CTA.astro';
 import LeadGenerator from '../components/LeadGenerator.astro';
+import LeadMagnet from '../components/LeadMagnet.astro';
 import OptimizedImage from '../components/OptimizedImage.astro';
 import { renderCopy } from '../lib/markdown';
 import type { Page, Business } from '../lib/pages';
@@ -42,6 +43,7 @@ const headshot = page.images.headshot;
     <Fragment set:html={renderCopy(page.copy)} />
   </Section>
   <CTA heading={page.cta_heading ?? `Book with ${page.title}`} buttonText={page.cta_button_text ?? undefined} />
+  <LeadMagnet pageId={page.id} />
   <LeadGenerator
     slug={page.slug}
     collectWebsiteUrl={business.collect_website_in_leads}

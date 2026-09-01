@@ -6,6 +6,7 @@ import CTA from '../components/CTA.astro';
 import PlanSteps from '../components/PlanSteps.astro';
 import FAQ from '../components/FAQ.astro';
 import LeadGenerator from '../components/LeadGenerator.astro';
+import LeadMagnet from '../components/LeadMagnet.astro';
 import { renderCopy } from '../lib/markdown';
 import type { Page, Business } from '../lib/pages';
 
@@ -35,6 +36,7 @@ const heroImage = page.images.serviceHero ?? page.images.hero;
   <PlanSteps steps={page.plan_steps} />
   <FAQ faqs={page.faqs} />
   <CTA heading={page.cta_heading ?? `Get started with ${page.title}`} buttonText={page.cta_button_text ?? undefined} />
+  <LeadMagnet pageId={page.id} />
   <LeadGenerator
     slug={page.slug}
     collectWebsiteUrl={business.collect_website_in_leads}

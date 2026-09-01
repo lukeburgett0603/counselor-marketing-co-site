@@ -1,0 +1,132 @@
+---
+// A gated-content-download widget — distinct from LeadGenerator.astro
+// (the site's plain contact-request form). An owner/agency assigns at
+// most one of these per page via admin/lead-magnets.astro; this fetches
+// it at build time and renders nothing if the page doesn't have one, so
+// it's safe to drop into every template unconditionally. Placement is
+// deliberately standardized to one slot — between the mid-page CTA and
+// the bottom LeadGenerator — across every template, not left to vary
+// per page.
+import { getLeadMagnetForPage } from '../lib/leadMagnets';
+
+interface Props {
+  pageId: string;
+}
+
+const { pageId } = Astro.props;
+const magnet = await getLeadMagnetForPage(pageId);
+---
+
+{
+  magnet && (
+    <section class="bg-brand-secondary py-14">
+      <div class="mx-auto max-w-5xl overflow-hidden rounded-2xl bg-brand-ink shadow-lg">
+        <div class="grid gap-0 md:grid-cols-2">
+          <div class="p-8 md:p-10">
+            <h2 class="mb-4 font-[family-name:var(--font-heading)] text-2xl font-extrabold tracking-tight text-white md:text-3xl">
+              {magnet.title}
+            </h2>
+            <p class="mb-6 text-slate-200">{magnet.description}</p>
+
+            <form class="lead-magnet-form space-y-3" data-magnet-id={magnet.id} data-file-url={magnet.file_url} data-file-name={magnet.file_name}>
+              <input
+                name="name"
+                type="text"
+                placeholder="Name"
+                required
+                class="w-full rounded-md border border-white/20 bg-white/95 px-4 py-2.5 text-brand-ink placeholder:text-slate-500"
+              />
+              <input
+                name="email"
+                type="email"
+                placeholder="Enter your email"
+                required
+                class="w-full rounded-md border border-white/20 bg-white/95 px-4 py-2.5 text-brand-ink placeholder:text-slate-500"
+              />
+              <button
+                type="submit"
+                class="w-full rounded-md bg-brand-accent px-6 py-3 font-semibold text-white transition hover:opacity-90 hover:shadow-md"
+              >
+                Send Me the Guide
+              </button>
+              <p class="lead-magnet-status text-center text-sm text-slate-300" role="status"></p>
+            </form>
+
+            <div class="lead-magnet-success hidden">
+              <p class="mb-3 text-slate-200">Thanks! Your download is ready.</p>
+              <a
+                href={magnet.file_url}
+                download={magnet.file_name}
+                class="inline-block w-full rounded-md bg-brand-accent px-6 py-3 text-center font-semibold text-white transition hover:opacity-90 hover:shadow-md"
+              >
+                Download now
+              </a>
+            </div>
+
+            <p class="mt-3 text-xs text-slate-400">Your privacy is important to us.</p>
+          </div>
+
+          {magnet.image_url && (
+            <div class="relative min-h-[220px] md:min-h-full">
+              <img src={magnet.image_url} alt={magnet.image_alt ?? ''} class="absolute inset-0 h-full w-full object-cover" />
+              {magnet.image_credit_name && magnet.image_credit_url && (
+                <a
+                  href={magnet.image_credit_url}
+                  target="_blank"
+                  rel="noopener"
+                  class="absolute bottom-2 right-2 rounded bg-black/40 px-2 py-1 text-xs text-white hover:bg-black/60"
+                >
+                  Photo: {magnet.image_credit_name}
+                </a>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+<script>
+  // Same reasoning as LeadGenerator.astro's submission script: a direct
+  // REST call instead of the full supabase-js SDK, to avoid ~200KB of JS
+  // on every page this widget appears on for what's still a one-line
+  // insert per submit.
+  const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
+  const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+  document.querySelectorAll<HTMLFormElement>('.lead-magnet-form').forEach((form) => {
+    const status = form.querySelector<HTMLElement>('.lead-magnet-status');
+    const successView = form.parentElement?.querySelector<HTMLElement>('.lead-magnet-success');
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!status) return;
+      const formData = new FormData(form);
+      status.textContent = 'Sending...';
+
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          Prefer: 'return=minimal',
+        },
+        body: JSON.stringify({
+          name: formData.get('name'),
+          email: formData.get('email'),
+          source_page: window.location.pathname,
+          lead_magnet_id: form.dataset.magnetId,
+        }),
+      });
+
+      if (response.ok) {
+        form.classList.add('hidden');
+        successView?.classList.remove('hidden');
+      } else {
+        status.textContent = 'Something went wrong — please try again.';
+      }
+    });
+  });
+</script>

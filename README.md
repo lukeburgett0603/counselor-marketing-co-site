@@ -82,6 +82,18 @@ a checklist to run in full, not a reference to skim.
    at github.com/settings/tokens. `GITHUB_WORKFLOW_FILE` is optional,
    defaults to `deploy.yml`.
 
+   **Optional**: also deploy `search-unsplash` and set
+   `UNSPLASH_ACCESS_KEY` (same key already used for local/offline image
+   sourcing, see "Handling the Unsplash API key" in the
+   `frontend-site-builder-supabase` reference doc) if this client should
+   have live Unsplash search in the Lead Magnets admin screen. Without
+   it, that screen's search button just shows a "not configured" message
+   and direct image upload still works.
+   ```bash
+   supabase functions deploy search-unsplash --project-ref <ref>
+   supabase secrets set UNSPLASH_ACCESS_KEY=<key> --project-ref <ref>
+   ```
+
 7. **Seed the first admin login** — a brand-new project has zero rows in
    `admin_users`, so nobody can log in through the normal invite flow yet
    (there's no existing owner to send the invite). Insert the agency's own
