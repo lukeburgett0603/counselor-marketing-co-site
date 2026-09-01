@@ -93,6 +93,26 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         <tbody id="leads-table-body"></tbody>
       </table>
     </div>
+
+    <!--
+      A single shared menu, not one per row — `position: fixed` and
+      appended outside the table's `overflow-x-auto` wrapper (rather than
+      absolutely positioned inside a row's own cell) so it can never be
+      clipped by that wrapper's scroll bounds. JS positions it against
+      whichever row's toggle button was clicked, flipping to open upward
+      when there isn't room below (see openActionsMenuFor).
+    -->
+    <div id="actions-menu" class="fixed z-50 hidden w-36 rounded-md border border-slate-200 bg-white py-1 text-left shadow-lg">
+      <button type="button" id="actions-menu-view" class="block w-full px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50">
+        View
+      </button>
+      <button type="button" id="actions-menu-archive" class="block w-full px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50">
+        Archive
+      </button>
+      <button type="button" id="actions-menu-delete" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-red-50">
+        Delete
+      </button>
+    </div>
   </div>
 
   <!--
@@ -283,9 +303,10 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   let leadMagnets: LeadMagnet[] = [];
   let noteCounts = new Map<string, number>();
   let currentLeadId: string | null = null;
-  // The currently-open row Actions menu, if any — tracked so opening one
-  // closes any other, and so an outside click can close it.
-  let openActionsMenu: HTMLElement | null = null;
+  // Which lead's row the single shared Actions menu is currently open
+  // for, if any — the menu itself has no per-row identity, so this is
+  // how its View/Archive/Delete handlers know which lead to act on.
+  let actionsMenuLeadId: string | null = null;
 
   const listView = document.getElementById('crm-list-view')!;
   const detailView = document.getElementById('crm-detail-view')!;
@@ -293,6 +314,10 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   const leadsCount = document.getElementById('leads-count')!;
   const dueSection = document.getElementById('due-section')!;
   const dueList = document.getElementById('due-list')!;
+  const actionsMenu = document.getElementById('actions-menu')!;
+  const actionsMenuViewButton = document.getElementById('actions-menu-view')!;
+  const actionsMenuArchiveButton = document.getElementById('actions-menu-archive')!;
+  const actionsMenuDeleteButton = document.getElementById('actions-menu-delete')!;
 
   const searchInput = document.getElementById('filter-search') as HTMLInputElement;
   const statusFilter = document.getElementById('filter-status') as HTMLSelectElement;
@@ -396,76 +421,76 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         <td class="px-4 py-3" data-no-row-click>${renderStatusSelect(lead.id, lead.status)}</td>
         <td class="px-4 py-3 whitespace-nowrap">${lead.follow_up_date ? new Date(lead.follow_up_date + 'T00:00:00').toLocaleDateString() : ''}</td>
         <td class="px-4 py-3">${noteCounts.get(lead.id) ?? 0}</td>
-        <td class="relative px-4 py-3 text-right" data-no-row-click>
+        <td class="px-4 py-3 text-right" data-no-row-click>
           <button type="button" class="actions-toggle rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50" data-lead-id="${lead.id}">
             Actions ▾
           </button>
-          <div class="actions-menu absolute right-4 z-10 mt-1 hidden w-36 rounded-md border border-slate-200 bg-white py-1 text-left shadow-lg">
-            <button type="button" class="actions-view block w-full px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50" data-lead-id="${lead.id}">View</button>
-            <button type="button" class="actions-archive block w-full px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50" data-lead-id="${lead.id}">${lead.archived_at ? 'Unarchive' : 'Archive'}</button>
-            <button type="button" class="actions-delete block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-red-50" data-lead-id="${lead.id}">Delete</button>
-          </div>
         </td>
       </tr>`
       )
       .join('');
   }
 
+  const ACTIONS_MENU_WIDTH = 144; // matches the menu's w-36
+
   function closeActionsMenu() {
-    openActionsMenu?.classList.add('hidden');
-    openActionsMenu = null;
+    actionsMenu.classList.add('hidden');
+    actionsMenuLeadId = null;
   }
 
-  // Close any open Actions menu on an outside click.
+  // Positions the single shared menu against whichever row's toggle
+  // button was clicked. `position: fixed` + viewport coordinates from
+  // getBoundingClientRect() means it's placed outside the table's
+  // overflow-x-auto wrapper entirely, so that wrapper's scroll bounds
+  // can never clip it — the earlier per-row absolutely-positioned menu
+  // did get clipped that way, cutting off "View"/"Archive"/"Delete" on
+  // any row near the bottom of the visible table. Flips to open upward
+  // when there isn't room below, for the same reason.
+  function openActionsMenuFor(button: HTMLElement, leadId: string) {
+    const lead = allLeads.find((l) => l.id === leadId);
+    actionsMenuArchiveButton.textContent = lead?.archived_at ? 'Unarchive' : 'Archive';
+    actionsMenuLeadId = leadId;
+
+    const rect = button.getBoundingClientRect();
+    const estimatedMenuHeight = 116; // three items ~36px each + padding
+    const openUpward = window.innerHeight - rect.bottom < estimatedMenuHeight;
+
+    const left = Math.max(8, Math.min(rect.right - ACTIONS_MENU_WIDTH, window.innerWidth - ACTIONS_MENU_WIDTH - 8));
+    actionsMenu.style.left = `${left}px`;
+    if (openUpward) {
+      actionsMenu.style.top = 'auto';
+      actionsMenu.style.bottom = `${window.innerHeight - rect.top + 4}px`;
+    } else {
+      actionsMenu.style.bottom = 'auto';
+      actionsMenu.style.top = `${rect.bottom + 4}px`;
+    }
+
+    actionsMenu.classList.remove('hidden');
+  }
+
+  // Close on an outside click, on scroll (capture:true so this also
+  // catches the table wrapper's own horizontal scroll, which doesn't
+  // bubble), and on resize — all three can leave the menu's fixed
+  // position misaligned with the button it was opened from.
   document.addEventListener('click', (event) => {
-    if (!openActionsMenu) return;
+    if (actionsMenu.classList.contains('hidden')) return;
     const target = event.target as HTMLElement;
-    if (target.closest('.actions-menu') || target.closest('.actions-toggle')) return;
+    if (target.closest('#actions-menu') || target.closest('.actions-toggle')) return;
     closeActionsMenu();
   });
+  window.addEventListener('scroll', closeActionsMenu, true);
+  window.addEventListener('resize', closeActionsMenu);
 
-  // Single delegated listener for everything in a row: opening it (click
-  // anywhere except data-no-row-click cells), and the Actions menu's
-  // toggle/View/Archive/Delete buttons (all inside a data-no-row-click
-  // cell, so they never also trigger the row-open behavior below).
-  tableBody.addEventListener('click', async (event) => {
+  tableBody.addEventListener('click', (event) => {
     const target = event.target as HTMLElement;
 
     const toggleButton = target.closest<HTMLElement>('.actions-toggle');
     if (toggleButton) {
-      const menu = toggleButton.nextElementSibling as HTMLElement;
-      if (openActionsMenu && openActionsMenu !== menu) closeActionsMenu();
-      menu.classList.toggle('hidden');
-      openActionsMenu = menu.classList.contains('hidden') ? null : menu;
-      return;
-    }
-
-    const viewButton = target.closest<HTMLElement>('.actions-view');
-    if (viewButton) {
-      closeActionsMenu();
-      openDetail(viewButton.dataset.leadId!);
-      return;
-    }
-
-    const archiveButton = target.closest<HTMLElement>('.actions-archive');
-    if (archiveButton) {
-      closeActionsMenu();
-      const leadId = archiveButton.dataset.leadId!;
-      const lead = allLeads.find((l) => l.id === leadId);
-      if (!lead) return;
-      if (await setArchived(leadId, !lead.archived_at)) {
-        renderDueThisWeek();
-        renderList();
-      }
-      return;
-    }
-
-    const deleteButton = target.closest<HTMLElement>('.actions-delete');
-    if (deleteButton) {
-      closeActionsMenu();
-      if (await deleteLead(deleteButton.dataset.leadId!)) {
-        renderDueThisWeek();
-        renderList();
+      const leadId = toggleButton.dataset.leadId!;
+      if (actionsMenuLeadId === leadId && !actionsMenu.classList.contains('hidden')) {
+        closeActionsMenu();
+      } else {
+        openActionsMenuFor(toggleButton, leadId);
       }
       return;
     }
@@ -474,6 +499,34 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     const row = target.closest<HTMLElement>('tr[data-lead-id]');
     if (!row) return;
     openDetail(row.dataset.leadId!);
+  });
+
+  actionsMenuViewButton.addEventListener('click', () => {
+    const leadId = actionsMenuLeadId;
+    closeActionsMenu();
+    if (leadId) openDetail(leadId);
+  });
+
+  actionsMenuArchiveButton.addEventListener('click', async () => {
+    const leadId = actionsMenuLeadId;
+    closeActionsMenu();
+    if (!leadId) return;
+    const lead = allLeads.find((l) => l.id === leadId);
+    if (!lead) return;
+    if (await setArchived(leadId, !lead.archived_at)) {
+      renderDueThisWeek();
+      renderList();
+    }
+  });
+
+  actionsMenuDeleteButton.addEventListener('click', async () => {
+    const leadId = actionsMenuLeadId;
+    closeActionsMenu();
+    if (!leadId) return;
+    if (await deleteLead(leadId)) {
+      renderDueThisWeek();
+      renderList();
+    }
   });
 
   initStatusSelectHandler(tableBody, (leadId, newStatus) => {
