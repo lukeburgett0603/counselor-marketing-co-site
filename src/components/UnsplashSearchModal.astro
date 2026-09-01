@@ -1,0 +1,32 @@
+---
+// A live Unsplash search popup, for any admin image field that wants one
+// alongside direct upload. Markup only — lib/unsplashSearch.ts's
+// initUnsplashSearchModal() wires it up, given an onSelect callback
+// deciding what the caller does with the chosen photo. Fixed ids since
+// only one instance is ever open on a page at a time — the consuming
+// page renders its own "Search Unsplash" trigger button
+// (id="search-unsplash-button") near whichever field it's for, and
+// includes this component once, anywhere in the page.
+---
+
+<div id="unsplash-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+  <div class="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6">
+    <div class="mb-4 flex items-center justify-between">
+      <h3 class="font-[family-name:var(--font-heading)] text-lg font-bold text-brand-ink">Search Unsplash</h3>
+      <button id="unsplash-close-button" type="button" class="text-sm text-slate-500 hover:text-slate-800">Close</button>
+    </div>
+    <div class="mb-4 flex gap-2">
+      <input
+        id="unsplash-query"
+        type="text"
+        placeholder="e.g. counseling, therapy office, family"
+        class="w-full rounded-md border border-slate-300 px-4 py-2 text-sm"
+      />
+      <button id="unsplash-search-button" type="button" class="rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
+        Search
+      </button>
+    </div>
+    <p id="unsplash-status" class="mb-2 text-sm text-slate-500"></p>
+    <div id="unsplash-results" class="grid grid-cols-3 gap-2 sm:grid-cols-4"></div>
+  </div>
+</div>

@@ -687,6 +687,21 @@ typically). Genuinely new infrastructure, not just another admin screen:
   the user described as still hypothetical ("maybe we need..."). Add one
   later if a client actually asks to hand this off to specific staff.
 
+**The Unsplash search modal and file-input button styling are shared,
+not per-page copies.** Built once for Lead Magnets, then reused
+immediately for `admin/blog.astro`'s hero image field rather than
+copy-pasted a second time — `components/UnsplashSearchModal.astro`
+(fixed ids; only one instance is ever open on a page at once, unlike
+`RichTextEditor.astro`, which does need per-instance ids) is the markup,
+`lib/unsplashSearch.ts`'s `initUnsplashSearchModal({ onSelect })` is the
+wiring, and each consuming page decides what to do with the selected
+photo. Also standardized the "Choose File" button styling here (a
+visually hidden `sr-only` input — not `hidden`, which would drop it from
+the tab order — paired with a styled `<label for=...>`) since the native
+unstyled file input didn't read as clickable. If a third admin field
+ever needs an image picker, reuse both of these rather than copying
+`admin/content.astro`'s or `admin/blog.astro`'s inline pattern again.
+
 ## Hub-and-spoke content (Content Pillar + Blog Post + Blog Index)
 
 Built 2026-08-29, first shipped on Counselor Marketing Co. — see

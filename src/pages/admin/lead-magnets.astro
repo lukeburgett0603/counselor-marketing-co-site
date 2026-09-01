@@ -1,5 +1,6 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
+import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
 ---
 
 <AdminLayout title="Lead magnets | Admin" current="lead-magnets">
@@ -94,33 +95,13 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     </form>
   </div>
 
-  <!-- Unsplash search modal -->
-  <div id="unsplash-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
-    <div class="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6">
-      <div class="mb-4 flex items-center justify-between">
-        <h3 class="font-[family-name:var(--font-heading)] text-lg font-bold text-brand-ink">Search Unsplash</h3>
-        <button id="unsplash-close-button" type="button" class="text-sm text-slate-500 hover:text-slate-800">Close</button>
-      </div>
-      <div class="mb-4 flex gap-2">
-        <input
-          id="unsplash-query"
-          type="text"
-          placeholder="e.g. counseling, therapy office, family"
-          class="w-full rounded-md border border-slate-300 px-4 py-2 text-sm"
-        />
-        <button id="unsplash-search-button" type="button" class="rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
-          Search
-        </button>
-      </div>
-      <p id="unsplash-status" class="mb-2 text-sm text-slate-500"></p>
-      <div id="unsplash-results" class="grid grid-cols-3 gap-2 sm:grid-cols-4"></div>
-    </div>
-  </div>
+  <UnsplashSearchModal />
 </AdminLayout>
 
 <script>
   import { supabase, initAdminAuth } from '../../lib/adminAuth';
   import { callPublishFunction } from '../../lib/publishFunction';
+  import { initUnsplashSearchModal, type UnsplashPhoto } from '../../lib/unsplashSearch';
 
   type LeadMagnet = {
     id: string;
@@ -157,14 +138,6 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   const imageFileField = document.getElementById('field-image-file') as HTMLInputElement;
   const imageStatus = document.getElementById('field-image-status')!;
   const imagePreview = document.getElementById('field-image-preview') as HTMLImageElement;
-  const searchUnsplashButton = document.getElementById('search-unsplash-button')!;
-
-  const unsplashModal = document.getElementById('unsplash-modal')!;
-  const unsplashCloseButton = document.getElementById('unsplash-close-button')!;
-  const unsplashQuery = document.getElementById('unsplash-query') as HTMLInputElement;
-  const unsplashSearchButton = document.getElementById('unsplash-search-button')!;
-  const unsplashStatus = document.getElementById('unsplash-status')!;
-  const unsplashResults = document.getElementById('unsplash-results')!;
 
   let magnets: LeadMagnet[] = [];
   let pages: PageOption[] = [];
@@ -327,93 +300,15 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   });
 
   // ---------------------------------------------------------------------
-  // Unsplash search modal
-  // ---------------------------------------------------------------------
-  searchUnsplashButton.addEventListener('click', () => {
-    unsplashModal.classList.remove('hidden');
-    unsplashModal.classList.add('flex');
-    unsplashQuery.focus();
-  });
-  unsplashCloseButton.addEventListener('click', () => {
-    unsplashModal.classList.add('hidden');
-    unsplashModal.classList.remove('flex');
+  initUnsplashSearchModal({
+    onSelect: (photo: UnsplashPhoto) => {
+      selectedImage = { url: photo.fullUrl, alt: photo.alt, creditName: photo.creditName, creditUrl: photo.creditUrl };
+      imagePreview.src = photo.fullUrl;
+      imagePreview.classList.remove('hidden');
+      imageStatus.textContent = photo.creditName ? `Selected — photo by ${photo.creditName} on Unsplash.` : 'Selected.';
+    },
   });
 
-  async function runUnsplashSearch() {
-    const query = unsplashQuery.value.trim();
-    if (!query) return;
-    unsplashStatus.textContent = 'Searching...';
-    unsplashResults.innerHTML = '';
-    const result = await callPublishFunctionDirect({ action: 'search', query });
-    if (!result.ok) {
-      unsplashStatus.textContent =
-        result.error === 'Live image search is not configured for this site'
-          ? "Live search isn't set up for this site — upload an image instead."
-          : 'Could not search: ' + result.error;
-      return;
-    }
-    unsplashStatus.textContent = `${result.results.length} results`;
-    unsplashResults.innerHTML = result.results
-      .map(
-        (photo: any, i: number) => `
-      <button type="button" class="unsplash-result-button overflow-hidden rounded-md border border-slate-200 hover:ring-2 hover:ring-brand-primary" data-index="${i}">
-        <img src="${photo.thumbUrl}" alt="" class="h-24 w-full object-cover" />
-      </button>`
-      )
-      .join('');
-    (unsplashResults as any)._results = result.results;
-  }
-
-  unsplashSearchButton.addEventListener('click', runUnsplashSearch);
-  unsplashQuery.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') runUnsplashSearch();
-  });
-
-  unsplashResults.addEventListener('click', async (event) => {
-    const button = (event.target as HTMLElement).closest<HTMLElement>('.unsplash-result-button');
-    if (!button) return;
-    const results = (unsplashResults as any)._results ?? [];
-    const photo = results[Number(button.dataset.index)];
-    if (!photo) return;
-
-    selectedImage = { url: photo.fullUrl, alt: photo.alt, creditName: photo.creditName, creditUrl: photo.creditUrl };
-    imagePreview.src = photo.fullUrl;
-    imagePreview.classList.remove('hidden');
-    imageStatus.textContent = photo.creditName ? `Selected — photo by ${photo.creditName} on Unsplash.` : 'Selected.';
-    unsplashModal.classList.add('hidden');
-    unsplashModal.classList.remove('flex');
-
-    if (photo.downloadLocation) {
-      callPublishFunctionDirect({ action: 'trackDownload', downloadLocation: photo.downloadLocation });
-    }
-  });
-
-  // search-unsplash is a separate Edge Function from publish-site (see
-  // its own file header for why) — a tiny local wrapper mirroring
-  // callPublishFunction's shape rather than adding a second export there.
-  async function callPublishFunctionDirect(body: Record<string, unknown>): Promise<any> {
-    const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
-    const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
-    const { data: sessionData } = await supabase.auth.getSession();
-    try {
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/search-unsplash`, {
-        method: 'POST',
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${sessionData.session?.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) return { ok: false, error: result.error ?? 'Something went wrong.' };
-      return { ok: true, ...result };
-    } catch (err) {
-      return { ok: false, error: String(err) };
-    }
-  }
-
-  // ---------------------------------------------------------------------
   function validate(): string | null {
     if (!titleField.value.trim()) return 'Title is required.';
     if (!descriptionField.value.trim()) return 'Description is required.';
