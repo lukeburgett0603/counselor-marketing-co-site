@@ -1,0 +1,512 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<!--
+  Day-to-day lead management — notes, follow-up dates, a detail view,
+  search/filter, CSV export — kept deliberately separate from
+  admin/leads.astro. That page stays a clean, numbers-only dashboard a
+  client's own customers can point to as proof their marketing is
+  working; this page is the working tool for actually managing those
+  relationships. Same `leads` table, same owner/agency access level.
+-->
+<AdminLayout title="Lead CRM | Admin" current="crm">
+  <div id="crm-list-view">
+    <div id="due-section" class="mb-6 hidden rounded-lg border border-amber-200 bg-amber-50 p-4">
+      <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-800">Due this week</p>
+      <div id="due-list" class="space-y-1 text-sm"></div>
+    </div>
+
+    <div class="mb-4 flex flex-wrap items-end gap-3">
+      <div>
+        <label class="block text-xs font-semibold text-slate-500">Search</label>
+        <input
+          id="filter-search"
+          type="text"
+          placeholder="Name, email, phone..."
+          class="rounded-md border border-slate-300 px-3 py-2 text-sm"
+        />
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-500">Status</label>
+        <select id="filter-status" class="rounded-md border border-slate-300 px-3 py-2 text-sm">
+          <option value="all">All</option>
+          <option value="new">New</option>
+          <option value="contacted">Contacted</option>
+          <option value="closed">Closed</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-500">Date</label>
+        <select id="filter-date" class="rounded-md border border-slate-300 px-3 py-2 text-sm">
+          <option value="all">All time</option>
+          <option value="7">Last 7 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 90 days</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-500">Source</label>
+        <select id="filter-source" class="rounded-md border border-slate-300 px-3 py-2 text-sm">
+          <option value="all">All sources</option>
+          <option value="contact-form">Contact form</option>
+        </select>
+      </div>
+      <button
+        id="export-csv-button"
+        type="button"
+        class="ml-auto rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+      >
+        Export CSV
+      </button>
+    </div>
+
+    <p id="leads-count" class="mb-3 text-sm text-slate-600"></p>
+
+    <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <table class="w-full text-left text-sm">
+        <thead class="border-b border-slate-200 bg-slate-50">
+          <tr>
+            <th class="px-4 py-3 font-semibold">Date</th>
+            <th class="px-4 py-3 font-semibold">Name</th>
+            <th class="px-4 py-3 font-semibold">Email</th>
+            <th class="px-4 py-3 font-semibold">Status</th>
+            <th class="px-4 py-3 font-semibold">Follow-up</th>
+            <th class="px-4 py-3 font-semibold">Notes</th>
+            <th class="px-4 py-3 font-semibold"></th>
+          </tr>
+        </thead>
+        <tbody id="leads-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="crm-detail-view" class="hidden">
+    <button id="back-to-list-button" type="button" class="mb-4 text-sm text-brand-primary hover:underline">
+      &larr; Back to all leads
+    </button>
+
+    <div class="mb-6 rounded-lg border border-black/5 bg-white p-5 shadow-sm">
+      <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 id="detail-name" class="font-[family-name:var(--font-heading)] text-xl font-bold text-brand-ink"></h2>
+          <p id="detail-submitted" class="text-xs text-slate-500"></p>
+        </div>
+        <div id="detail-status-container"></div>
+      </div>
+      <dl class="grid gap-3 text-sm sm:grid-cols-2">
+        <div>
+          <dt class="text-xs font-semibold uppercase text-slate-500">Email</dt>
+          <dd id="detail-email" class="mt-0.5"></dd>
+        </div>
+        <div>
+          <dt class="text-xs font-semibold uppercase text-slate-500">Phone</dt>
+          <dd id="detail-phone" class="mt-0.5"></dd>
+        </div>
+        <div>
+          <dt class="text-xs font-semibold uppercase text-slate-500">Current site</dt>
+          <dd id="detail-website" class="mt-0.5"></dd>
+        </div>
+        <div>
+          <dt class="text-xs font-semibold uppercase text-slate-500">Source</dt>
+          <dd id="detail-source" class="mt-0.5"></dd>
+        </div>
+      </dl>
+      <div class="mt-4">
+        <dt class="text-xs font-semibold uppercase text-slate-500">Message</dt>
+        <dd id="detail-message" class="mt-0.5 whitespace-pre-wrap text-sm"></dd>
+      </div>
+      <div class="mt-5 flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500">Follow-up date</label>
+          <input id="detail-follow-up" type="date" class="rounded-md border border-slate-300 px-3 py-2 text-sm" />
+        </div>
+        <button
+          id="save-follow-up-button"
+          type="button"
+          class="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          Save
+        </button>
+        <button id="clear-follow-up-button" type="button" class="text-sm text-slate-500 hover:underline">
+          Clear
+        </button>
+        <span id="follow-up-status" class="text-xs"></span>
+      </div>
+    </div>
+
+    <div class="rounded-lg border border-black/5 bg-white p-5 shadow-sm">
+      <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Notes</p>
+      <div id="notes-list" class="mb-4 space-y-3"></div>
+      <form id="add-note-form" class="space-y-2">
+        <textarea
+          id="note-text"
+          rows="3"
+          placeholder="Called, left voicemail..."
+          required
+          class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"></textarea>
+        <button type="submit" class="rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
+          Add note
+        </button>
+      </form>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  import { supabase, initAdminAuth } from '../../lib/adminAuth';
+  import { renderStatusSelect, initStatusSelectHandler } from '../../lib/leadStatus';
+
+  function escapeHtml(value: string): string {
+    const div = document.createElement('div');
+    div.textContent = value;
+    return div.innerHTML;
+  }
+
+  type Lead = {
+    id: string;
+    created_at: string;
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+    message: string | null;
+    existing_website_url: string | null;
+    source_page: string | null;
+    status: string | null;
+    follow_up_date: string | null;
+    lead_magnet_id: string | null;
+  };
+  type LeadMagnet = { id: string; title: string };
+  type LeadNote = { id: string; lead_id: string; note: string; created_at: string };
+
+  let allLeads: Lead[] = [];
+  let leadMagnets: LeadMagnet[] = [];
+  let noteCounts = new Map<string, number>();
+  let currentLeadId: string | null = null;
+
+  const listView = document.getElementById('crm-list-view')!;
+  const detailView = document.getElementById('crm-detail-view')!;
+  const tableBody = document.getElementById('leads-table-body')!;
+  const leadsCount = document.getElementById('leads-count')!;
+  const dueSection = document.getElementById('due-section')!;
+  const dueList = document.getElementById('due-list')!;
+
+  const searchInput = document.getElementById('filter-search') as HTMLInputElement;
+  const statusFilter = document.getElementById('filter-status') as HTMLSelectElement;
+  const dateFilter = document.getElementById('filter-date') as HTMLSelectElement;
+  const sourceFilter = document.getElementById('filter-source') as HTMLSelectElement;
+  const exportButton = document.getElementById('export-csv-button')!;
+
+  function showList() {
+    detailView.classList.add('hidden');
+    listView.classList.remove('hidden');
+  }
+  function showDetail() {
+    listView.classList.add('hidden');
+    detailView.classList.remove('hidden');
+  }
+
+  function magnetTitle(id: string | null): string {
+    if (!id) return 'Contact form';
+    return leadMagnets.find((m) => m.id === id)?.title ?? 'Lead magnet';
+  }
+
+  function applyFilters(leads: Lead[]): Lead[] {
+    const search = searchInput.value.trim().toLowerCase();
+    const status = statusFilter.value;
+    const days = dateFilter.value;
+    const source = sourceFilter.value;
+
+    return leads.filter((lead) => {
+      if (status !== 'all' && (lead.status ?? 'new') !== status) return false;
+      if (days !== 'all') {
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - Number(days));
+        if (new Date(lead.created_at) < cutoff) return false;
+      }
+      if (source === 'contact-form' && lead.lead_magnet_id) return false;
+      if (source !== 'all' && source !== 'contact-form' && lead.lead_magnet_id !== source) return false;
+      if (search) {
+        const haystack = `${lead.name ?? ''} ${lead.email ?? ''} ${lead.phone ?? ''}`.toLowerCase();
+        if (!haystack.includes(search)) return false;
+      }
+      return true;
+    });
+  }
+
+  // "Due this week" surfaces anything with a follow-up date within the
+  // next 7 days — with no lower bound, so an overdue-but-not-yet-handled
+  // follow-up keeps showing here instead of silently falling off once its
+  // date passes. Closed leads are excluded — no point being reminded
+  // about someone already handled.
+  function renderDueThisWeek() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const weekOut = new Date(today);
+    weekOut.setDate(today.getDate() + 7);
+
+    const due = allLeads
+      .filter((l) => l.follow_up_date && (l.status ?? 'new') !== 'closed')
+      .filter((l) => new Date(l.follow_up_date + 'T00:00:00') <= weekOut)
+      .sort((a, b) => (a.follow_up_date! < b.follow_up_date! ? -1 : 1));
+
+    if (due.length === 0) {
+      dueSection.classList.add('hidden');
+      return;
+    }
+    dueSection.classList.remove('hidden');
+    dueList.innerHTML = due
+      .map((lead) => {
+        const dueDate = new Date(lead.follow_up_date + 'T00:00:00');
+        const isOverdue = dueDate < today;
+        return `
+      <button type="button" data-lead-id="${lead.id}" class="due-item flex w-full items-center justify-between rounded-md border border-amber-200 bg-white px-3 py-2 text-left hover:bg-amber-100">
+        <span class="font-medium text-brand-ink">${escapeHtml(lead.name || '(no name)')}</span>
+        <span class="text-xs font-semibold ${isOverdue ? 'text-red-600' : 'text-amber-700'}">${isOverdue ? 'Overdue — ' : ''}${dueDate.toLocaleDateString()}</span>
+      </button>`;
+      })
+      .join('');
+  }
+
+  dueList.addEventListener('click', (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLElement>('.due-item');
+    if (!button) return;
+    openDetail(button.dataset.leadId!);
+  });
+
+  function renderList() {
+    const filtered = applyFilters(allLeads);
+    leadsCount.textContent = `${filtered.length} lead${filtered.length === 1 ? '' : 's'}`;
+    tableBody.innerHTML = filtered
+      .map(
+        (lead) => `
+      <tr class="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50" data-lead-id="${lead.id}">
+        <td class="px-4 py-3 whitespace-nowrap">${new Date(lead.created_at).toLocaleDateString()}</td>
+        <td class="px-4 py-3">${escapeHtml(lead.name ?? '')}</td>
+        <td class="px-4 py-3">${escapeHtml(lead.email ?? '')}</td>
+        <td class="px-4 py-3" data-no-row-click>${renderStatusSelect(lead.id, lead.status)}</td>
+        <td class="px-4 py-3 whitespace-nowrap">${lead.follow_up_date ? new Date(lead.follow_up_date + 'T00:00:00').toLocaleDateString() : ''}</td>
+        <td class="px-4 py-3">${noteCounts.get(lead.id) ?? 0}</td>
+        <td class="px-4 py-3"><span class="text-brand-primary">View</span></td>
+      </tr>`
+      )
+      .join('');
+  }
+
+  // Clicking anywhere in a row opens that lead's detail view, except the
+  // status select itself (data-no-row-click) — that has its own inline
+  // change behavior and shouldn't also trigger a navigation.
+  tableBody.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement;
+    if (target.closest('[data-no-row-click]')) return;
+    const row = target.closest<HTMLElement>('tr[data-lead-id]');
+    if (!row) return;
+    openDetail(row.dataset.leadId!);
+  });
+
+  initStatusSelectHandler(tableBody, (leadId, newStatus) => {
+    const lead = allLeads.find((l) => l.id === leadId);
+    if (lead) lead.status = newStatus;
+    renderDueThisWeek();
+  });
+
+  [searchInput, statusFilter, dateFilter, sourceFilter].forEach((el) => {
+    el.addEventListener('input', renderList);
+    el.addEventListener('change', renderList);
+  });
+
+  function csvEscape(value: string): string {
+    if (/[",\n]/.test(value)) return '"' + value.replace(/"/g, '""') + '"';
+    return value;
+  }
+
+  // Exports whatever the current filters show, not the whole table — a
+  // client who's filtered down to "last 30 days, new leads" expects the
+  // export to match what's on screen.
+  exportButton.addEventListener('click', () => {
+    const filtered = applyFilters(allLeads);
+    const header = ['Date', 'Name', 'Email', 'Phone', 'Status', 'Follow-up date', 'Source', 'Message'];
+    const rows = filtered.map((lead) => [
+      new Date(lead.created_at).toLocaleDateString(),
+      lead.name ?? '',
+      lead.email ?? '',
+      lead.phone ?? '',
+      lead.status ?? 'new',
+      lead.follow_up_date ?? '',
+      magnetTitle(lead.lead_magnet_id),
+      lead.message ?? '',
+    ]);
+    const csv = [header, ...rows].map((row) => row.map((cell) => csvEscape(String(cell))).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `leads-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  // --- Detail view ---
+
+  const backButton = document.getElementById('back-to-list-button')!;
+  const detailName = document.getElementById('detail-name')!;
+  const detailSubmitted = document.getElementById('detail-submitted')!;
+  const detailStatusContainer = document.getElementById('detail-status-container')!;
+  const detailEmail = document.getElementById('detail-email')!;
+  const detailPhone = document.getElementById('detail-phone')!;
+  const detailWebsite = document.getElementById('detail-website')!;
+  const detailSource = document.getElementById('detail-source')!;
+  const detailMessage = document.getElementById('detail-message')!;
+  const detailFollowUp = document.getElementById('detail-follow-up') as HTMLInputElement;
+  const saveFollowUpButton = document.getElementById('save-follow-up-button')!;
+  const clearFollowUpButton = document.getElementById('clear-follow-up-button')!;
+  const followUpStatus = document.getElementById('follow-up-status')!;
+  const notesList = document.getElementById('notes-list')!;
+  const addNoteForm = document.getElementById('add-note-form') as HTMLFormElement;
+  const noteTextField = document.getElementById('note-text') as HTMLTextAreaElement;
+
+  initStatusSelectHandler(detailStatusContainer, (leadId, newStatus) => {
+    const lead = allLeads.find((l) => l.id === leadId);
+    if (lead) lead.status = newStatus;
+    renderDueThisWeek();
+  });
+
+  backButton.addEventListener('click', () => {
+    showList();
+    renderList();
+  });
+
+  async function openDetail(leadId: string) {
+    const lead = allLeads.find((l) => l.id === leadId);
+    if (!lead) return;
+    currentLeadId = leadId;
+
+    detailName.textContent = lead.name || '(no name)';
+    detailSubmitted.textContent = `Submitted ${new Date(lead.created_at).toLocaleString()}`;
+    detailStatusContainer.innerHTML = renderStatusSelect(lead.id, lead.status);
+    detailEmail.textContent = lead.email ?? '—';
+    detailPhone.textContent = lead.phone ?? '—';
+    detailWebsite.innerHTML = lead.existing_website_url
+      ? `<a href="${escapeHtml(lead.existing_website_url)}" target="_blank" rel="noopener" class="text-brand-primary hover:underline">${escapeHtml(lead.existing_website_url)}</a>`
+      : '—';
+    detailSource.textContent = `${magnetTitle(lead.lead_magnet_id)}${lead.source_page ? ` — ${lead.source_page}` : ''}`;
+    detailMessage.textContent = lead.message ?? '—';
+    detailFollowUp.value = lead.follow_up_date ?? '';
+    followUpStatus.textContent = '';
+
+    showDetail();
+    await loadNotes(leadId);
+  }
+
+  saveFollowUpButton.addEventListener('click', async () => {
+    if (!currentLeadId) return;
+    followUpStatus.textContent = 'Saving...';
+    followUpStatus.className = 'text-xs text-slate-500';
+    const { error } = await supabase
+      .from('leads')
+      .update({ follow_up_date: detailFollowUp.value || null })
+      .eq('id', currentLeadId);
+    if (error) {
+      followUpStatus.textContent = 'Could not save: ' + error.message;
+      followUpStatus.className = 'text-xs text-red-600';
+      return;
+    }
+    const lead = allLeads.find((l) => l.id === currentLeadId);
+    if (lead) lead.follow_up_date = detailFollowUp.value || null;
+    followUpStatus.textContent = 'Saved.';
+    followUpStatus.className = 'text-xs text-emerald-700';
+    renderDueThisWeek();
+  });
+
+  clearFollowUpButton.addEventListener('click', () => {
+    detailFollowUp.value = '';
+    saveFollowUpButton.click();
+  });
+
+  async function loadNotes(leadId: string) {
+    notesList.innerHTML = '<p class="text-sm text-slate-500">Loading notes...</p>';
+    const { data, error } = await supabase
+      .from('lead_notes')
+      .select('*')
+      .eq('lead_id', leadId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      notesList.innerHTML = `<p class="text-sm text-red-600">Could not load notes: ${escapeHtml(error.message)}</p>`;
+      return;
+    }
+    const notes = data as LeadNote[];
+    noteCounts.set(leadId, notes.length);
+    if (notes.length === 0) {
+      notesList.innerHTML = '<p class="text-sm text-slate-500">No notes yet.</p>';
+      return;
+    }
+    notesList.innerHTML = notes
+      .map(
+        (note) => `
+      <div class="rounded-md border border-slate-100 bg-slate-50 p-3">
+        <p class="whitespace-pre-wrap text-sm text-slate-800">${escapeHtml(note.note)}</p>
+        <p class="mt-1 text-xs text-slate-400">${new Date(note.created_at).toLocaleString()}</p>
+      </div>`
+      )
+      .join('');
+  }
+
+  addNoteForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!currentLeadId) return;
+    const noteText = noteTextField.value.trim();
+    if (!noteText) return;
+
+    const { data: userData } = await supabase.auth.getUser();
+    const { error } = await supabase.from('lead_notes').insert({
+      lead_id: currentLeadId,
+      note: noteText,
+      created_by: userData.user?.id ?? null,
+    });
+    if (error) {
+      window.alert('Could not add note: ' + error.message);
+      return;
+    }
+    noteTextField.value = '';
+    await loadNotes(currentLeadId);
+  });
+
+  async function loadLeadMagnets() {
+    const { data } = await supabase.from('lead_magnets').select('id, title').order('title');
+    leadMagnets = (data as LeadMagnet[]) ?? [];
+    sourceFilter.innerHTML =
+      '<option value="all">All sources</option><option value="contact-form">Contact form</option>' +
+      leadMagnets.map((m) => `<option value="${m.id}">${escapeHtml(m.title)}</option>`).join('');
+  }
+
+  async function loadNoteCounts() {
+    const { data } = await supabase.from('lead_notes').select('lead_id');
+    noteCounts = new Map();
+    for (const row of (data as { lead_id: string }[]) ?? []) {
+      noteCounts.set(row.lead_id, (noteCounts.get(row.lead_id) ?? 0) + 1);
+    }
+  }
+
+  async function loadLeads() {
+    const { data, error } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
+    if (error) {
+      leadsCount.textContent = 'Could not load leads: ' + error.message;
+      return;
+    }
+    allLeads = data as Lead[];
+    await loadNoteCounts();
+    renderDueThisWeek();
+    renderList();
+  }
+
+  initAdminAuth(
+    async () => {
+      await loadLeadMagnets();
+      await loadLeads();
+    },
+    { allowedRoles: ['owner', 'agency'] }
+  );
+</script>
