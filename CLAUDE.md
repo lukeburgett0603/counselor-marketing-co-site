@@ -375,6 +375,57 @@ here until "assign leads to staff" (backlogged, see below) is built.
   SMTP infrastructure — see the invite-rate-limit note in the
   multi-user-roles section, held off until there's a paying client to
   justify the Resend/Postmark cost).
+- **"+ Add lead"** (built 2026-09-01) covers a lead that came in some
+  way other than the site's own form — a phone call, a walk-in, a
+  referral — via a small modal (name/email/phone/status/notes) that
+  inserts straight into the same `leads` table. No new migration needed:
+  `leads`' existing `"public can insert leads"` policy (`for insert with
+  check (true)`, there for the anonymous contact-form submission) already
+  covers an authenticated admin session too, since a permissive policy
+  with no `to` clause applies to every role. **The row is tagged
+  `source_page = 'Manually added'`** (a fixed sentinel, exported as the
+  `MANUAL_SOURCE` constant in `admin/crm.astro`) rather than left null —
+  this is what makes it show up on Leads and analytics as its own
+  honest, clearly-labeled bucket in "Leads by page" instead of being
+  silently folded into `(unknown page)` or misattributed to a real page.
+  Leads and analytics needed **zero code changes** to pick this up: it
+  has no source filtering at all, so total/this-month/last-month/the
+  weekly chart all include a manually-added lead automatically just by
+  virtue of it being a `leads` row — verified live, not assumed. After
+  saving, the modal closes and jumps straight into the new lead's detail
+  view, since adding a note or setting a follow-up date is the near-
+  certain next step.
+- **Archive and delete** (built 2026-09-01), both CRM-only — Leads and
+  analytics has no delete/archive UI and never will; that page stays a
+  read-only, numbers-only view. An **Actions ▾** menu on each list row
+  (View / Archive / Delete) replaced the old plain "View" text — the
+  same three actions are also available as buttons in the detail view,
+  for whichever lead you're already looking at.
+  - **Archive is a soft-hide, not a data change client-facing dashboards
+    ever see**: `leads.archived_at` (nullable timestamptz,
+    `0018_lead_archive_and_delete.sql`) just filters an archived lead out
+    of the CRM's own default list (a "Show archived" checkbox brings it
+    back, and un-archives). **Leads and analytics has zero
+    archived-awareness** — deliberately: an archived lead keeps counting
+    toward every stat there exactly as before, since archiving only means
+    "get this out of my active CRM view," not "this didn't happen."
+    Confirmed this decision explicitly with the client before building —
+    the two are easy to conflate and hard to walk back once real data
+    depends on the answer.
+  - **Delete is a real, hard delete** — `leads` had no DELETE RLS policy
+    before this (nothing needed one), so `0018` adds
+    `"admin can delete leads"` (`is_owner() or is_agency()`). This is
+    what actually reduces the Leads and analytics numbers, confirmed
+    live: deleting a lead drops the total/weekly-chart/by-page numbers
+    immediately, since that page just counts whatever rows exist in
+    `leads`. `lead_notes.lead_id` already cascades on delete (see
+    `0017_lead_crm.sql`), so a deleted lead's notes go with it — no
+    orphaned rows. Gated behind the same `window.confirm(...)` pattern
+    already used for delete buttons elsewhere in this app
+    (`admin/blog.astro`, `admin/lead-magnets.astro`).
+  - Archive/delete logic (`setArchived`, `deleteLead`) is written once
+    and called from both the row menu and the detail view — same reuse
+    discipline as the status-select extraction above.
 
 ## Admin CMS: Edge Functions for anything needing a secret at request time
 

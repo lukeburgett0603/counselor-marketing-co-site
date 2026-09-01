@@ -53,6 +53,10 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           <option value="manual">Manually added</option>
         </select>
       </div>
+      <div class="flex items-center gap-2 pb-2">
+        <input id="filter-show-archived" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
+        <label for="filter-show-archived" class="text-sm text-slate-600">Show archived</label>
+      </div>
       <div class="ml-auto flex gap-2">
         <button
           id="add-lead-button"
@@ -147,9 +151,31 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   </div>
 
   <div id="crm-detail-view" class="hidden">
-    <button id="back-to-list-button" type="button" class="mb-4 text-sm text-brand-primary hover:underline">
-      &larr; Back to all leads
-    </button>
+    <div class="mb-4 flex items-center justify-between">
+      <button id="back-to-list-button" type="button" class="text-sm text-brand-primary hover:underline">
+        &larr; Back to all leads
+      </button>
+      <div class="flex gap-2">
+        <button
+          id="detail-archive-button"
+          type="button"
+          class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          Archive
+        </button>
+        <button
+          id="detail-delete-button"
+          type="button"
+          class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-50"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+
+    <p id="detail-archived-banner" class="mb-4 hidden rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-700">
+      This lead is archived — hidden from the CRM's default list, but still counted on Leads and analytics.
+    </p>
 
     <div class="mb-6 rounded-lg border border-black/5 bg-white p-5 shadow-sm">
       <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -240,6 +266,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     status: string | null;
     follow_up_date: string | null;
     lead_magnet_id: string | null;
+    archived_at: string | null;
   };
   type LeadMagnet = { id: string; title: string };
   type LeadNote = { id: string; lead_id: string; note: string; created_at: string };
@@ -256,6 +283,9 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   let leadMagnets: LeadMagnet[] = [];
   let noteCounts = new Map<string, number>();
   let currentLeadId: string | null = null;
+  // The currently-open row Actions menu, if any — tracked so opening one
+  // closes any other, and so an outside click can close it.
+  let openActionsMenu: HTMLElement | null = null;
 
   const listView = document.getElementById('crm-list-view')!;
   const detailView = document.getElementById('crm-detail-view')!;
@@ -268,6 +298,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   const statusFilter = document.getElementById('filter-status') as HTMLSelectElement;
   const dateFilter = document.getElementById('filter-date') as HTMLSelectElement;
   const sourceFilter = document.getElementById('filter-source') as HTMLSelectElement;
+  const showArchivedFilter = document.getElementById('filter-show-archived') as HTMLInputElement;
   const exportButton = document.getElementById('export-csv-button')!;
 
   function showList() {
@@ -290,8 +321,10 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     const status = statusFilter.value;
     const days = dateFilter.value;
     const source = sourceFilter.value;
+    const showArchived = showArchivedFilter.checked;
 
     return leads.filter((lead) => {
+      if (!showArchived && lead.archived_at) return false;
       if (status !== 'all' && (lead.status ?? 'new') !== status) return false;
       if (days !== 'all') {
         const cutoff = new Date();
@@ -313,8 +346,8 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   // "Due this week" surfaces anything with a follow-up date within the
   // next 7 days — with no lower bound, so an overdue-but-not-yet-handled
   // follow-up keeps showing here instead of silently falling off once its
-  // date passes. Closed leads are excluded — no point being reminded
-  // about someone already handled.
+  // date passes. Closed and archived leads are excluded — no point being
+  // reminded about someone already handled or no longer being worked.
   function renderDueThisWeek() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -322,7 +355,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     weekOut.setDate(today.getDate() + 7);
 
     const due = allLeads
-      .filter((l) => l.follow_up_date && (l.status ?? 'new') !== 'closed')
+      .filter((l) => l.follow_up_date && (l.status ?? 'new') !== 'closed' && !l.archived_at)
       .filter((l) => new Date(l.follow_up_date + 'T00:00:00') <= weekOut)
       .sort((a, b) => (a.follow_up_date! < b.follow_up_date! ? -1 : 1));
 
@@ -356,24 +389,87 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     tableBody.innerHTML = filtered
       .map(
         (lead) => `
-      <tr class="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50" data-lead-id="${lead.id}">
+      <tr class="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50 ${lead.archived_at ? 'opacity-60' : ''}" data-lead-id="${lead.id}">
         <td class="px-4 py-3 whitespace-nowrap">${new Date(lead.created_at).toLocaleDateString()}</td>
-        <td class="px-4 py-3">${escapeHtml(lead.name ?? '')}</td>
+        <td class="px-4 py-3">${escapeHtml(lead.name ?? '')}${lead.archived_at ? ' <span class="ml-1 rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-600">Archived</span>' : ''}</td>
         <td class="px-4 py-3">${escapeHtml(lead.email ?? '')}</td>
         <td class="px-4 py-3" data-no-row-click>${renderStatusSelect(lead.id, lead.status)}</td>
         <td class="px-4 py-3 whitespace-nowrap">${lead.follow_up_date ? new Date(lead.follow_up_date + 'T00:00:00').toLocaleDateString() : ''}</td>
         <td class="px-4 py-3">${noteCounts.get(lead.id) ?? 0}</td>
-        <td class="px-4 py-3"><span class="text-brand-primary">View</span></td>
+        <td class="relative px-4 py-3 text-right" data-no-row-click>
+          <button type="button" class="actions-toggle rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50" data-lead-id="${lead.id}">
+            Actions ▾
+          </button>
+          <div class="actions-menu absolute right-4 z-10 mt-1 hidden w-36 rounded-md border border-slate-200 bg-white py-1 text-left shadow-lg">
+            <button type="button" class="actions-view block w-full px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50" data-lead-id="${lead.id}">View</button>
+            <button type="button" class="actions-archive block w-full px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50" data-lead-id="${lead.id}">${lead.archived_at ? 'Unarchive' : 'Archive'}</button>
+            <button type="button" class="actions-delete block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-red-50" data-lead-id="${lead.id}">Delete</button>
+          </div>
+        </td>
       </tr>`
       )
       .join('');
   }
 
-  // Clicking anywhere in a row opens that lead's detail view, except the
-  // status select itself (data-no-row-click) — that has its own inline
-  // change behavior and shouldn't also trigger a navigation.
-  tableBody.addEventListener('click', (event) => {
+  function closeActionsMenu() {
+    openActionsMenu?.classList.add('hidden');
+    openActionsMenu = null;
+  }
+
+  // Close any open Actions menu on an outside click.
+  document.addEventListener('click', (event) => {
+    if (!openActionsMenu) return;
     const target = event.target as HTMLElement;
+    if (target.closest('.actions-menu') || target.closest('.actions-toggle')) return;
+    closeActionsMenu();
+  });
+
+  // Single delegated listener for everything in a row: opening it (click
+  // anywhere except data-no-row-click cells), and the Actions menu's
+  // toggle/View/Archive/Delete buttons (all inside a data-no-row-click
+  // cell, so they never also trigger the row-open behavior below).
+  tableBody.addEventListener('click', async (event) => {
+    const target = event.target as HTMLElement;
+
+    const toggleButton = target.closest<HTMLElement>('.actions-toggle');
+    if (toggleButton) {
+      const menu = toggleButton.nextElementSibling as HTMLElement;
+      if (openActionsMenu && openActionsMenu !== menu) closeActionsMenu();
+      menu.classList.toggle('hidden');
+      openActionsMenu = menu.classList.contains('hidden') ? null : menu;
+      return;
+    }
+
+    const viewButton = target.closest<HTMLElement>('.actions-view');
+    if (viewButton) {
+      closeActionsMenu();
+      openDetail(viewButton.dataset.leadId!);
+      return;
+    }
+
+    const archiveButton = target.closest<HTMLElement>('.actions-archive');
+    if (archiveButton) {
+      closeActionsMenu();
+      const leadId = archiveButton.dataset.leadId!;
+      const lead = allLeads.find((l) => l.id === leadId);
+      if (!lead) return;
+      if (await setArchived(leadId, !lead.archived_at)) {
+        renderDueThisWeek();
+        renderList();
+      }
+      return;
+    }
+
+    const deleteButton = target.closest<HTMLElement>('.actions-delete');
+    if (deleteButton) {
+      closeActionsMenu();
+      if (await deleteLead(deleteButton.dataset.leadId!)) {
+        renderDueThisWeek();
+        renderList();
+      }
+      return;
+    }
+
     if (target.closest('[data-no-row-click]')) return;
     const row = target.closest<HTMLElement>('tr[data-lead-id]');
     if (!row) return;
@@ -386,7 +482,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     renderDueThisWeek();
   });
 
-  [searchInput, statusFilter, dateFilter, sourceFilter].forEach((el) => {
+  [searchInput, statusFilter, dateFilter, sourceFilter, showArchivedFilter].forEach((el) => {
     el.addEventListener('input', renderList);
     el.addEventListener('change', renderList);
   });
@@ -401,7 +497,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   // export to match what's on screen.
   exportButton.addEventListener('click', () => {
     const filtered = applyFilters(allLeads);
-    const header = ['Date', 'Name', 'Email', 'Phone', 'Status', 'Follow-up date', 'Source', 'Message'];
+    const header = ['Date', 'Name', 'Email', 'Phone', 'Status', 'Follow-up date', 'Source', 'Archived', 'Message'];
     const rows = filtered.map((lead) => [
       new Date(lead.created_at).toLocaleDateString(),
       lead.name ?? '',
@@ -410,6 +506,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       lead.status ?? 'new',
       lead.follow_up_date ?? '',
       sourceLabel(lead),
+      lead.archived_at ? 'Yes' : '',
       lead.message ?? '',
     ]);
     const csv = [header, ...rows].map((row) => row.map((cell) => csvEscape(String(cell))).join(',')).join('\n');
@@ -423,6 +520,41 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     a.remove();
     URL.revokeObjectURL(url);
   });
+
+  // --- Archive / delete (shared by the row Actions menu and the detail view) ---
+
+  async function setArchived(leadId: string, archived: boolean): Promise<boolean> {
+    const archivedAt = archived ? new Date().toISOString() : null;
+    const { error } = await supabase.from('leads').update({ archived_at: archivedAt }).eq('id', leadId);
+    if (error) {
+      window.alert('Could not update lead: ' + error.message);
+      return false;
+    }
+    const lead = allLeads.find((l) => l.id === leadId);
+    if (lead) lead.archived_at = archivedAt;
+    return true;
+  }
+
+  // A real, hard delete — this is what actually reduces the Leads and
+  // analytics numbers, since that page just counts whatever rows exist.
+  // Notes cascade-delete at the DB level (see 0017_lead_crm.sql).
+  async function deleteLead(leadId: string): Promise<boolean> {
+    if (
+      !window.confirm(
+        'Delete this lead? This removes it (and its notes) permanently, including from the Leads and analytics dashboard. This cannot be undone.'
+      )
+    ) {
+      return false;
+    }
+    const { error } = await supabase.from('leads').delete().eq('id', leadId);
+    if (error) {
+      window.alert('Could not delete lead: ' + error.message);
+      return false;
+    }
+    allLeads = allLeads.filter((l) => l.id !== leadId);
+    noteCounts.delete(leadId);
+    return true;
+  }
 
   // --- Detail view ---
 
@@ -442,6 +574,9 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   const notesList = document.getElementById('notes-list')!;
   const addNoteForm = document.getElementById('add-note-form') as HTMLFormElement;
   const noteTextField = document.getElementById('note-text') as HTMLTextAreaElement;
+  const detailArchiveButton = document.getElementById('detail-archive-button')!;
+  const detailDeleteButton = document.getElementById('detail-delete-button')!;
+  const detailArchivedBanner = document.getElementById('detail-archived-banner')!;
 
   initStatusSelectHandler(detailStatusContainer, (leadId, newStatus) => {
     const lead = allLeads.find((l) => l.id === leadId);
@@ -452,6 +587,26 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   backButton.addEventListener('click', () => {
     showList();
     renderList();
+  });
+
+  detailArchiveButton.addEventListener('click', async () => {
+    if (!currentLeadId) return;
+    const lead = allLeads.find((l) => l.id === currentLeadId);
+    if (!lead) return;
+    if (await setArchived(currentLeadId, !lead.archived_at)) {
+      detailArchiveButton.textContent = lead.archived_at ? 'Unarchive' : 'Archive';
+      detailArchivedBanner.classList.toggle('hidden', !lead.archived_at);
+      renderDueThisWeek();
+    }
+  });
+
+  detailDeleteButton.addEventListener('click', async () => {
+    if (!currentLeadId) return;
+    if (await deleteLead(currentLeadId)) {
+      showList();
+      renderDueThisWeek();
+      renderList();
+    }
   });
 
   async function openDetail(leadId: string) {
@@ -475,6 +630,8 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     detailMessage.textContent = lead.message ?? '—';
     detailFollowUp.value = lead.follow_up_date ?? '';
     followUpStatus.textContent = '';
+    detailArchiveButton.textContent = lead.archived_at ? 'Unarchive' : 'Archive';
+    detailArchivedBanner.classList.toggle('hidden', !lead.archived_at);
 
     showDetail();
     await loadNotes(leadId);
