@@ -609,11 +609,11 @@ a staff member's login and their byline won't always match.
   service, which has a low, easy-to-hit send rate limit** (a few emails
   per hour) — discovered while testing the invite flow, not from
   documentation. A real client sending several staff invites in a short
-  window will hit "email rate limit exceeded." Worth flagging to a
-  client who plans to invite more than one or two people at once —
-  configuring custom SMTP (Resend, Postmark, etc.) in Supabase's Auth
-  settings removes this ceiling, but isn't set up by default and wasn't
-  part of this phase's scope.
+  window will hit "email rate limit exceeded." Custom SMTP (see the
+  "Custom SMTP (Resend)" section below) removes this ceiling — set up
+  for CMC ahead of onboarding its first real client, specifically
+  because onboarding itself (inviting the client's login, them using
+  "forgot password") is exactly the moment this limit gets hit.
 - **Resend is written to work whether or not Supabase's API resends
   cleanly for an already-invited-but-unconfirmed email** (behavior that
   turned out to be untestable live, due to the rate limit above): try
@@ -727,6 +727,59 @@ a manual SQL workaround afterward.
   the locked Phase 6 plan). Lives at `admin/directory.astro` in the
   client repo only, reachable by URL (bookmarked), deliberately not added
   to the shared nav.
+
+## Custom SMTP (Resend), configured for CMC 2026-09-01
+
+Removes the low, easy-to-hit rate limit on Supabase's default shared
+email service (see the real-bugs list above) — set up ahead of
+onboarding CMC's first real client, since inviting that client's login
+(and them later using "forgot password") is exactly the moment the
+default limit gets hit. Provider is Resend: a real free tier (3,000
+emails/month, 100/day, no credit card) comfortably covers one or a few
+client sites' transactional auth email (invites, password resets),
+where Postmark has no free tier at all. Configured in Supabase Dashboard
+→ Authentication → Emails → SMTP Settings — host `smtp.resend.com`,
+port `587`, username `resend`, password is a Resend API key scoped to
+"Sending access" only.
+
+**The sender address must live on the exact domain/subdomain verified
+in Resend — not assumed to be the root domain.** Resend (like most
+providers) lets you verify a subdomain instead of the root domain for
+sending — a common, often-recommended pattern, since it isolates
+transactional-email reputation from the root domain and avoids
+colliding with any existing mail setup on the root (here, the
+registrar's default email-forwarding SPF record). CMC's domain
+(`counselormarketingco.com`, via Namecheap) was verified in Resend as
+`communications.counselormarketingco.com`, not the root — first attempt
+at wiring this up used a sender address on the root domain
+(`no-reply@counselormarketingco.com`) purely from assuming root-domain
+verification without checking, and Supabase's `recover()` call failed
+outright with a generic 500 "Error sending recovery email" — no
+specific reason given. Fixed by pointing the sender address at the
+actually-verified subdomain (`no-reply@communications.
+counselormarketingco.com`) instead. When wiring up SMTP for any future
+client, **confirm which exact domain/subdomain Resend shows as verified
+before picking a sender address** — don't assume it's the root domain
+just because that's what the client owns.
+
+Also worth knowing: Resend auto-generates its own SPF/MX records scoped
+to a `send.` sub-subdomain under whatever domain you verify (e.g.
+`send.communications.counselormarketingco.com` here) — nothing needs to
+be manually merged into the root domain's own SPF record for Resend to
+work. The root domain's SPF (if any) only matters for that domain's own
+separate mail setup (Namecheap's email-forwarding feature, in CMC's
+case) — entirely unrelated to whether Resend can send.
+
+**Verification pattern**: a disposable inbox from a temp-mail service
+(not a Supabase test account with a fake domain — this needs to prove
+actual delivery, not just that Supabase's API accepted the request) —
+created a throwaway Supabase Auth user with that address, triggered a
+real `recover()` call through the same public `/auth/v1/recover`
+endpoint the live "Forgot password?" link uses, and confirmed the email
+actually arrived with the correct sender, subject, and a `redirect_to`
+pointing at `/admin/leads` (matching the redirectTo fix above) inside
+the reset link. Confirms the whole chain — Supabase → Resend → inbox —
+not just that the SMTP settings form saved without erroring.
 
 ## Lead Magnets (gated content downloads, built 2026-08-31)
 
