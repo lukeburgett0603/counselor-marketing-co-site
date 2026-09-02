@@ -59,6 +59,16 @@ export interface Page {
   // Short summary bullets rendered before a hub page's main content (see
   // KeyTakeaways.astro) — see 0008_key_takeaways.sql.
   key_takeaways: string[];
+  // Only meaningful on a 'Service Page' row — which section of the
+  // Services Overview grid it belongs to. 'deliverable' = a distinct
+  // scope of work (Website Design, SEO, ...); 'segment' = the same
+  // underlying services, priced/tailored for a specific practice type
+  // (Solo, Group, Psychologist Marketing). null on every other page
+  // type. See 0020_service_page_groups.sql — this is what makes the
+  // Services Overview grid pull every Service Page automatically
+  // instead of relying on a manually-curated list that's easy to forget
+  // to update when a new Service Page is added.
+  service_group: 'deliverable' | 'segment' | null;
 }
 
 export interface Business {

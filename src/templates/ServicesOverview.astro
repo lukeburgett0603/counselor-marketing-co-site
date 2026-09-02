@@ -17,9 +17,18 @@ interface Props {
 
 const { page, allPages, business } = Astro.props;
 
-const linkedServices = allPages.filter(
-  (p) => page.internal_links.includes(p.slug) && p.page_type === 'Service Page'
-);
+// Fully dynamic on `service_group`, not a manually-curated list on this
+// page — a new Service Page shows up here automatically the moment it's
+// given a group, with nothing else to remember to update. (The previous
+// version drove this off `internal_links` on this page specifically;
+// a real bug in production was a new Service Page never appearing here
+// because nobody thought to add it to that list.)
+const deliverablePages = allPages
+  .filter((p) => p.page_type === 'Service Page' && p.service_group === 'deliverable')
+  .sort((a, b) => a.nav_order - b.nav_order);
+const segmentPages = allPages
+  .filter((p) => p.page_type === 'Service Page' && p.service_group === 'segment')
+  .sort((a, b) => a.nav_order - b.nav_order);
 ---
 
 <BaseLayout page={page} allPages={allPages} business={business}>
@@ -31,10 +40,39 @@ const linkedServices = allPages.filter(
     imageCreditUrl={page.images.hero?.creditUrl}
     compact
   />
-  {linkedServices.length > 0 && (
+  {deliverablePages.length > 0 && (
+    <section class="mx-auto max-w-6xl px-6 pt-10">
+      <h2 class="mb-1 font-[family-name:var(--font-heading)] text-xl font-extrabold tracking-tight text-brand-ink">
+        What we do
+      </h2>
+      <p class="mb-6 text-sm text-slate-500">The actual scopes of work — pick what your practice needs.</p>
+      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {deliverablePages.map((service) => (
+          <a
+            href={withBase(`/${service.slug}`)}
+            class="block rounded-lg border border-slate-200 p-6 hover:border-brand-primary hover:shadow-md"
+          >
+            <h3 class="font-[family-name:var(--font-heading)] text-lg font-bold text-brand-ink">
+              {service.title}
+            </h3>
+            {service.meta_description && (
+              <p class="mt-2 text-sm text-slate-600">{service.meta_description}</p>
+            )}
+          </a>
+        ))}
+      </div>
+    </section>
+  )}
+  {segmentPages.length > 0 && (
     <section class="mx-auto max-w-6xl px-6 py-10">
+      <h2 class="mb-1 font-[family-name:var(--font-heading)] text-xl font-extrabold tracking-tight text-brand-ink">
+        Built for your practice
+      </h2>
+      <p class="mb-6 text-sm text-slate-500">
+        The same services above, tailored and priced for how your practice actually works — not a different service, a different fit.
+      </p>
       <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {linkedServices.map((service) => (
+        {segmentPages.map((service) => (
           <a
             href={withBase(`/${service.slug}`)}
             class="block rounded-lg border border-slate-200 p-6 hover:border-brand-primary hover:shadow-md"
