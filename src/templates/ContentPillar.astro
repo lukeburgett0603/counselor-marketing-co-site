@@ -4,6 +4,7 @@ import Hero from '../components/Hero.astro';
 import KeyTakeaways from '../components/KeyTakeaways.astro';
 import TableOfContents from '../components/TableOfContents.astro';
 import BlogPreview from '../components/BlogPreview.astro';
+import FAQ from '../components/FAQ.astro';
 import CTA from '../components/CTA.astro';
 import LeadGenerator from '../components/LeadGenerator.astro';
 import LeadMagnet from '../components/LeadMagnet.astro';
@@ -66,6 +67,7 @@ const tocItems = extractTableOfContents(page.copy);
       </ul>
     </section>
   )}
+  <FAQ faqs={page.faqs} />
   <CTA heading={page.cta_heading ?? `Want help from ${business.display_name}?`} buttonText={page.cta_button_text ?? undefined} />
   <LeadMagnet pageId={page.id} />
   <LeadGenerator
