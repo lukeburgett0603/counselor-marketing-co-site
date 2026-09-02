@@ -9,14 +9,22 @@
 // Auth: there's no browser session here — the caller is the cron job
 // itself, not a logged-in admin — so this can't use the usual
 // "supabase.auth.getUser()" pattern every other function in this project
-// relies on. Instead it checks that the caller's Authorization header is
-// exactly the service_role key. `verify_jwt` alone isn't enough here for
-// the same reason it isn't enough elsewhere: the public anon key is also
-// a validly-signed JWT. Schedule this function's cron job with the
-// service_role key as its bearer token (Supabase Cron's "HTTP Request"
-// job type lets you set a static header).
+// relies on. Deliberately NOT compared against SUPABASE_SERVICE_ROLE_KEY
+// either — Supabase now has both a legacy JWT-format service_role key and
+// a newer sb_secret_-format one, and which one actually gets injected
+// into an Edge Function's own environment as SUPABASE_SERVICE_ROLE_KEY
+// turned out not to match the key used when calling this function from
+// the outside (found by testing this exact call, not by reading docs) —
+// so instead this checks a dedicated secret this function owns, which
+// sidesteps that ambiguity entirely and is better-scoped besides: whoever
+// sets up the Cron job never needs to handle the actual service_role key,
+// just this narrower, function-specific one.
 //
 // Config (`supabase secrets set ... --project-ref <ref>`):
+//   NURTURE_CRON_SECRET     - any random value (e.g. `openssl rand -hex 32`).
+//                             Configure the Supabase Cron job (Dashboard →
+//                             Integrations → Cron) to send this same
+//                             value as its Authorization: Bearer header.
 //   NURTURE_RESEND_API_KEY - a Resend API key, domain-restricted to
 //                            whichever subdomain is verified for nurture
 //                            email. Recommended: a SEPARATE subdomain
@@ -60,10 +68,12 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: 'Method not allowed' }, 405);
   }
 
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  if (req.headers.get('Authorization') !== `Bearer ${serviceRoleKey}`) {
+  const cronSecret = Deno.env.get('NURTURE_CRON_SECRET');
+  if (!cronSecret || req.headers.get('Authorization') !== `Bearer ${cronSecret}`) {
     return jsonResponse({ error: 'Not authorized' }, 401);
   }
+
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
   const resendApiKey = Deno.env.get('NURTURE_RESEND_API_KEY');
   const senderEmail = Deno.env.get('NURTURE_SENDER_EMAIL');
