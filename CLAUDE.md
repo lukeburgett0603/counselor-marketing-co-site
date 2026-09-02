@@ -820,12 +820,14 @@ typically). Genuinely new infrastructure, not just another admin screen:
   threaded through `[...slug].astro`'s existing prop chain — it renders
   nothing when the page has no magnet assigned, so it's safe to drop
   into every template unconditionally.
-- **Delivery is an instant on-page download link, deliberately not an
-  emailed PDF.** Emailing would need real transactional email sending,
-  which this template has zero infrastructure for and which the user has
-  already decided to hold off setting up (custom SMTP) until there's a
-  paying client to justify the cost — see the email-rate-limit backlog
-  item in project memory. Revisit once that's set up anyway.
+- **Delivery is an instant on-page download link, not an emailed PDF** —
+  simpler, and the guide is available immediately rather than waiting on
+  an email. This was originally also because the template had zero
+  transactional-email infrastructure; that's no longer true (see "Custom
+  SMTP (Resend)" above) but the on-page link stayed the right call
+  anyway once SMTP existed — no reason to add an email round-trip delay
+  to something that already works instantly. See "Lead magnet nurture
+  sequences" below for where email *does* now fit into this feature.
 - **The file bucket (`lead-magnet-files`) is public, same reasoning as
   `site-images`** — this app has no signed-URL delivery mechanism
   anywhere, and building one just for this would be real new complexity
@@ -870,6 +872,97 @@ the tab order — paired with a styled `<label for=...>`) since the native
 unstyled file input didn't read as clickable. If a third admin field
 ever needs an image picker, reuse both of these rather than copying
 `admin/content.astro`'s or `admin/blog.astro`'s inline pattern again.
+
+## Lead magnet nurture sequences (built 2026-09-01)
+
+A fixed 4-email drip — Day 0, 3, 7, and 14 after someone downloads a
+lead magnet — meant to move them from "got the PDF" toward booking.
+Explicitly scoped smaller than a general marketing-automation feature:
+the cadence itself is hardcoded (`SEQUENCE_SCHEDULE_DAYS` in
+`src/lib/nurtureSequence.ts`, duplicated in the Edge Function below since
+Edge Functions are separate Deno deployables that don't share the site's
+build) — only each step's subject/body is admin-editable, via 4 fixed
+panels in `admin/lead-magnets.astro`'s edit view, reusing the same
+rich-text-editor pattern as blog posts. A step with both subject and
+body left blank is skipped (represented as no DB row, not an empty one).
+
+- **Enrollment/progress lives directly on `leads`** (`sequence_next_step`,
+  `sequence_last_sent_at`, `sequence_unsubscribed_at`,
+  `0019_lead_magnet_nurture_sequences.sql`) rather than a separate join
+  table — a lead can only ever be enrolled in the one sequence tied to
+  their own `lead_magnet_id`, a true 1:1 relationship. Day offsets are
+  always computed from the lead's original `created_at`, not from the
+  previous send — so a cron run that's a few hours late on one step
+  doesn't cascade delay into the rest of the schedule.
+- **This needed a different sending mechanism than the SMTP setup
+  above.** Supabase Auth's SMTP settings only handle *auth* emails
+  (invites, password resets) — they can't send arbitrary content to a
+  lead. Sending to leads goes through a new Edge Function
+  (`send-nurture-emails`) that calls Resend's API directly, using its
+  own separate API key (`NURTURE_RESEND_API_KEY`) — recommend verifying
+  a **second, separate Resend subdomain** for this (e.g.
+  `updates.yourdomain.com` vs. the auth email's `communications.
+  yourdomain.com`), since marketing email naturally draws more
+  unsubscribes/spam complaints than transactional auth email, and
+  isolating them protects the domain admin logins depend on.
+- **The first scheduled/cron-triggered Edge Function in this project —
+  every prior one was request-triggered from the browser.** Scheduled
+  via Supabase's Cron (Dashboard → Integrations → Cron), which is a
+  manual, per-client, one-time setup step rather than something baked
+  into a migration — same reason SMTP itself is manual: the Edge
+  Function's URL and the secret used to authorize it are project-
+  specific values that don't belong hardcoded into a portable template
+  migration.
+- **Real bug found while testing this, not from documentation: don't
+  authorize a cron-triggered function by comparing against
+  `SUPABASE_SERVICE_ROLE_KEY`.** First attempt checked the incoming
+  Authorization header against `Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')`
+  — the same pattern every other function in this project uses to *hold*
+  the service_role key for its own outgoing DB client, just reused here
+  to *check* an incoming caller. Deployed and tested directly (not
+  assumed): calling the live function with the actual current
+  service_role key still got rejected. Root cause — Supabase now issues
+  both a legacy JWT-format service_role key and a newer `sb_secret_`-
+  format one, and evidently the value auto-injected into an Edge
+  Function's own environment doesn't reliably match whichever format a
+  caller presents from outside. Fixed by using a dedicated
+  `NURTURE_CRON_SECRET` (any random value) that this function alone
+  owns and checks — sidesteps the format ambiguity entirely, and is
+  better-scoped besides: whoever configures the Cron job never needs to
+  handle the actual service_role key, just this narrower one. Requires
+  `verify_jwt = false` for this function too (`supabase/config.toml`) —
+  the gateway would otherwise reject the random secret before the
+  function's own check ever ran, since it isn't a real Supabase-signed
+  JWT.
+- **Unsubscribe is a second new function, `unsubscribe-lead`** — the one
+  other function in this project with `verify_jwt = false`, since it has
+  to be reachable by a plain link click from inside an email client with
+  no session at all. Does exactly one narrow thing (flips
+  `sequence_unsubscribed_at` for the one lead ID in the URL) and returns
+  a plain HTML confirmation directly, no separate public page needed.
+  CAN-SPAM requires this — every nurture email includes the unsubscribe
+  link plus the practice's mailing address (pulled from the existing
+  `business` table fields, no new field needed) in its footer.
+- **A consent line on the public lead magnet form itself**
+  (`LeadMagnet.astro`, next to the existing "Your privacy is important to
+  us" line) — downloading a guide only implies wanting the PDF, not
+  agreeing to a multi-week email series, so the form says so explicitly
+  rather than silently enrolling every download.
+- **Open/click tracking analytics were explicitly scoped OUT of this
+  build** — backlogged for a future lead-magnet dashboard, on top of
+  Resend's own webhook-based event data. Not needed to get sending
+  working reliably, which was the priority here.
+- **Verification pattern**: a temporary lead magnet + temporary agency
+  test account to exercise the admin sequence editor end-to-end
+  (4 panels round-tripped correctly; leaving Day 7/14 blank correctly
+  created no rows rather than empty ones — confirmed via a direct query,
+  not just the UI). The Edge Functions were tested live via direct
+  `curl` calls with real and deliberately-wrong secrets (confirming both
+  the accept and reject paths, not just the happy path) rather than
+  waiting on an actual cron run or a real email send, since the auth
+  bug above would only ever have surfaced that way. All test data
+  deleted after — the lead magnet's cascade delete also correctly
+  removed its sequence steps.
 
 ## Hub-and-spoke content (Content Pillar + Blog Post + Blog Index)
 
