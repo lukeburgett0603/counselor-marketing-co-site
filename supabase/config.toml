@@ -1,0 +1,6 @@
+# Per-function overrides to the Edge Functions gateway's verify_jwt
+# default (true for every function unless listed here — never disable it
+# broadly, only for a specific function that genuinely needs to be
+# reachable with no session at all).
+[functions.unsubscribe-lead]
+verify_jwt = false

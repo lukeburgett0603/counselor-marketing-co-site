@@ -1,6 +1,8 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
+import RichTextEditor from '../../components/RichTextEditor.astro';
+import { SEQUENCE_SCHEDULE_DAYS } from '../../lib/nurtureSequence';
 ---
 
 <AdminLayout title="Lead magnets | Admin" current="lead-magnets">
@@ -85,6 +87,37 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
         <p id="field-image-status" class="mt-2 text-xs text-slate-500"></p>
         <img id="field-image-preview" class="mt-2 hidden h-32 w-auto rounded-md border border-slate-200 object-cover" />
       </div>
+
+      <div class="border-t border-slate-200 pt-4">
+        <h3 class="mb-1 text-sm font-semibold text-slate-700">Nurture email sequence</h3>
+        <p class="mb-4 text-xs text-slate-500">
+          Sent automatically to anyone who downloads this guide, on top of their instant download link — Day 0,
+          Day 3, Day 7, and Day 14 after they sign up. Leave a step's subject and body both blank to skip it.
+        </p>
+        <div class="space-y-6">
+          {
+            SEQUENCE_SCHEDULE_DAYS.map((day, index) => {
+              const step = index + 1;
+              return (
+                <div class="rounded-lg border border-slate-200 p-4">
+                  <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Day {day}</p>
+                  <div class="mb-3">
+                    <label class="mb-1 block text-sm font-semibold text-slate-700">Subject</label>
+                    <input
+                      id={`sequence-step-${step}-subject`}
+                      type="text"
+                      class="w-full rounded-md border border-slate-300 px-4 py-2"
+                    />
+                  </div>
+                  <label class="mb-1 block text-sm font-semibold text-slate-700">Body</label>
+                  <RichTextEditor id={`sequence-step-${step}-body`} />
+                </div>
+              );
+            })
+          }
+        </div>
+      </div>
+
       <div class="flex items-center gap-3 pt-2">
         <button id="save-button" type="button" class="rounded-md bg-brand-primary px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90">
           Save
@@ -102,6 +135,8 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
   import { supabase, initAdminAuth } from '../../lib/adminAuth';
   import { callPublishFunction } from '../../lib/publishFunction';
   import { initUnsplashSearchModal, type UnsplashPhoto } from '../../lib/unsplashSearch';
+  import { initRichTextEditor, type RichTextEditorHandle } from '../../lib/richTextEditor';
+  import { SEQUENCE_SCHEDULE_DAYS } from '../../lib/nurtureSequence';
 
   type LeadMagnet = {
     id: string;
@@ -115,6 +150,8 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
     image_credit_name: string | null;
     image_credit_url: string | null;
   };
+
+  type SequenceStep = { step_order: number; subject: string; body: string };
 
   type PageOption = { id: string; title: string };
 
@@ -138,6 +175,13 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
   const imageFileField = document.getElementById('field-image-file') as HTMLInputElement;
   const imageStatus = document.getElementById('field-image-status')!;
   const imagePreview = document.getElementById('field-image-preview') as HTMLImageElement;
+
+  const sequenceSubjectFields = SEQUENCE_SCHEDULE_DAYS.map(
+    (_, index) => document.getElementById(`sequence-step-${index + 1}-subject`) as HTMLInputElement
+  );
+  const sequenceEditors: RichTextEditorHandle[] = SEQUENCE_SCHEDULE_DAYS.map((_, index) =>
+    initRichTextEditor(`sequence-step-${index + 1}-body`)
+  );
 
   let magnets: LeadMagnet[] = [];
   let pages: PageOption[] = [];
@@ -221,10 +265,12 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
     deleteButton.classList.add('hidden');
     editHeading.textContent = 'New lead magnet';
     formStatus.textContent = '';
+    for (const field of sequenceSubjectFields) field.value = '';
+    for (const editor of sequenceEditors) editor.setMarkdown('');
     populatePagePicker();
   }
 
-  function loadMagnetIntoForm(magnet: LeadMagnet) {
+  async function loadMagnetIntoForm(magnet: LeadMagnet) {
     editingId = magnet.id;
     titleField.value = magnet.title;
     descriptionField.value = magnet.description;
@@ -246,6 +292,18 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
     deleteButton.classList.remove('hidden');
     populatePagePicker();
     pageField.value = magnet.page_id;
+
+    for (const field of sequenceSubjectFields) field.value = '';
+    for (const editor of sequenceEditors) editor.setMarkdown('');
+    const { data: steps } = await supabase
+      .from('lead_magnet_sequence_steps')
+      .select('step_order, subject, body')
+      .eq('lead_magnet_id', magnet.id);
+    for (const step of (steps ?? []) as SequenceStep[]) {
+      const index = step.step_order - 1;
+      if (sequenceSubjectFields[index]) sequenceSubjectFields[index].value = step.subject;
+      if (sequenceEditors[index]) sequenceEditors[index].setMarkdown(step.body);
+    }
   }
 
   newMagnetButton.addEventListener('click', () => {
@@ -255,14 +313,14 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
 
   backButton.addEventListener('click', showList);
 
-  tableBody.addEventListener('click', (event) => {
+  tableBody.addEventListener('click', async (event) => {
     const target = event.target as HTMLElement;
     if (!target.classList.contains('edit-magnet-button')) return;
     const id = target.dataset.editId!;
     const magnet = magnets.find((m) => m.id === id);
     if (magnet) {
-      loadMagnetIntoForm(magnet);
       showEdit();
+      await loadMagnetIntoForm(magnet);
     }
   });
 
@@ -340,16 +398,50 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
       image_credit_url: selectedImage?.creditUrl ?? null,
     };
 
-    const { error } = editingId
-      ? await supabase.from('lead_magnets').update(payload).eq('id', editingId)
-      : await supabase.from('lead_magnets').insert(payload);
+    const { data: savedMagnet, error } = editingId
+      ? await supabase.from('lead_magnets').update(payload).eq('id', editingId).select().single()
+      : await supabase.from('lead_magnets').insert(payload).select().single();
 
-    saveButton.removeAttribute('disabled');
-    if (error) {
-      formStatus.textContent = 'Could not save: ' + error.message;
+    if (error || !savedMagnet) {
+      saveButton.removeAttribute('disabled');
+      formStatus.textContent = 'Could not save: ' + (error?.message ?? 'unknown error');
       formStatus.className = 'text-sm text-red-600';
       return;
     }
+
+    // Sequence steps: upsert whichever days have real content, and delete
+    // any that were cleared out — a blank subject+body means "skip this
+    // day," represented as no row rather than an empty one, matching what
+    // the sending function checks for.
+    const stepsPayload: SequenceStep[] = SEQUENCE_SCHEDULE_DAYS.map((_, index) => ({
+      step_order: index + 1,
+      subject: sequenceSubjectFields[index].value.trim(),
+      body: sequenceEditors[index].getMarkdown().trim(),
+    }));
+    const nonEmptySteps = stepsPayload.filter((s) => s.subject || s.body);
+    const blankStepOrders = stepsPayload.filter((s) => !s.subject && !s.body).map((s) => s.step_order);
+
+    if (nonEmptySteps.length > 0) {
+      const { error: stepsError } = await supabase.from('lead_magnet_sequence_steps').upsert(
+        nonEmptySteps.map((s) => ({ ...s, lead_magnet_id: savedMagnet.id })),
+        { onConflict: 'lead_magnet_id,step_order' }
+      );
+      if (stepsError) {
+        saveButton.removeAttribute('disabled');
+        formStatus.textContent = 'Lead magnet saved, but the email sequence failed to save: ' + stepsError.message;
+        formStatus.className = 'text-sm text-red-600';
+        return;
+      }
+    }
+    if (blankStepOrders.length > 0) {
+      await supabase
+        .from('lead_magnet_sequence_steps')
+        .delete()
+        .eq('lead_magnet_id', savedMagnet.id)
+        .in('step_order', blankStepOrders);
+    }
+
+    saveButton.removeAttribute('disabled');
 
     formStatus.textContent = 'Saving your site...';
     const result = await callPublishFunction({ action: 'publish' });
