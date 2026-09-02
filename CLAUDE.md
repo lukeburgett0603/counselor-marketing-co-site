@@ -942,7 +942,14 @@ body left blank is skipped (represented as no DB row, not an empty one).
   a plain HTML confirmation directly, no separate public page needed.
   CAN-SPAM requires this — every nurture email includes the unsubscribe
   link plus the practice's mailing address (pulled from the existing
-  `business` table fields, no new field needed) in its footer.
+  `business` table fields, no new field needed) in its footer. **That
+  address field being empty isn't caught by anything** — found via a
+  real live send during setup, where CMC's own `business` row had no
+  street address on file, so the footer silently rendered with no
+  address at all. Confirm the client's real mailing address is filled in
+  via Website content → Business info before this goes live for real
+  leads on any client site — not a code bug, just an easy-to-miss data
+  dependency.
 - **A consent line on the public lead magnet form itself**
   (`LeadMagnet.astro`, next to the existing "Your privacy is important to
   us" line) — downloading a guide only implies wanting the PDF, not
@@ -962,7 +969,16 @@ body left blank is skipped (represented as no DB row, not an empty one).
   waiting on an actual cron run or a real email send, since the auth
   bug above would only ever have surfaced that way. All test data
   deleted after — the lead magnet's cascade delete also correctly
-  removed its sequence steps.
+  removed its sequence steps. **Once CMC's own Resend subdomain
+  (`learn.counselormarketingco.com`), Edge Function secrets, and
+  Supabase Cron job were actually configured**, ran the real thing
+  end-to-end once more: a disposable inbox, a real lead enrolled in a
+  real (temporary) magnet's sequence, the function invoked manually with
+  the same header the cron job uses — confirmed actual delivery,
+  correct sender/subject/body, `sequence_next_step` advancing, and the
+  unsubscribe link genuinely flipping `sequence_unsubscribed_at`. This
+  is what caught the missing-mailing-address gap above — a curl-only
+  test of the auth logic wouldn't have surfaced it.
 
 ## Hub-and-spoke content (Content Pillar + Blog Post + Blog Index)
 
