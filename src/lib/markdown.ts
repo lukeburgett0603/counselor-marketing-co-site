@@ -1,5 +1,6 @@
 import { marked, Renderer } from 'marked';
 import type { Tokens } from 'marked';
+import { withBase } from './url';
 
 // `pages.copy` is plain markdown (webpage-copywriter's copy.md content,
 // synced as-is) rather than Wix's Ricos JSON — this is the one deliberate
@@ -32,6 +33,20 @@ renderer.heading = function ({ tokens, depth, text }: Tokens.Heading) {
     return `<h3 id="${slugify(text)}">${html}</h3>\n`;
   }
   return `<h${depth}>${html}</h${depth}>\n`;
+};
+
+// GitHub Pages serves the site under a base path (e.g. /repo-name/), so a
+// plain relative link written into `copy` as [text](/seo) needs the same
+// withBase() treatment every other internal link in this codebase gets —
+// otherwise it 404s the moment a client isn't on a custom domain. Only
+// touches a genuinely internal path (starts with exactly one `/`, not
+// `//` which is protocol-relative to another host) — external URLs,
+// mailto:, tel:, and same-page #anchors pass through untouched.
+renderer.link = function ({ href, title, tokens }: Tokens.Link) {
+  const html = this.parser.parseInline(tokens);
+  const resolvedHref = /^\/(?!\/)/.test(href) ? withBase(href) : href;
+  const titleAttr = title ? ` title="${title}"` : '';
+  return `<a href="${resolvedHref}"${titleAttr}>${html}</a>`;
 };
 
 export function renderCopy(markdown: string | null): string {
