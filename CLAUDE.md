@@ -106,6 +106,55 @@ these as "done" criteria, not nice-to-haves, for every future client.
   momentum if the domain changes later, so it's cheaper to fix this early
   than to migrate authority after the fact.
 
+### Local SEO — Google Business Profile & citations
+
+- **The website is not what wins the local map pack — the Google Business
+  Profile is.** On-page content and schema markup drive organic blue-link
+  rankings and reinforce local relevance, but the map pack's own ranking
+  (proximity, category match, review count/recency/rating, NAP citation
+  consistency) is won mostly *off* the website. Treat a GBP + citation
+  audit as a real phase of every client build, not an assumption covered
+  by "do they have one claimed and verified" at intake — claimed and
+  verified is not the same as optimized.
+- **Audit for real, concrete NAP mismatches across directories** (Google
+  Business Profile itself, Psychology Today or the industry-relevant
+  directory, Yelp, Facebook, Nextdoor, any local award/chamber listing) —
+  don't just confirm they exist. Found live on Freedom Counseling
+  Services' real citations: their Google Business Profile and website both
+  list `(502) 523-2970`, but their Psychology Today listing showed a
+  completely different number, `(502) 878-7153` — a real trust-signal
+  mismatch on a high-authority directory that was already ranking
+  organically. This kind of thing doesn't show up unless you actually
+  check each citation directly, not just confirm a directory listing
+  exists.
+- **Compare the client's review count/rating against the actual "People
+  also search for" competitors shown on their own GBP listing**, not
+  competitors picked in the abstract — Google surfaces the real
+  comparison set directly on the profile page. A client sitting at 10
+  reviews next to a direct competitor with 51 is a concrete, prioritized
+  gap, not a vague "get more reviews" recommendation.
+- **A counseling/therapy client's review strategy needs different handling
+  than a typical local business.** Soliciting Google reviews from therapy
+  clients raises a real confidentiality/disclosure question that doesn't
+  exist for, say, a plumbing company — a public review can itself reveal
+  that someone is in therapy. Don't recommend a generic "ask every client
+  for a review" tactic for a clinical practice; defer to the client's own
+  ethical/professional judgment on how or whether to solicit reviews
+  actively.
+- **A migrating client's existing domain may carry real authority worth
+  protecting, unlike a from-scratch build.** Freedom Counseling Services'
+  real domain (`freedomcounselingservices.org` — confirmed via Mangools
+  SiteProfiler after the client initially gave a slightly wrong URL,
+  worth double-checking against what's actually live and ranking, not just
+  what the client remembers) came in at Domain Authority 15 and was
+  already ranking position #4 organically for a real target keyword,
+  ahead of several lower-DA competitors — a real, non-zero starting
+  position, not a blank slate like CMC's own brand-new domain (DA 1).
+  **Proper 301 redirects from every existing indexed URL to its new
+  equivalent become a hard requirement during migration in this case** —
+  losing that position by resetting to a fresh, unindexed site would be a
+  real, avoidable regression, not just a missed opportunity.
+
 ### Conversion / CTA discipline
 
 - The Hero's CTA button is above the fold — don't remove it or push the
