@@ -603,11 +603,15 @@ turned out to already have exactly this pattern on its service pages.
   conditionally on `author_name` being set — a pillar with no reviewer on
   file (a case-study/proof page, say) just shows nothing, same "optional,
   never invented" discipline as everything else on this page type.
+  `ServiceHub.astro` (see its own section below) renders the identical
+  byline the same way — both are "pillar/hub" page types for this
+  purpose.
 - **Admin UI lives inside `admin/content.astro`'s existing "Page copy"
-  section**, gated to page_type = 'Content Pillar' (hidden entirely for
-  any other page), not a new top-level section — this is what the client
-  asked for specifically, and it also means the page picker/tier-note
-  infrastructure that section already has doesn't need duplicating.
+  section**, gated to `page_type` being `'Content Pillar'` or `'Service
+  Hub'` (`BYLINE_PAGE_TYPES`, hidden entirely for any other page), not a
+  new top-level section — this is what the client asked for specifically,
+  and it also means the page picker/tier-note infrastructure that section
+  already has doesn't need duplicating.
 - **Its own save button, deliberately not folded into the tier-gated one
   above it.** `author_name`/`credentials`/`date_modified` aren't columns
   `enforce_content_permission` protects, so they're editable by any
@@ -1329,6 +1333,52 @@ for how a Service Page grid gets built and organized.
   straight in nav, no overview page needed. First built for Freedom
   Counseling Services (Louisville, KY office + Southern Indiana
   telehealth coverage).
+
+## Service Hub: a bookable service that's also a content hub (built 2026-09-03)
+
+A distinct `Service Hub` page type (`ServiceHub.astro`,
+`0024_service_hub_page_type.sql`) for a client whose real services are
+*simultaneously* something you book and something people research
+extensively — first built for Freedom Counseling Services, whose 8
+services (Individual, Couples & Marriage, Family, Child & Teen,
+Christian/Faith-Based, Grief, Anxiety & Depression, Trauma & EMDR) are
+each a real, bookable offering *and* a genuine topic with real search
+demand behind it, not a narrow transactional thing the way CMC's own
+services (Website Design, SEO) are.
+
+- **Deliberately a distinct `page_type`, not a reuse of `Content
+  Pillar`.** The underlying mechanics are identical (TOC, deep FAQ,
+  category-driven spoke posts via `BlogPreview`, the Reviewed-by byline,
+  related links) — the reason for a separate type is that the CMS should
+  make "this is also a real bookable service" explicit, not leave it
+  implicit in a generic pillar row. `Content Pillar` stays for pages
+  that are genuinely just broad educational content and never a
+  service you'd book directly (CMC's own Therapist Branding, SEO &
+  Marketing, Practice Growth pillars) — don't convert those to Service
+  Hub just because the template *could* render them.
+- **`ServiceHub.astro` = `ContentPillar.astro`'s full feature set, plus
+  `PlanSteps` and a Hero CTA button** (`ctaText`, same as
+  `ServicePage.astro`) — the "bookable" half. Real precedent for the
+  merge: Freedom's own existing Christian/Faith-Based Counseling page
+  already had a TOC, deep FAQ, and a blog cross-link *and* a "Start
+  Counseling" CTA button in the hero — this template just formalizes a
+  pattern the client had already arrived at in practice, not something
+  invented from scratch.
+- **The Reviewed-by byline (see its own section above) applies to
+  `Service Hub` pages too**, not just `Content Pillar` — both are
+  "pillar/hub" page types for that feature's purposes.
+  `admin/content.astro`'s `BYLINE_PAGE_TYPES` array is what gates this;
+  add any future pillar-shaped page type to that array too, don't
+  assume it only ever needs to check for `Content Pillar`.
+- **When to reach for this vs. plain `Service Page`**: if a future
+  client's services are narrow and transactional (most B2B/agency
+  services, most home-services trades — "Website Design," "gutter
+  cleaning") stay `Service Page`. If they're the kind of thing a real
+  person researches at length before booking — most clinical/healthcare
+  specialties, most things where the "service" and "topic" are the same
+  concept — `Service Hub` is very likely the right call. Decide this
+  explicitly per client at Phase 1 (site-structure-planner-supabase),
+  not by default.
 
 ## Generating a logo from a CSS wordmark
 

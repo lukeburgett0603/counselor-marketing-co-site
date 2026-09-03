@@ -1,0 +1,96 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/Hero.astro';
+import KeyTakeaways from '../components/KeyTakeaways.astro';
+import TableOfContents from '../components/TableOfContents.astro';
+import PlanSteps from '../components/PlanSteps.astro';
+import BlogPreview from '../components/BlogPreview.astro';
+import FAQ from '../components/FAQ.astro';
+import CTA from '../components/CTA.astro';
+import LeadGenerator from '../components/LeadGenerator.astro';
+import LeadMagnet from '../components/LeadMagnet.astro';
+import { renderCopy, extractTableOfContents } from '../lib/markdown';
+import { withBase } from '../lib/url';
+import { getCounselorOptions } from '../lib/pages';
+import type { Page, Business } from '../lib/pages';
+
+interface Props {
+  page: Page;
+  allPages: Page[];
+  business: Business;
+}
+
+const { page, allPages, business } = Astro.props;
+const counselors = getCounselorOptions(allPages);
+
+const relatedPages = allPages.filter((p) => page.internal_links.includes(p.slug));
+
+// Hub-and-spoke, same mechanism as ContentPillar.astro — only pages
+// acting as a content hub have `category` set. Never invents a category;
+// renders nothing without one.
+const categoryPosts = page.category
+  ? allPages
+      .filter((p) => p.page_type === 'Blog Post' && p.category === page.category)
+      .sort((a, b) => (b.date_published ?? '').localeCompare(a.date_published ?? ''))
+  : [];
+
+const tocItems = extractTableOfContents(page.copy);
+
+// "Reviewed by [name], [credential] — Updated [date]" — same byline
+// pattern as ContentPillar.astro. See CLAUDE.md's Reviewed-by byline
+// section for why this reuses author_name/credentials/date_modified
+// rather than new columns.
+const updatedDate = page.date_modified
+  ? new Date(page.date_modified).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+  : null;
+---
+
+<BaseLayout page={page} allPages={allPages} business={business}>
+  <Hero
+    h1={page.h1 ?? page.title}
+    subhead={page.hero_subhead ?? undefined}
+    imageUrl={page.images.hero?.url}
+    imageAlt={page.images.hero?.alt}
+    imageCreditName={page.images.hero?.creditName}
+    imageCreditUrl={page.images.hero?.creditUrl}
+    ctaText={page.cta_button_text ?? 'Get Started'}
+  />
+  {page.author_name && (
+    <div class="mx-auto max-w-3xl px-6 pt-6 text-sm text-slate-500">
+      Reviewed by {page.author_name}{page.credentials && <>, {page.credentials}</>}{updatedDate && <> &middot; Updated {updatedDate}</>}
+    </div>
+  )}
+  <div class="mx-auto max-w-3xl px-6 pt-10">
+    <KeyTakeaways items={page.key_takeaways} />
+  </div>
+  <div class="mx-auto grid max-w-5xl grid-cols-1 gap-10 px-6 pb-10 lg:grid-cols-[220px_1fr]">
+    <TableOfContents items={tocItems} />
+    <article class="prose prose-lg max-w-none">
+      <Fragment set:html={renderCopy(page.copy)} />
+    </article>
+  </div>
+  <PlanSteps steps={page.plan_steps} />
+  {page.category && <BlogPreview posts={categoryPosts} category={page.category} />}
+  {relatedPages.length > 0 && (
+    <section class="mx-auto max-w-3xl px-6 pb-10">
+      <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold tracking-tight text-brand-ink">Related</h2>
+      <ul class="list-inside list-disc space-y-1">
+        {relatedPages.map((related) => (
+          <li>
+            <a href={withBase(`/${related.slug}`)} class="text-brand-primary hover:underline">{related.title}</a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
+  <FAQ faqs={page.faqs} />
+  <CTA heading={page.cta_heading ?? `Want help from ${business.display_name}?`} buttonText={page.cta_button_text ?? undefined} />
+  <LeadMagnet pageId={page.id} />
+  <LeadGenerator
+    slug={page.slug}
+    collectWebsiteUrl={business.collect_website_in_leads}
+    responseTimeNote={business.lead_response_time_note}
+    collectCounselorPreference={business.collect_counselor_preference}
+    counselors={counselors}
+  />
+</BaseLayout>

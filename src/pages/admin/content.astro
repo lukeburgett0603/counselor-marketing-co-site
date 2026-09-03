@@ -164,12 +164,12 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
           <p id="content-save-status" class="text-sm" role="status"></p>
 
           <!--
-            Reviewer byline — pillar/hub pages only ("Content Pillar" page
-            type). Not tier-gated like the fields above: author_name/
-            credentials/date_modified aren't locked by
-            enforce_content_permission, so this gets its own always-on
-            save button rather than being folded into content-save-button's
-            tier-gated visibility.
+            Reviewer byline — pillar/hub pages only ("Content Pillar" and
+            "Service Hub" page types; see BYLINE_PAGE_TYPES below). Not
+            tier-gated like the fields above: author_name/credentials/
+            date_modified aren't locked by enforce_content_permission, so
+            this gets its own always-on save button rather than being
+            folded into content-save-button's tier-gated visibility.
           -->
           <div id="content-byline-section" class="hidden space-y-3 border-t border-slate-200 pt-6">
             <h3 class="text-sm font-semibold text-slate-700">Reviewed-by byline</h3>
@@ -539,7 +539,12 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
       ? `Current image: ${selectedContentPage.images?.hero?.alt}`
       : 'No image set.';
 
-    contentBylineSection.classList.toggle('hidden', selectedContentPage.page_type !== 'Content Pillar');
+    // Content Pillar and Service Hub both render this byline (see
+    // ContentPillar.astro and ServiceHub.astro) — a Service Hub is a
+    // real bookable service that also functions as a content hub, so it
+    // gets the same reviewer byline as a pure informational pillar.
+    const BYLINE_PAGE_TYPES = ['Content Pillar', 'Service Hub'];
+    contentBylineSection.classList.toggle('hidden', !BYLINE_PAGE_TYPES.includes(selectedContentPage.page_type));
     contentBylineName.value = selectedContentPage.author_name ?? '';
     contentBylineCredential.value = selectedContentPage.credentials ?? '';
     contentBylineDate.value = selectedContentPage.date_modified ?? '';
