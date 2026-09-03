@@ -8,6 +8,7 @@ import PlanSteps from '../components/PlanSteps.astro';
 import LeadGenerator from '../components/LeadGenerator.astro';
 import LeadMagnet from '../components/LeadMagnet.astro';
 import { renderCopy } from '../lib/markdown';
+import { getCounselorOptions } from '../lib/pages';
 import type { Page, Business } from '../lib/pages';
 
 interface Props {
@@ -17,6 +18,7 @@ interface Props {
 }
 
 const { page, allPages, business } = Astro.props;
+const counselors = getCounselorOptions(allPages);
 ---
 
 <BaseLayout page={page} allPages={allPages} business={business}>
@@ -44,6 +46,8 @@ const { page, allPages, business } = Astro.props;
         submitText={page.cta_button_text ?? 'Get Started'}
         collectWebsiteUrl={business.collect_website_in_leads}
         responseTimeNote={business.lead_response_time_note}
+        collectCounselorPreference={business.collect_counselor_preference}
+        counselors={counselors}
       />
     </Fragment>
   </Hero>
@@ -62,5 +66,7 @@ const { page, allPages, business } = Astro.props;
     submitText={page.cta_button_text ?? undefined}
     collectWebsiteUrl={business.collect_website_in_leads}
     responseTimeNote={business.lead_response_time_note}
+    collectCounselorPreference={business.collect_counselor_preference}
+    counselors={counselors}
   />
 </BaseLayout>

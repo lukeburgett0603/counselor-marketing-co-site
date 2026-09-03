@@ -99,6 +99,11 @@ export interface Business {
   google_maps_url: string | null;
   collect_website_in_leads: boolean;
   lead_response_time_note: string | null;
+  // Shows the "Select a Counselor" / "Help me choose" dropdown on every
+  // LeadGenerator — opt-in since a solo-practice or non-counseling client
+  // has no one to select. See 0023_counselor_preference.sql and
+  // getCounselorOptions() below.
+  collect_counselor_preference: boolean;
   // A link to the business's EHR client portal (SimplePractice,
   // TherapyNotes, etc.) for existing clients — see 0009_client_portal_url.sql.
   client_portal_url: string | null;
@@ -147,6 +152,18 @@ export async function getBusiness(): Promise<Business> {
   const { data, error } = await supabase.from('business').select('*').single();
   if (error) throw error;
   return data as Business;
+}
+
+// The "Select a Counselor" dropdown's option list — derived live from
+// whichever pages currently have page_type 'Counselor Profile', never a
+// hand-curated list (same discipline as the service_group-driven grids).
+// Shared by every template that renders LeadGenerator with
+// collectCounselorPreference, instead of repeating this filter/sort in each.
+export function getCounselorOptions(allPages: Page[]): { id: string; title: string }[] {
+  return allPages
+    .filter((p) => p.page_type === 'Counselor Profile')
+    .sort((a, b) => a.nav_order - b.nav_order)
+    .map((p) => ({ id: p.id, title: p.title }));
 }
 
 // Breadcrumb chain from a page up through its parent_page_id ancestors,

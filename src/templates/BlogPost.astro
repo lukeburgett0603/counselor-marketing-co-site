@@ -6,6 +6,7 @@ import LeadGenerator from '../components/LeadGenerator.astro';
 import LeadMagnet from '../components/LeadMagnet.astro';
 import { renderCopy } from '../lib/markdown';
 import { withBase } from '../lib/url';
+import { getCounselorOptions } from '../lib/pages';
 import type { Page, Business } from '../lib/pages';
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
 }
 
 const { page, allPages, business } = Astro.props;
+const counselors = getCounselorOptions(allPages);
 
 // The hub page whose `category` matches this post's — used for the
 // "back to [category]" link so a spoke post links back to its pillar,
@@ -61,5 +63,7 @@ const publishedDate = page.date_published
     slug={page.slug}
     collectWebsiteUrl={business.collect_website_in_leads}
     responseTimeNote={business.lead_response_time_note}
+    collectCounselorPreference={business.collect_counselor_preference}
+    counselors={counselors}
   />
 </BaseLayout>

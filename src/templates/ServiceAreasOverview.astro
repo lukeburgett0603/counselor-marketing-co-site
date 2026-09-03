@@ -7,6 +7,7 @@ import LeadGenerator from '../components/LeadGenerator.astro';
 import LeadMagnet from '../components/LeadMagnet.astro';
 import { renderCopy } from '../lib/markdown';
 import { withBase } from '../lib/url';
+import { getCounselorOptions } from '../lib/pages';
 import type { Page, Business } from '../lib/pages';
 
 interface Props {
@@ -16,6 +17,7 @@ interface Props {
 }
 
 const { page, allPages, business } = Astro.props;
+const counselors = getCounselorOptions(allPages);
 
 // Same self-maintaining pattern as Services Overview / Who We Serve — a
 // new Service Area page shows up here automatically, nothing to manually
@@ -63,5 +65,7 @@ const areaPages = allPages
     slug={page.slug}
     collectWebsiteUrl={business.collect_website_in_leads}
     responseTimeNote={business.lead_response_time_note}
+    collectCounselorPreference={business.collect_counselor_preference}
+    counselors={counselors}
   />
 </BaseLayout>

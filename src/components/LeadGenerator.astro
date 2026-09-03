@@ -1,4 +1,9 @@
 ---
+interface Counselor {
+  id: string;
+  title: string;
+}
+
 interface Props {
   slug: string;
   heading?: string;
@@ -11,6 +16,16 @@ interface Props {
   // entry point, not a replacement.
   embedded?: boolean;
   submitText?: string;
+  // Multi-provider lead routing — opt-in via business.collect_counselor_preference.
+  // `counselors` is derived by the caller from allPages (page_type ===
+  // 'Counselor Profile'), never hand-curated here or on `business` —
+  // see 0023_counselor_preference.sql.
+  collectCounselorPreference?: boolean;
+  counselors?: Counselor[];
+  // Pre-selects this counselor instead of defaulting to "Help me choose" —
+  // used on a Counselor Profile page itself, where the visitor has
+  // already picked who they want by being on that page.
+  defaultCounselorId?: string;
 }
 
 const {
@@ -20,6 +35,9 @@ const {
   responseTimeNote,
   embedded = false,
   submitText = 'Send',
+  collectCounselorPreference = false,
+  counselors = [],
+  defaultCounselorId,
 } = Astro.props;
 
 const Wrapper = embedded ? 'div' : 'section';
@@ -73,6 +91,20 @@ const Wrapper = embedded ? 'div' : 'section';
           class="w-full rounded-md border border-slate-300 px-4 py-2"
         />
       )}
+      {collectCounselorPreference && counselors.length > 0 && (
+        <select
+          name="preferred_counselor_page_id"
+          aria-label="Select a Counselor"
+          class="w-full rounded-md border border-slate-300 px-4 py-2 text-slate-700"
+        >
+          <option value="" selected={!defaultCounselorId}>Help me choose</option>
+          {counselors.map((counselor) => (
+            <option value={counselor.id} selected={counselor.id === defaultCounselorId}>
+              {counselor.title}
+            </option>
+          ))}
+        </select>
+      )}
       {!embedded && (
         <textarea
           name="message"
@@ -122,6 +154,9 @@ const Wrapper = embedded ? 'div' : 'section';
       };
       if (form.dataset.collectWebsite === 'true') {
         payload.existing_website_url = formData.get('existing_website_url') || null;
+      }
+      if (form.querySelector('[name="preferred_counselor_page_id"]')) {
+        payload.preferred_counselor_page_id = formData.get('preferred_counselor_page_id') || null;
       }
 
       const response = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {

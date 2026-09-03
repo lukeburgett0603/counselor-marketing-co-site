@@ -51,6 +51,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           <th class="px-4 py-3 font-semibold">Current site</th>
           <th class="px-4 py-3 font-semibold">Message</th>
           <th class="px-4 py-3 font-semibold">From page</th>
+          <th class="px-4 py-3 font-semibold">Counselor</th>
           <th class="px-4 py-3 font-semibold">Status</th>
         </tr>
       </thead>
@@ -82,7 +83,14 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     existing_website_url: string | null;
     source_page: string | null;
     status: string | null;
+    preferred_counselor_page_id: string | null;
   };
+
+  // Populated in loadLeads() from a live query, not hardcoded — a
+  // counselor rename/removal is reflected automatically. Empty on any
+  // site that doesn't have collect_counselor_preference on, which is the
+  // common case, so this is a no-op cost there.
+  let counselorNames = new Map<string, string>();
 
   function renderDashboard(leads: Lead[]) {
     const now = new Date();
@@ -189,6 +197,12 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       return;
     }
 
+    const { data: counselorPages } = await supabase
+      .from('pages')
+      .select('id, title')
+      .eq('page_type', 'Counselor Profile');
+    counselorNames = new Map((counselorPages ?? []).map((p) => [p.id, p.title]));
+
     renderDashboard(data);
 
     leadsCount.textContent = `${data.length} lead${data.length === 1 ? '' : 's'}`;
@@ -203,6 +217,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         <td class="px-4 py-3">${lead.existing_website_url ? `<a href="${escapeHtml(lead.existing_website_url)}" target="_blank" rel="noopener" class="text-brand-primary hover:underline">link</a>` : ''}</td>
         <td class="px-4 py-3 max-w-xs truncate" title="${escapeHtml(lead.message ?? '')}">${escapeHtml(lead.message ?? '')}</td>
         <td class="px-4 py-3">${escapeHtml(lead.source_page ?? '')}</td>
+        <td class="px-4 py-3">${lead.preferred_counselor_page_id ? escapeHtml(counselorNames.get(lead.preferred_counselor_page_id) ?? 'Unknown') : ''}</td>
         <td class="px-4 py-3">${renderStatusSelect(lead.id, lead.status)}</td>
       </tr>`
       )

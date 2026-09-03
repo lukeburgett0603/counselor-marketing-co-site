@@ -478,6 +478,52 @@ here until "assign leads to staff" (backlogged, see below) is built.
     and called from both the row menu and the detail view — same reuse
     discipline as the status-select extraction above.
 
+## Multi-provider lead routing ("Select a Counselor", built 2026-09-03)
+
+An opt-in "Select a Counselor" dropdown + "Help me choose" default on
+`LeadGenerator`, for any group-practice client with more than one
+provider — first requested for Freedom Counseling Services (5 counselors,
+a real version of this already live on their previous site) and made a
+standard template feature rather than a one-off, since any future
+group-practice client has the same need.
+
+- **Opt-in via `business.collect_counselor_preference`**
+  (`0023_counselor_preference.sql`), same pattern as
+  `collect_website_in_leads` — a solo-practice or non-counseling client
+  just doesn't set it, and the dropdown never renders.
+- **The counselor list is never hand-curated** — `getCounselorOptions()`
+  (`src/lib/pages.ts`) derives it live from whichever pages currently have
+  `page_type = 'Counselor Profile'`, the same self-maintaining-list
+  discipline as the service_group-driven grids. Add a new counselor's
+  profile page and they appear in the dropdown automatically; remove one
+  and they disappear. Every template that renders `LeadGenerator` calls
+  this helper and passes the result through — don't reintroduce a
+  hardcoded list on a future template.
+- **Stored as a real foreign key**, not a free-text name —
+  `leads.preferred_counselor_page_id references pages(id) on delete set
+  null`. A counselor rename is reflected automatically on every past lead;
+  a free-text column would have gone stale the moment someone got married
+  or a name was misspelled once.
+- **Pre-selected on a counselor's own profile page** — `CounselorProfile.astro`
+  passes `defaultCounselorId={page.id}` so a visitor who already navigated
+  to a specific counselor's page doesn't have to re-select them from the
+  dropdown; every other template leaves it on "Help me choose".
+- **Every template that renders `LeadGenerator` needs this threaded
+  through** — `collectCounselorPreference={business.collect_counselor_preference}`
+  and `counselors={getCounselorOptions(allPages)}` on every call site,
+  including both of `Homepage.astro`'s (the embedded Hero-aside card and
+  the full form). A new template that renders `LeadGenerator` and forgets
+  this will just silently never show the dropdown even when the business
+  has it enabled — no error, just a missing field. Check for this the
+  same way the FAQ-rendering bug above got missed the first time.
+- **Surfaced in both admin lead views**: `admin/leads.astro`'s table gets
+  a Counselor column, `admin/crm.astro`'s detail view gets a "Counselor
+  preference" field and the CSV export includes it — collecting a
+  preference nobody in the admin dashboard can see would defeat the
+  point. Both pages resolve the stored page id to a name via a live
+  `page_type = 'Counselor Profile'` query, same derivation as the public
+  dropdown, not a cached/stale list.
+
 ## Admin CMS: Edge Functions for anything needing a secret at request time
 
 Built in phases (business info fields → Edge Function → blog posting →

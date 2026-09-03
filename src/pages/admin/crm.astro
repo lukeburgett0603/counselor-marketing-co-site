@@ -222,6 +222,10 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           <dt class="text-xs font-semibold uppercase text-slate-500">Source</dt>
           <dd id="detail-source" class="mt-0.5"></dd>
         </div>
+        <div>
+          <dt class="text-xs font-semibold uppercase text-slate-500">Counselor preference</dt>
+          <dd id="detail-counselor" class="mt-0.5"></dd>
+        </div>
       </dl>
       <div class="mt-4">
         <dt class="text-xs font-semibold uppercase text-slate-500">Message</dt>
@@ -287,6 +291,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     follow_up_date: string | null;
     lead_magnet_id: string | null;
     archived_at: string | null;
+    preferred_counselor_page_id: string | null;
   };
   type LeadMagnet = { id: string; title: string };
   type LeadNote = { id: string; lead_id: string; note: string; created_at: string };
@@ -301,6 +306,9 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 
   let allLeads: Lead[] = [];
   let leadMagnets: LeadMagnet[] = [];
+  // Populated in init() from a live query, not hardcoded — see leads.astro's
+  // identical pattern.
+  let counselorNames = new Map<string, string>();
   let noteCounts = new Map<string, number>();
   let currentLeadId: string | null = null;
   // Which lead's row the single shared Actions menu is currently open
@@ -550,7 +558,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   // export to match what's on screen.
   exportButton.addEventListener('click', () => {
     const filtered = applyFilters(allLeads);
-    const header = ['Date', 'Name', 'Email', 'Phone', 'Status', 'Follow-up date', 'Source', 'Archived', 'Message'];
+    const header = ['Date', 'Name', 'Email', 'Phone', 'Status', 'Follow-up date', 'Source', 'Counselor preference', 'Archived', 'Message'];
     const rows = filtered.map((lead) => [
       new Date(lead.created_at).toLocaleDateString(),
       lead.name ?? '',
@@ -559,6 +567,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       lead.status ?? 'new',
       lead.follow_up_date ?? '',
       sourceLabel(lead),
+      lead.preferred_counselor_page_id ? (counselorNames.get(lead.preferred_counselor_page_id) ?? 'Unknown') : '',
       lead.archived_at ? 'Yes' : '',
       lead.message ?? '',
     ]);
@@ -618,6 +627,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   const detailEmail = document.getElementById('detail-email')!;
   const detailPhone = document.getElementById('detail-phone')!;
   const detailWebsite = document.getElementById('detail-website')!;
+  const detailCounselor = document.getElementById('detail-counselor')!;
   const detailSource = document.getElementById('detail-source')!;
   const detailMessage = document.getElementById('detail-message')!;
   const detailFollowUp = document.getElementById('detail-follow-up') as HTMLInputElement;
@@ -680,6 +690,9 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     // read "Manually added — Manually added".
     const pageSuffix = lead.source_page && lead.source_page !== MANUAL_SOURCE ? ` — ${lead.source_page}` : '';
     detailSource.textContent = `${sourceLabel(lead)}${pageSuffix}`;
+    detailCounselor.textContent = lead.preferred_counselor_page_id
+      ? (counselorNames.get(lead.preferred_counselor_page_id) ?? 'Unknown')
+      : 'No preference (Help me choose)';
     detailMessage.textContent = lead.message ?? '—';
     detailFollowUp.value = lead.follow_up_date ?? '';
     followUpStatus.textContent = '';
@@ -834,6 +847,11 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       leadMagnets.map((m) => `<option value="${m.id}">${escapeHtml(m.title)}</option>`).join('');
   }
 
+  async function loadCounselors() {
+    const { data } = await supabase.from('pages').select('id, title').eq('page_type', 'Counselor Profile');
+    counselorNames = new Map((data ?? []).map((p) => [p.id, p.title]));
+  }
+
   async function loadNoteCounts() {
     const { data } = await supabase.from('lead_notes').select('lead_id');
     noteCounts = new Map();
@@ -857,6 +875,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   initAdminAuth(
     async () => {
       await loadLeadMagnets();
+      await loadCounselors();
       await loadLeads();
     },
     { allowedRoles: ['owner', 'agency'] }
