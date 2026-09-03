@@ -162,6 +162,42 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
             Save
           </button>
           <p id="content-save-status" class="text-sm" role="status"></p>
+
+          <!--
+            Reviewer byline — pillar/hub pages only ("Content Pillar" page
+            type). Not tier-gated like the fields above: author_name/
+            credentials/date_modified aren't locked by
+            enforce_content_permission, so this gets its own always-on
+            save button rather than being folded into content-save-button's
+            tier-gated visibility.
+          -->
+          <div id="content-byline-section" class="hidden space-y-3 border-t border-slate-200 pt-6">
+            <h3 class="text-sm font-semibold text-slate-700">Reviewed-by byline</h3>
+            <p class="text-xs text-slate-500">
+              Shown on the page as "Reviewed by [name], [credential] — Updated [date]" and included in this page's
+              schema markup. Leave the name blank to hide the byline entirely.
+            </p>
+            <div>
+              <label class="mb-1 block text-sm font-semibold text-slate-700">Reviewer name</label>
+              <input id="content-byline-name" type="text" placeholder="Jane Smith" class="w-full rounded-md border border-slate-300 px-4 py-2" />
+            </div>
+            <div>
+              <label class="mb-1 block text-sm font-semibold text-slate-700">Reviewer credential (optional)</label>
+              <input id="content-byline-credential" type="text" placeholder="LCSW, Owner/Director" class="w-full rounded-md border border-slate-300 px-4 py-2" />
+            </div>
+            <div>
+              <label class="mb-1 block text-sm font-semibold text-slate-700">Date updated</label>
+              <input id="content-byline-date" type="date" class="w-full rounded-md border border-slate-300 px-4 py-2" />
+            </div>
+            <button
+              id="content-byline-save-button"
+              type="button"
+              class="rounded-md bg-brand-primary px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+            >
+              Save byline
+            </button>
+            <p id="content-byline-status" class="text-sm" role="status"></p>
+          </div>
         </div>
       </div>
     </section>
@@ -195,6 +231,9 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
     testimonial_quote: string | null;
     testimonial_author: string | null;
     testimonial_role: string | null;
+    author_name: string | null;
+    credentials: string | null;
+    date_modified: string | null;
   };
 
   type Business = {
@@ -355,6 +394,12 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
   const contentImageStatus = document.getElementById('content-image-status')!;
   const contentSaveButton = document.getElementById('content-save-button')!;
   const contentSaveStatus = document.getElementById('content-save-status')!;
+  const contentBylineSection = document.getElementById('content-byline-section')!;
+  const contentBylineName = document.getElementById('content-byline-name') as HTMLInputElement;
+  const contentBylineCredential = document.getElementById('content-byline-credential') as HTMLInputElement;
+  const contentBylineDate = document.getElementById('content-byline-date') as HTMLInputElement;
+  const contentBylineSaveButton = document.getElementById('content-byline-save-button')!;
+  const contentBylineStatus = document.getElementById('content-byline-status')!;
 
   const ALWAYS_LOCKED_FIELDS = ['h1', 'meta_description', 'focus_keyword'];
 
@@ -494,6 +539,12 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
       ? `Current image: ${selectedContentPage.images?.hero?.alt}`
       : 'No image set.';
 
+    contentBylineSection.classList.toggle('hidden', selectedContentPage.page_type !== 'Content Pillar');
+    contentBylineName.value = selectedContentPage.author_name ?? '';
+    contentBylineCredential.value = selectedContentPage.credentials ?? '';
+    contentBylineDate.value = selectedContentPage.date_modified ?? '';
+    contentBylineStatus.textContent = '';
+
     contentSaveStatus.textContent = '';
     renderTierUI();
   }
@@ -553,6 +604,34 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
       ? 'Saved! Your site will update shortly.'
       : 'Saved, but the update trigger failed — it will go live on the next rebuild.';
     contentSaveStatus.className = result.ok ? 'text-sm text-emerald-700' : 'text-sm text-amber-700';
+  });
+
+  // Independent of contentSaveButton above — author_name/credentials/
+  // date_modified aren't tier-locked (see enforce_content_permission),
+  // so this stays editable and savable even for a restricted-tier owner
+  // who can't touch h1/copy/images on the same page.
+  contentBylineSaveButton.addEventListener('click', async () => {
+    if (!selectedContentPage) return;
+    contentBylineStatus.textContent = 'Saving...';
+    contentBylineStatus.className = 'text-sm text-slate-600';
+    const payload = {
+      author_name: contentBylineName.value.trim() || null,
+      credentials: contentBylineCredential.value.trim() || null,
+      date_modified: contentBylineDate.value || null,
+    };
+    const { error } = await supabase.from('pages').update(payload).eq('id', selectedContentPage.id);
+    if (error) {
+      contentBylineStatus.textContent = 'Could not save: ' + error.message;
+      contentBylineStatus.className = 'text-sm text-red-600';
+      return;
+    }
+    Object.assign(selectedContentPage, payload);
+    contentBylineStatus.textContent = 'Saving your site...';
+    const result = await triggerRebuild();
+    contentBylineStatus.textContent = result.ok
+      ? 'Saved! Your site will update shortly.'
+      : 'Saved, but the update trigger failed — it will go live on the next rebuild.';
+    contentBylineStatus.className = result.ok ? 'text-sm text-emerald-700' : 'text-sm text-amber-700';
   });
 
   // ---------------------------------------------------------------------

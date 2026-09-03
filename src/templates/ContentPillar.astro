@@ -36,6 +36,20 @@ const categoryPosts = page.category
   : [];
 
 const tocItems = extractTableOfContents(page.copy);
+
+// "Reviewed by [name], [credential] — Updated [date]" — a real E-E-A-T
+// byline for hub/pillar content. Reuses author_name/credentials/
+// date_modified rather than adding new columns — these were already
+// schema-scoped to Content Pillar (0001_init.sql) and already read by
+// buildArticleSchema() (schema.ts), but never actually rendered anywhere
+// on the page until now. Populating author_name without rendering it was
+// generating real, live schema for a byline visitors never saw — the same
+// invisible-content-schema bug class as the FAQPage fix above, just not
+// caught until this pass. Optional: a pillar with no reviewer set (a
+// case-study/proof page, say) just renders nothing here.
+const updatedDate = page.date_modified
+  ? new Date(page.date_modified).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+  : null;
 ---
 
 <BaseLayout page={page} allPages={allPages} business={business}>
@@ -47,6 +61,13 @@ const tocItems = extractTableOfContents(page.copy);
     imageCreditName={page.images.hero?.creditName}
     imageCreditUrl={page.images.hero?.creditUrl}
   />
+  {page.author_name && (
+    <div class="mx-auto max-w-3xl px-6 pt-6 text-sm text-slate-500">
+      Reviewed by {page.author_name}
+      {page.credentials && <>, {page.credentials}</>}
+      {updatedDate && <> &middot; Updated {updatedDate}</>}
+    </div>
+  )}
   <div class="mx-auto max-w-3xl px-6 pt-10">
     <KeyTakeaways items={page.key_takeaways} />
   </div>

@@ -308,6 +308,19 @@ before touching the related code on a future client site.
   `#anchors`, and protocol-relative `//` hrefs pass through untouched).
   Any future place that renders markdown from `pages.copy` needs the same
   renderer override, not just `renderCopy()`'s existing call sites.
+- **Populating a schema-feeding field without rendering it anywhere is the
+  same bug as the FAQ one above, just quieter.** `buildArticleSchema()`
+  (`schema.ts`) has always read `author_name`/`date_published`/
+  `date_modified` for `Content Pillar` pages and included them in that
+  page's JSON-LD (`schema.author`, `schema.datePublished`,
+  `schema.dateModified`) — but three of CMC's own Content Pillar pages had
+  `author_name`/`date_published` populated with real values while
+  `ContentPillar.astro` never rendered a byline anywhere, meaning real,
+  live schema was describing a byline no visitor could actually see. Found
+  while building the "Reviewed by" byline feature below, not by auditing
+  for it directly. Before adding a new field to a `pages` row, check
+  whether `schema.ts` already reads it for that `page_type` — if so, either
+  render it visibly or don't populate it, never populate-but-hide.
 
 ## Client dashboard (`/admin/leads` login)
 
@@ -523,6 +536,47 @@ group-practice client has the same need.
   point. Both pages resolve the stored page id to a name via a live
   `page_type = 'Counselor Profile'` query, same derivation as the public
   dropdown, not a cached/stale list.
+
+## Reviewed-by byline for pillar/hub pages (built 2026-09-03)
+
+A "Reviewed by [name], [credential] — Updated [date]" byline for
+`Content Pillar` pages only, standard for every client going forward, not
+a one-off — requested after Freedom Counseling Services' previous site
+turned out to already have exactly this pattern on its service pages.
+
+- **No new columns.** Reuses `author_name`/`credentials`/`date_modified`
+  — already schema-scoped to `Content Pillar` in `0001_init.sql`, and
+  already read by `buildArticleSchema()` for that page type. The gap was
+  never the data model, it was that nothing rendered these visibly (see
+  the matching entry in "Real bugs found and fixed here" above) or gave a
+  client any way to edit them.
+- **`ContentPillar.astro` renders the byline** right under the Hero,
+  conditionally on `author_name` being set — a pillar with no reviewer on
+  file (a case-study/proof page, say) just shows nothing, same "optional,
+  never invented" discipline as everything else on this page type.
+- **Admin UI lives inside `admin/content.astro`'s existing "Page copy"
+  section**, gated to page_type = 'Content Pillar' (hidden entirely for
+  any other page), not a new top-level section — this is what the client
+  asked for specifically, and it also means the page picker/tier-note
+  infrastructure that section already has doesn't need duplicating.
+- **Its own save button, deliberately not folded into the tier-gated one
+  above it.** `author_name`/`credentials`/`date_modified` aren't columns
+  `enforce_content_permission` protects, so they're editable by any
+  `owner` regardless of `content_permission_level` — but the existing
+  Page copy save button's visibility is driven by `canEditAnyField()`,
+  which is false for a restricted-tier owner on every *other* field in
+  that section. Reusing that button would have made the byline
+  inaccessible to exactly the clients who most need a simple, always-on
+  field. Same reasoning as Testimonials already having its own
+  independent save button on this same admin page.
+- **Backfilled on CMC's own site** (three Content Pillar pages already had
+  `author_name`/`date_published` set with no visible byline — the exact
+  invisible-schema bug this pass fixed) — `Luke Burgett, LPCA`, matching
+  his real, verified credential from Freedom Counseling Services' site
+  rather than the vaguer "licensed counselor" phrasing used in CMC's own
+  About page copy. Real credentials for schema/E-E-A-T purposes should
+  come from the most specific, verifiable source available, not whatever
+  marketing copy happens to say.
 
 ## Admin CMS: Edge Functions for anything needing a secret at request time
 
