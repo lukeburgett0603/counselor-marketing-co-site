@@ -17,19 +17,11 @@ interface Props {
 
 const { page, allPages, business } = Astro.props;
 
-// Fully dynamic on `service_group`, not a manually-curated list on this
-// page — a new Service Page shows up here automatically the moment it's
-// given a group, with nothing else to remember to update. (The previous
-// version drove this off `internal_links` on this page specifically;
-// a real bug in production was a new Service Page never appearing here
-// because nobody thought to add it to that list.)
-//
-// Practice-type/segment pages (Solo, Group, Psychologist, Christian
-// Counseling Marketing) live on their own "Who We Serve" page instead of
-// here — this page is deliverables only, so it's clear what's actually
-// being sold vs. who it's built for. See WhoWeServe.astro.
-const deliverablePages = allPages
-  .filter((p) => p.page_type === 'Service Page' && p.service_group === 'deliverable')
+// Same self-maintaining pattern as ServicesOverview's deliverable grid — a
+// new practice-type page shows up here automatically the moment it's given
+// service_group = 'segment', nothing to remember to update.
+const segmentPages = allPages
+  .filter((p) => p.page_type === 'Service Page' && p.service_group === 'segment')
   .sort((a, b) => a.nav_order - b.nav_order);
 ---
 
@@ -42,10 +34,10 @@ const deliverablePages = allPages
     imageCreditUrl={page.images.hero?.creditUrl}
     compact
   />
-  {deliverablePages.length > 0 && (
+  {segmentPages.length > 0 && (
     <section class="mx-auto max-w-6xl px-6 py-10">
       <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {deliverablePages.map((service) => (
+        {segmentPages.map((service) => (
           <a
             href={withBase(`/${service.slug}`)}
             class="block rounded-lg border border-slate-200 p-6 hover:border-brand-primary hover:shadow-md"
@@ -64,7 +56,7 @@ const deliverablePages = allPages
   <Section>
     <Fragment set:html={renderCopy(page.copy)} />
   </Section>
-  <CTA heading={page.cta_heading ?? 'Not sure which service you need?'} buttonText={page.cta_button_text ?? undefined} />
+  <CTA heading={page.cta_heading ?? 'Not sure which practice type fits yours?'} buttonText={page.cta_button_text ?? undefined} />
   <LeadMagnet pageId={page.id} />
   <LeadGenerator
     slug={page.slug}
