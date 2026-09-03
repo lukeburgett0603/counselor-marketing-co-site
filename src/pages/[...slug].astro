@@ -13,6 +13,7 @@ import Other from '../templates/Other.astro';
 import BlogPost from '../templates/BlogPost.astro';
 import BlogIndex from '../templates/BlogIndex.astro';
 import WhoWeServe from '../templates/WhoWeServe.astro';
+import ServiceAreasOverview from '../templates/ServiceAreasOverview.astro';
 
 // Homepage renders at "/" via index.astro instead, so it's excluded here
 // even though it's still part of allPages (needed for nav/breadcrumbs).
@@ -44,6 +45,7 @@ const templateByType: Record<PageType, unknown> = {
   'Blog Post': BlogPost,
   'Blog Index': BlogIndex,
   'Who We Serve': WhoWeServe,
+  'Service Areas Overview': ServiceAreasOverview,
 };
 
 const Template = templateByType[page.page_type] as typeof Homepage;

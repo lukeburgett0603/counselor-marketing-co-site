@@ -1103,7 +1103,7 @@ real content yet. Delete the test posts after. This caught real, working
 behavior with confidence before any real content existed to obscure bugs
 in either direction.
 
-## Services Overview & Who We Serve (built 2026-09-02/03)
+## Dynamic overview/hub pages: Services, Who We Serve, Service Areas (built 2026-09-02/03)
 
 Real bug found in production, then generalized into two durable patterns
 for how a Service Page grid gets built and organized.
@@ -1157,6 +1157,19 @@ for how a Service Page grid gets built and organized.
   applies to the *obvious* alternative keyword, though — a segment page's
   natural-sounding client-facing phrase can carry real volume that
   belongs to the wrong audience entirely.)
+- **The same pattern applies a third time for multi-region businesses**:
+  `Service Areas Overview` (`0022_service_areas_overview_page_type.sql`,
+  `ServiceAreasOverview.astro`) is the same dynamic-grid landing page,
+  filtered to `page_type = 'Service Area'` directly — no extra grouping
+  column needed here, since `Service Area` is already an unambiguous type
+  on its own (unlike `Service Page`, which needed `service_group` to tell
+  deliverables and segments apart). Only worth building for a business
+  that genuinely serves more than one distinct area (e.g. a physical
+  office in one metro plus telehealth coverage of a second, separate
+  region) — a single-area business just puts its one Service Area page
+  straight in nav, no overview page needed. First built for Freedom
+  Counseling Services (Louisville, KY office + Southern Indiana
+  telehealth coverage).
 
 ## Generating a logo from a CSS wordmark
 

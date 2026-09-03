@@ -12,7 +12,8 @@ export type PageType =
   | 'Other'
   | 'Blog Post'
   | 'Blog Index'
-  | 'Who We Serve';
+  | 'Who We Serve'
+  | 'Service Areas Overview';
 
 export interface ImageSlot {
   url: string;
