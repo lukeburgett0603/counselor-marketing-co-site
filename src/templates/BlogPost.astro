@@ -41,10 +41,7 @@ const publishedDate = page.date_published
   />
   <div class="mx-auto max-w-3xl px-6 pt-6 text-sm text-slate-500">
     {page.author_name && (
-      <span>
-        By {page.author_name}
-        {page.credentials && <>, {page.credentials}</>}
-      </span>
+      <span>By {page.author_name}{page.credentials && <>, {page.credentials}</>}</span>
     )}
     {page.author_name && (publishedDate || page.category) && <span> &middot; </span>}
     {publishedDate && <span>{publishedDate}</span>}

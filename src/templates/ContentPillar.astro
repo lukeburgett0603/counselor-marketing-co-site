@@ -63,9 +63,7 @@ const updatedDate = page.date_modified
   />
   {page.author_name && (
     <div class="mx-auto max-w-3xl px-6 pt-6 text-sm text-slate-500">
-      Reviewed by {page.author_name}
-      {page.credentials && <>, {page.credentials}</>}
-      {updatedDate && <> &middot; Updated {updatedDate}</>}
+      Reviewed by {page.author_name}{page.credentials && <>, {page.credentials}</>}{updatedDate && <> &middot; Updated {updatedDate}</>}
     </div>
   )}
   <div class="mx-auto max-w-3xl px-6 pt-10">

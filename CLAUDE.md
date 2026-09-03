@@ -577,6 +577,16 @@ turned out to already have exactly this pattern on its service pages.
   About page copy. Real credentials for schema/E-E-A-T purposes should
   come from the most specific, verifiable source available, not whatever
   marketing copy happens to say.
+- **A newline between two JSX expressions renders as a literal space** —
+  `{page.author_name}\n{page.credentials && <>, {page.credentials}</>}`
+  rendered as "Luke Burgett , LPCA" (extra space before the comma), caught
+  live on this exact byline. `BlogPost.astro`'s near-identical author byline
+  had the same latent bug — nobody had caught it there yet only because no
+  client site has a real Blog Post live to render it against. Fixed both by
+  writing adjacent conditional fragments on one line with no whitespace
+  between them, not split across lines for readability. Watch for this
+  anywhere a comma/punctuation needs to sit directly against a conditional
+  expression's output.
 
 ## Admin CMS: Edge Functions for anything needing a secret at request time
 
