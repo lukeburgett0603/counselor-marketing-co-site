@@ -23,6 +23,20 @@ client-specific decisions get written down" note.
   section), and it's currently rendering with none. Fill in via Website
   content → Business info before any nurture sequence goes live for real
   leads.
+- **Backlog: add "Google Business Profile Optimization" as a real,
+  positioned service CMC offers.** Came up while building out Freedom
+  Counseling Services' GBP + citation audit (2026-09-03) — GBP
+  optimization turned out to be a bigger, more concrete lever for a
+  counseling practice's local ranking than the on-page content work
+  alone (see `CLAUDE.md`'s "Local SEO — Google Business Profile &
+  citations" standard). Worth its own Service Page on CMC's own site
+  once there's time to plan it properly, not built yet.
+- **Backlog: a planning session on whether GBP optimization should
+  become one of CMC's own content-pillar categories** (alongside SEO &
+  Marketing, Therapist Branding, Practice Growth, Website Design) — not
+  decided, needs its own real keyword-research pass before committing to
+  it as a category, same discipline as every other pillar category on
+  this site.
 
 ## SEO / keyword research (2026-09-02, via Mangools MCP)
 
