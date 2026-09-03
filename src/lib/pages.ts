@@ -14,7 +14,8 @@ export type PageType =
   | 'Blog Index'
   | 'Who We Serve'
   | 'Service Areas Overview'
-  | 'Service Hub';
+  | 'Service Hub'
+  | 'Counselors Overview';
 
 export interface ImageSlot {
   url: string;

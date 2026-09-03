@@ -1266,7 +1266,7 @@ real content yet. Delete the test posts after. This caught real, working
 behavior with confidence before any real content existed to obscure bugs
 in either direction.
 
-## Dynamic overview/hub pages: Services, Who We Serve, Service Areas (built 2026-09-02/03)
+## Dynamic overview/hub pages: Services, Who We Serve, Service Areas, Counselors (built 2026-09-02/03)
 
 Real bug found in production, then generalized into two durable patterns
 for how a Service Page grid gets built and organized.
@@ -1333,6 +1333,13 @@ for how a Service Page grid gets built and organized.
   straight in nav, no overview page needed. First built for Freedom
   Counseling Services (Louisville, KY office + Southern Indiana
   telehealth coverage).
+- **A fourth instance, for a "meet the team" page**: `Counselors
+  Overview` (`0025_counselors_overview_page_type.sql`,
+  `CounselorsOverview.astro`) — same pattern again, filtered to
+  `page_type = 'Counselor Profile'`. Only worth building for a group
+  practice with more than one counselor; a solo practice's one bio just
+  goes on the About page. First built for Freedom Counseling Services
+  (5 counselors).
 
 ## Service Hub: a bookable service that's also a content hub (built 2026-09-03)
 
