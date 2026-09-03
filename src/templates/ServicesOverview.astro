@@ -19,19 +19,21 @@ interface Props {
 const { page, allPages, business } = Astro.props;
 const counselors = getCounselorOptions(allPages);
 
-// Fully dynamic on `service_group`, not a manually-curated list on this
-// page — a new Service Page shows up here automatically the moment it's
-// given a group, with nothing else to remember to update. (The previous
-// version drove this off `internal_links` on this page specifically;
-// a real bug in production was a new Service Page never appearing here
-// because nobody thought to add it to that list.)
+// Fully dynamic, not a manually-curated list on this page — a new
+// service shows up here automatically, nothing else to remember to
+// update. (The original version drove this off `internal_links` on this
+// page specifically; a real bug in production was a new Service Page
+// never appearing here because nobody thought to add it to that list.)
 //
-// Practice-type/segment pages (Solo, Group, Psychologist, Christian
-// Counseling Marketing) live on their own "Who We Serve" page instead of
-// here — this page is deliverables only, so it's clear what's actually
-// being sold vs. who it's built for. See WhoWeServe.astro.
+// Two shapes of "service" both belong here: a plain 'Service Page' with
+// service_group = 'deliverable' (CMC-style — narrow, transactional
+// services split from audience-segment pages, see WhoWeServe.astro), and
+// a 'Service Hub' (see CLAUDE.md's Service Hub section — a bookable
+// service that's also a content hub, no further deliverable/segment
+// split needed since every Service Hub page already just is one of the
+// business's real services).
 const deliverablePages = allPages
-  .filter((p) => p.page_type === 'Service Page' && p.service_group === 'deliverable')
+  .filter((p) => (p.page_type === 'Service Page' && p.service_group === 'deliverable') || p.page_type === 'Service Hub')
   .sort((a, b) => a.nav_order - b.nav_order);
 ---
 
