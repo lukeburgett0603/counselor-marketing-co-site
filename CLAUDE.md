@@ -14,6 +14,20 @@ facts) happens in that client's own repo, never here. When a fix belongs in
 both (a real bug, not a client preference), fix it here first, then sync
 outward — never patch a client repo and forget to bring the fix back.
 
+**Where client-specific decisions get written down**: each client repo
+keeps its own `NOTES.md` at the repo root — SEO/keyword research findings
+and category decisions, business-fact gaps (missing address, no custom
+domain yet, etc.), brand-voice/positioning calls, and anything else that's
+true of *that* client but would be noise (or actively wrong) in every other
+client's repo. `NOTES.md` is never synced in either direction — the template
+repo doesn't have one, and a client repo's `NOTES.md` never gets copied back
+here. If you're about to write a client-specific fact into this file, it
+belongs in that client's `NOTES.md` instead; if you're documenting a real
+bug or a reusable pattern, it belongs here, illustrated with a real example
+if one helps (plenty of sections below use a real CMC anecdote to make a
+generic lesson concrete — that's fine, the line is "specific facts, kept
+out" not "specific examples, kept out").
+
 ## Non-negotiable standards for every client build
 
 These aren't aspirational — they're the direct output of an actual design
@@ -80,6 +94,17 @@ these as "done" criteria, not nice-to-haves, for every future client.
 - Work the page's focus keyword into at least one image's alt text when it
   fits naturally (per `keyword-usage-rules.md`'s placement checklist) —
   never force it, never at the cost of accuracy.
+
+### Domain
+
+- **A client site left on its raw `<username>.github.io/<repo>` GitHub
+  Pages subdomain has a real, structural SEO ceiling, independent of how
+  good the content is.** Confirmed via Mangools SiteProfiler on CMC's own
+  site: Domain Authority 1. Get a custom domain configured as basic
+  infrastructure for every client, ideally *before* investing heavily in
+  content/SEO work — content built up on a shared-subdomain URL loses
+  momentum if the domain changes later, so it's cheaper to fix this early
+  than to migrate authority after the fact.
 
 ### Conversion / CTA discipline
 
@@ -257,6 +282,32 @@ before touching the related code on a future client site.
   login form itself (previously the agency had to manually trigger a
   reset via script) — same `redirectTo` pattern, so it was the natural
   place to fix this properly rather than as a one-off patch.
+- **`ContentPillar.astro` never rendered the `FAQ` component**, even
+  though `schema.ts` appends `FAQPage` JSON-LD schema for *any* page with
+  a non-empty `faqs` array, independent of `page_type` (`if
+  (page.faqs.length > 0) schemas.push(buildFAQSchema(page))`). A Content
+  Pillar with `faqs` set was generating structured data for Q&A content
+  that was never actually visible on the page — a direct violation of
+  this file's own FAQPage rule above, and the kind of gap that only shows
+  up once a Content Pillar actually gets real FAQ content, not on a first
+  "looks done" pass. Fixed by importing and rendering `<FAQ
+  faqs={page.faqs} />` in `ContentPillar.astro`, the same way
+  `ServicePage.astro` already did. Any new template that renders a page
+  type schema.ts treats as FAQ-eligible needs the same check — don't
+  assume a template renders everything schema.ts might describe.
+- **`renderCopy()`'s markdown parser had no base-path handling for
+  internal links.** A markdown link written directly into `pages.copy`
+  (e.g. `[SEO](/seo)`) rendered as a raw `/seo` href — correct in local
+  dev, a 404 on GitHub Pages once the site is served under a base path
+  (`/<client-repo-name>/`), the same class of bug `withBase()`
+  (`src/lib/url.ts`) already exists to prevent everywhere else in this
+  app. Nobody had written an inline copy link before, so the gap sat
+  unnoticed until the first page that used one. Fixed with a custom
+  `marked` `renderer.link` in `lib/markdown.ts` that runs `withBase()` on
+  any href starting with a single `/` (external URLs, `mailto:`, `tel:`,
+  `#anchors`, and protocol-relative `//` hrefs pass through untouched).
+  Any future place that renders markdown from `pages.copy` needs the same
+  renderer override, not just `renderCopy()`'s existing call sites.
 
 ## Client dashboard (`/admin/leads` login)
 
@@ -429,11 +480,12 @@ here until "assign leads to staff" (backlogged, see below) is built.
 
 ## Admin CMS: Edge Functions for anything needing a secret at request time
 
-Being planned/built in phases (business info fields → Edge Function → blog posting →
-website content editing → multi-user roles) so client-site admins can eventually
-manage content from their own login instead of touching Supabase directly. Full
-architecture lives in this project's own memory/CLAUDE.md, not repeated here — this
-section is the durable, template-level pattern worth reusing on every future piece.
+Built in phases (business info fields → Edge Function → blog posting →
+website content editing → multi-user roles → agency role) so client-site
+admins can manage content from their own login instead of touching
+Supabase directly. All six phases are documented in full below — this
+section is the durable, template-level pattern worth reusing on every
+future piece, not a summary pointing elsewhere.
 
 **`supabase/functions/publish-site`** (built 2026-08-30) is the first Edge Function
 and the pattern to copy for anything similar: the static site can't run server code,
@@ -541,9 +593,12 @@ exception (`P0001`), not a silent no-op or a UI-only block.
 (`components/SuggestEdit.astro`, the `content_suggestions` table)
 instead of a save button.** Every client site gets the ability to
 *submit* a suggestion (`page_id`, `field_name`, `current_value` snapshot,
-`suggested_value`, `submitted_by`); nobody has a *review* UI yet — that's
-explicitly backlogged, Counselor-Marketing-Co-only (see project memory).
-The submit-side RLS policy is intentionally simple: any authenticated
+`suggested_value`, `submitted_by`). The review side — approving a
+suggestion and applying it to the live page — is the `agency`-only
+Suggestions screen described further down under "A third admin role,
+`agency`"; it wasn't built yet when this paragraph was first written, and
+this note is what's stale, not the app. The submit-side RLS policy is
+intentionally simple: any authenticated
 user can insert, and can read back only their own submissions
 (`auth.uid() = submitted_by`) — good enough for a single-owner-login site;
 Phase 5's multi-user roles may need to revisit the read policy so an
@@ -714,9 +769,9 @@ a manual SQL workaround afterward.
 - **Notification strategy is deliberately the cheapest option, not a
   webhook**: a pending-count badge on the Suggestions nav item (any
   `agency` login sees it on login, on any admin page — not just when they
-  happen to visit Suggestions). Real email/Slack alerts are backlogged
-  for when checking in on client sites regularly stops being enough — see
-  project memory.
+  happen to visit Suggestions). Real email/Slack alerts are backlogged —
+  add them when checking in on client sites regularly stops being enough,
+  not before.
 - **The client directory (a private list of every client's admin URL) is
   a client-repo-only feature, not template code** — it's a business tool
   specific to running the agency, with no meaning on a generic client
@@ -1005,15 +1060,27 @@ first but is the wrong default — it assumes every genuinely valuable blog
 topic maps onto exactly one existing service, which real keyword research
 consistently disproves (the strongest cluster found for Counselor
 Marketing Co., faith-based counseling, doesn't map to any single service
-page). Do real keyword research (Mangools API — `GET
+page). Do real keyword research around informational-intent seed terms
+adjacent to the business's actual services, then group genuine, on-topic,
+correctly-intent-matched results into categories. Expect to manually
+filter out a lot of noise (brand names, adjacent professions, "near me"
+hyper-local queries meant for a different audience than the blog's) — raw
+keyword tool output is not ready-to-use data.
+
+**Preferred tool: the Mangools MCP server**, not raw REST calls —
+`claude mcp add --transport http mangools https://mcp.mangools.com/mcp
+--header "x-access-token: <token>"` gives real MCP tools
+(`kwfinder_search_related_keywords`, `kwfinder_get_keyword_details`,
+`serpchecker_get_serp`, `siteprofiler_get_overview`/`find_competitors`,
+etc.) instead of hand-rolled `curl`. Two things that aren't obvious the
+first time: **adding the MCP server requires a full `claude` process
+restart** (`claude --continue`/`--resume`, not just a new message in the
+same session) before the new tools are visible, and the **API is rate-
+limited to a few requests per short period** — pace calls, don't batch
+several in a row. Falls back to the raw REST API (`GET
 https://api.mangools.com/v3/kwfinder/related-keywords?kw=<seed>&location_id=2840&language_id=1000`
-with the key in an `x-access-token` header) around informational-intent
-seed terms adjacent to the business's actual services, then group
-genuine, on-topic, correctly-intent-matched results into categories.
-Expect to manually filter out a lot of noise (brand names, adjacent
-professions, "near me" hyper-local queries meant for a different
-audience than the blog's) — raw keyword tool output is not ready-to-use
-data.
+with the key in an `x-access-token` header) if the MCP server isn't set up
+in a given environment. Location ID 2840 = United States.
 
 **Watch for search-intent mismatches when a raw volume number looks
 exciting.** A high-volume keyword cluster can be *end-client* search
@@ -1024,7 +1091,9 @@ counselors can't target the first kind directly, no matter how large the
 number is. Surface this distinction explicitly rather than presenting a
 combined volume number that implies it's all directly targetable — it
 isn't, and the client will (rightly) ask for the breakdown if the number
-seems too good to be true.
+seems too good to be true. This isn't limited to Content Pillar keywords —
+the same check applies to any page's `focus_keyword`, including audience-
+segment pages (see "Services Overview & Who We Serve" below).
 
 **Verification pattern**: same as the leads dashboard — build the full
 mechanism (pill filtering, `?category=` pre-selection, hub↔post
@@ -1033,6 +1102,61 @@ directly in Supabase, not the absence of testing just because there's no
 real content yet. Delete the test posts after. This caught real, working
 behavior with confidence before any real content existed to obscure bugs
 in either direction.
+
+## Services Overview & Who We Serve (built 2026-09-02/03)
+
+Real bug found in production, then generalized into two durable patterns
+for how a Service Page grid gets built and organized.
+
+- **A grid driven by a manually-curated list goes stale.** Services
+  Overview originally filtered a page-level `internal_links` array to
+  build its grid — a new Service Page (Google Ads for Therapists) went
+  live and never appeared there because nobody remembered to add its slug
+  to that list. Fixed by adding `pages.service_group` (`'deliverable' |
+  'segment'`, `0020_service_page_groups.sql`) — the template filters
+  `page_type = 'Service Page' AND service_group = 'X'` directly, so a new
+  Service Page with a group set shows up automatically. Reuse this same
+  self-maintaining pattern (a real column the template filters on, never
+  a page-level curated list) for any future grid that's supposed to grow
+  as pages are added — this is the same fix already applied once before
+  to the hub-and-spoke category system, now applied here too.
+- **Deliverables and audience-segment pages are two different things and
+  belong on two different pages.** A page like "Solo Practice Marketing"
+  or "Psychologist Marketing" isn't a distinct service — it's the same
+  core services (Website Design, SEO, Google Ads, Full-Service), tailored
+  and priced for a specific kind of practice. Mixing these into the
+  Services grid blurs "what's actually being sold" against "who it's
+  built for," and gets worse as segment pages accumulate.
+  `service_group = 'deliverable'` pages stay on Services Overview;
+  `service_group = 'segment'` pages get a new, dedicated **`Who We
+  Serve`** page_type (`WhoWeServe.astro`, wired into `[...slug].astro`'s
+  `templateByType` map same as any other page_type,
+  `0021_who_we_serve_page_type.sql`) — same self-maintaining grid
+  mechanism as Services Overview, just filtered to `service_group =
+  'segment'`. Give any future client's audience-specific pages (by
+  practice type, by client population, by specialty — whatever the real
+  segmentation turns out to be for that business) this same treatment
+  rather than cramming them into the Services grid or inventing a one-off
+  page structure per client.
+- **Nav placement for both pages is fully data-driven** off
+  `nav_placement`/`nav_order`/`parent_page_id` (see `Header.astro`) —
+  adding the "Who We Serve" nav item and reparenting the segment pages
+  under it required zero nav code changes, only correct CMS field values
+  on the new page row and on each reparented page. Already true for
+  Services Overview and the hub-and-spoke blog categories; worth
+  remembering before assuming a new top-level nav section needs code.
+- **A segment page's own focus keyword rarely has real search volume, and
+  that's fine.** These are conversion/positioning pages for someone
+  already on the site, referred in, or navigating from Who We Serve — not
+  organic-traffic-driving pages the way a Content Pillar is. Confirmed
+  live via Mangools on more than one segment page's keyword coming back
+  with zero measurable search volume. Don't chase volume here or force an
+  artificial exact-match keyword to try to manufacture some — pick the
+  accurate label for what the page actually is and move on. (The same
+  intent-mismatch check from the Hub-and-spoke section above still
+  applies to the *obvious* alternative keyword, though — a segment page's
+  natural-sounding client-facing phrase can carry real volume that
+  belongs to the wrong audience entirely.)
 
 ## Generating a logo from a CSS wordmark
 
