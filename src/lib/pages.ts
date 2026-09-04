@@ -81,6 +81,9 @@ export interface Business {
   display_name: string;
   legal_name: string | null;
   logo_url: string | null;
+  // Opt-in — render logo_url as a real <img> in Header.astro instead of the
+  // CSS-generated text wordmark. See 0026_logo_in_header.sql.
+  logo_in_header: boolean;
   brand_colors: string[];
   brand_fonts: string[];
   design_inspiration_urls: string[];

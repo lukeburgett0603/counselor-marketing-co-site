@@ -73,7 +73,12 @@ const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbChain, siteUrl);
     <SchemaScript schemas={[...pageSchemas, breadcrumbSchema]} />
   </head>
   <body class="pb-14 md:pb-0">
-    <Header navPages={allPages} businessName={business.display_name} telephone={business.telephone} />
+    <Header
+      navPages={allPages}
+      businessName={business.display_name}
+      telephone={business.telephone}
+      logoUrl={business.logo_in_header ? business.logo_url : null}
+    />
     <main>
       <slot />
     </main>

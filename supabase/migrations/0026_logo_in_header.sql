@@ -1,0 +1,11 @@
+-- Opt-in flag to render the real business.logo_url image in Header.astro
+-- instead of the CSS-generated text wordmark (splitWordmark). Defaults to
+-- false so existing clients' headers don't silently change the moment this
+-- column exists — several clients have a real logo_url set (e.g. CMC's own
+-- CSS-wordmark-derived PNG, see CLAUDE.md's "Generating a logo from a CSS
+-- wordmark") purely for Organization/OG-image schema purposes, not because
+-- they want an <img> tag replacing the live text header. First set true
+-- for Freedom Counseling Services, whose real logo has a genuine pictorial
+-- mark (an open padlock forming the "O" in FREEDOM) worth showing in the
+-- header, not just in schema — see the client's own visual-design-brief.md.
+alter table business add column logo_in_header boolean not null default false;

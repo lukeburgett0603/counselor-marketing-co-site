@@ -7,9 +7,13 @@ interface Props {
   navPages: Page[];
   businessName: string;
   telephone?: string | null;
+  // Opt-in (business.logo_in_header) — a real logo image in place of the
+  // CSS-generated text wordmark. Only passed when both a logo_url and the
+  // flag exist; see BaseLayout.astro.
+  logoUrl?: string | null;
 }
 
-const { navPages, businessName, telephone } = Astro.props;
+const { navPages, businessName, telephone, logoUrl } = Astro.props;
 const wordmark = splitWordmark(businessName);
 
 const primary = navPages
@@ -35,8 +39,14 @@ function hrefFor(page: Page): string {
 -->
 <header class="relative z-50 border-b border-slate-200 bg-white">
   <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-    <a href={withBase('/')} class="font-[family-name:var(--font-heading)] text-lg font-extrabold tracking-tight text-brand-ink">
-      {wordmark.main}{wordmark.accent && <span class="text-brand-accent">{wordmark.accent}</span>}
+    <a href={withBase('/')} class="flex items-center">
+      {logoUrl ? (
+        <img src={logoUrl} alt={businessName} class="h-10 w-auto" />
+      ) : (
+        <span class="font-[family-name:var(--font-heading)] text-lg font-extrabold tracking-tight text-brand-ink">
+          {wordmark.main}{wordmark.accent && <span class="text-brand-accent">{wordmark.accent}</span>}
+        </span>
+      )}
     </a>
 
     <nav class="hidden md:block">
