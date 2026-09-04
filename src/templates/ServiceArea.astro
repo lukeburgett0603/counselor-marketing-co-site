@@ -3,6 +3,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import Section from '../components/Section.astro';
 import Testimonial from '../components/Testimonial.astro';
+import PlanSteps from '../components/PlanSteps.astro';
+import FAQ from '../components/FAQ.astro';
 import CTA from '../components/CTA.astro';
 import LeadGenerator from '../components/LeadGenerator.astro';
 import LeadMagnet from '../components/LeadMagnet.astro';
@@ -37,6 +39,11 @@ const counselors = getCounselorOptions(allPages);
   {page.testimonial_quote && page.testimonial_author && (
     <Testimonial quote={page.testimonial_quote} author={page.testimonial_author} role={page.testimonial_role} />
   )}
+  <PlanSteps steps={page.plan_steps} />
+  <FAQ
+    faqs={page.faqs}
+    heading={page.area_served_name ? `Common questions from ${page.area_served_name} clients` : undefined}
+  />
   <CTA heading={page.cta_heading ?? `Serving ${page.area_served_name ?? 'your area'}`} buttonText={page.cta_button_text ?? undefined} />
   <LeadMagnet pageId={page.id} />
   <LeadGenerator

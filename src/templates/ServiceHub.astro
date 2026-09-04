@@ -65,7 +65,10 @@ const updatedDate = page.date_modified
   </div>
   <div class="mx-auto grid max-w-5xl grid-cols-1 gap-10 px-6 pb-10 lg:grid-cols-[220px_1fr]">
     <TableOfContents items={tocItems} />
-    <article class="prose prose-lg max-w-none">
+    {/* No max-w-none — see Section.astro's comment on the same change;
+        prose-lg's own 65ch default is the correct line-length cap here
+        too, not just in the generic Section wrapper. */}
+    <article class="prose prose-lg">
       <Fragment set:html={renderCopy(page.copy)} />
     </article>
   </div>

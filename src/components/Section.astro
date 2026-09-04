@@ -11,7 +11,19 @@ const { heading, tight = false } = Astro.props;
   {heading && (
     <h2 class="mb-6 font-[family-name:var(--font-heading)] text-2xl font-extrabold tracking-tight text-brand-ink">{heading}</h2>
   )}
-  <div class="prose max-w-none">
+  {/*
+    No max-w-none here on purpose — Tailwind Typography's own default
+    max-width (65ch) is exactly the 45-75-character line length the
+    approved Visual Design Brief's type system calls for. Removing it
+    (as this div previously did) let every page's body copy stretch to
+    the full max-w-4xl container width — part of the "wall of text"
+    problem: unconstrained line length reads as dense even when the
+    content itself is well-organized. This div's slot is always plain
+    markdown-rendered prose (never a card grid — checked every call site
+    before making this change), so constraining it here is safe
+    everywhere it's used.
+  */}
+  <div class="prose">
     <slot />
   </div>
 </section>
