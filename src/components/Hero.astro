@@ -11,6 +11,13 @@ interface Props {
   compact?: boolean;
   ctaText?: string;
   ctaHref?: string;
+  // 'overlay' only actually renders when an image is also present (see
+  // isOverlay below) - a page that picked this style but hasn't set a
+  // hero image yet falls back to the plain 'default' layout rather than
+  // showing a broken/empty tinted band.
+  style?: 'default' | 'overlay';
+  overlayColor?: string;
+  overlayOpacity?: number;
 }
 
 const {
@@ -23,59 +30,114 @@ const {
   compact = false,
   ctaText,
   ctaHref = '#lead-generator',
+  style = 'default',
+  overlayColor = '#1f2937',
+  overlayOpacity = 50,
 } = Astro.props;
 
-// When there's no image, the `aside` slot typically holds a form (see
-// PlanSteps.astro's sibling pattern in page-templates.md) — a standalone
-// button that just scrolls down to a DIFFERENT, distant form is redundant
-// once a form is already visible right here, and looks like two competing
-// CTAs with mismatched labels. The visible form becomes the CTA instead.
-const showAside = !imageUrl && Astro.slots.has('aside');
+const isOverlay = style === 'overlay' && !!imageUrl;
+
+// Admin-entered via a real <input type="color">, which only ever
+// produces #rrggbb - validated anyway before it reaches a raw inline
+// style attribute, rather than trusting stored data blindly.
+const safeOverlayColor = /^#[0-9a-fA-F]{6}$/.test(overlayColor) ? overlayColor : '#1f2937';
+const safeOverlayOpacity = Math.min(100, Math.max(0, overlayOpacity)) / 100;
+
+// In the default layout, the image and the aside slot are mutually
+// exclusive (a form only shows when there's no image - see
+// page-templates.md's sibling pattern). In the overlay layout the whole
+// point is both at once: full-bleed image behind, form as a card in
+// front - so this needs its own condition rather than reusing the
+// default layout's `!imageUrl` check.
+const showAside = isOverlay ? Astro.slots.has('aside') : !imageUrl && Astro.slots.has('aside');
 ---
 
-<section class:list={['bg-brand-neutral', compact ? 'py-10' : 'py-20']}>
-  <div class="mx-auto flex max-w-6xl flex-col items-center gap-10 px-6 md:flex-row">
-    <div class="flex-1">
-      <h1 class:list={['font-[family-name:var(--font-heading)] font-extrabold tracking-tight text-brand-ink', compact ? 'text-3xl' : 'text-4xl md:text-5xl']}>
-        {h1}
-      </h1>
-      {subhead && <p class="mt-4 text-lg text-slate-600">{subhead}</p>}
-      {/*
-        A visible CTA above the fold, not just at the bottom of the page —
-        visitors deciding quickly (especially on mobile, especially local
-        service searches) shouldn't have to scroll through the whole
-        StoryBrand arc to find a way to act. Suppressed when a form is
-        already visible in `aside` — see `showAside` above.
-      */}
-      {ctaText && !showAside && (
-        <a
-          href={ctaHref}
-          class="mt-6 inline-block rounded-md bg-brand-accent px-6 py-3 font-semibold text-white transition hover:opacity-90 hover:shadow-md"
-        >
-          {ctaText}
-        </a>
-      )}
-      <slot />
+{isOverlay ? (
+  <section class="relative overflow-hidden py-24 md:py-32">
+    <div class="absolute inset-0">
+      <OptimizedImage
+        src={imageUrl!}
+        alt={imageAlt ?? ''}
+        class="h-full w-full object-cover"
+        loading="eager"
+        widths={[800, 1200, 1600]}
+        sizes="100vw"
+        creditName={imageCreditName}
+        creditUrl={imageCreditUrl}
+      />
     </div>
-    {imageUrl ? (
+    <div class="absolute inset-0" style={`background-color: ${safeOverlayColor}; opacity: ${safeOverlayOpacity};`}></div>
+    <div class="relative mx-auto flex max-w-6xl flex-col items-start gap-10 px-6 md:flex-row">
       <div class="flex-1">
-        <OptimizedImage
-          src={imageUrl}
-          alt={imageAlt ?? ''}
-          class="w-full rounded-xl object-cover"
-          loading="eager"
-          widths={[400, 800, 1200]}
-          sizes="(min-width: 768px) 50vw, 100vw"
-          creditName={imageCreditName}
-          creditUrl={imageCreditUrl}
-        />
+        <h1 class:list={['font-[family-name:var(--font-heading)] font-extrabold tracking-tight text-white', compact ? 'text-3xl' : 'text-4xl md:text-5xl']}>
+          {h1}
+        </h1>
+        {subhead && <p class="mt-4 text-lg text-white/90">{subhead}</p>}
+        {/* No CTA button here when a form is already visible beside it —
+            same "don't compete with the visible form" rule as the
+            default layout below; the form itself is the CTA. */}
+        {ctaText && !showAside && (
+          <a
+            href={ctaHref}
+            class="mt-6 inline-block rounded-md bg-brand-accent px-6 py-3 font-semibold text-white transition hover:opacity-90 hover:shadow-md"
+          >
+            {ctaText}
+          </a>
+        )}
+        <slot />
       </div>
-    ) : (
-      showAside && (
+      {showAside && (
         <div class="w-full flex-1 md:max-w-sm">
           <slot name="aside" />
         </div>
-      )
-    )}
-  </div>
-</section>
+      )}
+    </div>
+  </section>
+) : (
+  <section class:list={['bg-brand-neutral', compact ? 'py-10' : 'py-20']}>
+    <div class="mx-auto flex max-w-6xl flex-col items-center gap-10 px-6 md:flex-row">
+      <div class="flex-1">
+        <h1 class:list={['font-[family-name:var(--font-heading)] font-extrabold tracking-tight text-brand-ink', compact ? 'text-3xl' : 'text-4xl md:text-5xl']}>
+          {h1}
+        </h1>
+        {subhead && <p class="mt-4 text-lg text-slate-600">{subhead}</p>}
+        {/*
+          A visible CTA above the fold, not just at the bottom of the page —
+          visitors deciding quickly (especially on mobile, especially local
+          service searches) shouldn't have to scroll through the whole
+          StoryBrand arc to find a way to act. Suppressed when a form is
+          already visible in `aside` — see `showAside` above.
+        */}
+        {ctaText && !showAside && (
+          <a
+            href={ctaHref}
+            class="mt-6 inline-block rounded-md bg-brand-accent px-6 py-3 font-semibold text-white transition hover:opacity-90 hover:shadow-md"
+          >
+            {ctaText}
+          </a>
+        )}
+        <slot />
+      </div>
+      {imageUrl ? (
+        <div class="flex-1">
+          <OptimizedImage
+            src={imageUrl}
+            alt={imageAlt ?? ''}
+            class="w-full rounded-xl object-cover"
+            loading="eager"
+            widths={[400, 800, 1200]}
+            sizes="(min-width: 768px) 50vw, 100vw"
+            creditName={imageCreditName}
+            creditUrl={imageCreditUrl}
+          />
+        </div>
+      ) : (
+        showAside && (
+          <div class="w-full flex-1 md:max-w-sm">
+            <slot name="aside" />
+          </div>
+        )
+      )}
+    </div>
+  </section>
+)}

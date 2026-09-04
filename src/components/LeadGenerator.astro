@@ -9,12 +9,24 @@ interface Props {
   heading?: string;
   collectWebsiteUrl?: boolean;
   responseTimeNote?: string | null;
-  // A leaner card variant (name + email only, no phone/message, no full
-  // section wrapper) meant to sit inside a Hero's aside slot — for pages
-  // that also have the full form elsewhere. Never remove the full-fields
-  // version entirely from a page; embedded is a second, lower-friction
-  // entry point, not a replacement.
+  // Renders as a card (div, no full-width section/py-14) instead of a
+  // standalone page section — meant to sit inside a Hero's aside slot,
+  // for pages that also have the full-section form elsewhere. Never
+  // remove the full-fields version entirely from a page; an embedded
+  // card is a second entry point, not a replacement.
   embedded?: boolean;
+  // Field set: fewer fields (no phone/message), a lower-friction ask.
+  // Defaults to whatever `embedded` is, matching this component's
+  // original behavior (an embedded card always used the leaner field
+  // set) — pass compact explicitly to decouple the two, e.g. an
+  // embedded card that still shows every field (the Hero overlay
+  // style's frosted form; see CLAUDE.md's "Hero overlay style" section).
+  compact?: boolean;
+  // A translucent, backdrop-blurred card instead of solid white — for
+  // sitting on top of a photo (the Hero overlay style). Only meaningful
+  // when `embedded` is true; a full-width section wrapper (the default,
+  // bottom-of-page form) isn't a "card" in the first place.
+  frosted?: boolean;
   submitText?: string;
   // Multi-provider lead routing — opt-in via business.collect_counselor_preference.
   // `counselors` is derived by the caller from allPages (page_type ===
@@ -34,6 +46,8 @@ const {
   collectWebsiteUrl = false,
   responseTimeNote,
   embedded = false,
+  compact = embedded,
+  frosted = false,
   submitText = 'Send',
   collectCounselorPreference = false,
   counselors = [],
@@ -45,7 +59,14 @@ const Wrapper = embedded ? 'div' : 'section';
 
 <Wrapper
   id={embedded ? undefined : 'lead-generator'}
-  class={embedded ? 'rounded-lg border border-black/5 bg-white p-6 shadow-md' : 'bg-white py-14'}
+  class:list={[
+    embedded
+      ? [
+          'rounded-lg p-6',
+          frosted ? 'border border-white/30 bg-white/70 shadow-lg backdrop-blur-md' : 'border border-black/5 bg-white shadow-md',
+        ]
+      : 'bg-white py-14',
+  ]}
 >
   <div class:list={[embedded ? '' : 'mx-auto max-w-xl px-6']}>
     <h2
@@ -75,7 +96,7 @@ const Wrapper = embedded ? 'div' : 'section';
         required
         class="w-full rounded-md border border-slate-300 px-4 py-2"
       />
-      {!embedded && (
+      {!compact && (
         <input
           name="phone"
           type="tel"
@@ -105,7 +126,7 @@ const Wrapper = embedded ? 'div' : 'section';
           ))}
         </select>
       )}
-      {!embedded && (
+      {!compact && (
         <textarea
           name="message"
           placeholder="How can we help?"

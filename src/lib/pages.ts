@@ -103,6 +103,19 @@ export interface Page {
   // Plain string tags, not linked anywhere (unlike specialties) - purely
   // self-service, see 0029_counselor_card_v2.sql.
   modalities: string[];
+  // Which Hero.astro layout this page uses. 'default' (today's
+  // side-by-side image/aside) is the default for every page on every
+  // client site; 'overlay' is opt-in per page - a full-bleed background
+  // image with a color/opacity tint for legibility, never available on
+  // 'Counselor Profile' pages (which don't use Hero.astro at all - see
+  // CounselorProfile.astro's own header card). See 0030_hero_overlay_style.sql.
+  hero_style: 'default' | 'overlay';
+  // Only meaningful when hero_style is 'overlay'. Real DB defaults (a
+  // sensible dark tint), not left null/unset - this is a technical
+  // rendering default, not invented business content, so it's fine for
+  // a page to inherit it without an admin having touched it yet.
+  hero_overlay_color: string;
+  hero_overlay_opacity: number;
 }
 
 export interface Business {

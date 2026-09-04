@@ -20,6 +20,13 @@ interface Props {
 
 const { page, allPages, business } = Astro.props;
 const counselors = getCounselorOptions(allPages);
+
+// The overlay Hero style only actually renders as 'overlay' once a real
+// image is on file (see Hero.astro's own fallback) — computed once here
+// too so the aside form's field set/styling stays in lockstep with what
+// Hero.astro will actually show, rather than re-deriving the same
+// condition twice and risking the two drifting apart.
+const isOverlayHero = page.hero_style === 'overlay' && !!page.images.hero;
 ---
 
 <BaseLayout page={page} allPages={allPages} business={business}>
@@ -31,18 +38,28 @@ const counselors = getCounselorOptions(allPages);
     imageCreditName={page.images.hero?.creditName}
     imageCreditUrl={page.images.hero?.creditUrl}
     ctaText={page.cta_button_text ?? 'Get Started'}
+    style={page.hero_style}
+    overlayColor={page.hero_overlay_color}
+    overlayOpacity={page.hero_overlay_opacity}
   >
     {/*
-      Only renders when there's no hero image (Hero.astro's `aside` slot is
-      ignored whenever imageUrl is set) — a compact, lower-friction form as
-      a second entry point for a homepage that leads with a form instead of
-      a photo, without displacing the full-fields LeadGenerator further
-      down the page for visitors who scroll first.
+      In the default style, only renders when there's no hero image
+      (Hero.astro's `aside` slot is ignored whenever imageUrl is set) — a
+      compact, lower-friction form as a second entry point for a homepage
+      that leads with a form instead of a photo. In the overlay style, this
+      renders alongside the full-bleed image as a frosted-glass card and
+      shows every field (compact=false) — the form itself is the page's
+      one real CTA there, matching Hero.astro's own CTA-button suppression
+      whenever this slot is visible. Either way, the full-fields
+      LeadGenerator further down the page stays too, for visitors who
+      scroll past the hero without converting.
     */}
     <Fragment slot="aside">
       <LeadGenerator
         slug={page.slug}
         embedded
+        compact={!isOverlayHero}
+        frosted={isOverlayHero}
         heading={page.cta_button_text ?? 'Get Started'}
         submitText={page.cta_button_text ?? 'Get Started'}
         collectWebsiteUrl={business.collect_website_in_leads}

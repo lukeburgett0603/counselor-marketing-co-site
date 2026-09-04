@@ -3,6 +3,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 import RichTextEditor from '../../components/RichTextEditor.astro';
 import LockedField from '../../components/LockedField.astro';
 import SuggestEdit from '../../components/SuggestEdit.astro';
+import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
 ---
 
 <AdminLayout title="Website content | Admin" current="content">
@@ -138,20 +139,77 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
           <div data-field="images">
             <label class="mb-1 block text-sm font-semibold text-slate-700">Hero image</label>
             <div class="editable-view space-y-2">
-              <input id="content-image-file" type="file" accept="image/*" class="w-full text-sm" />
+              <div class="flex flex-wrap items-center gap-2">
+                <button
+                  id="search-unsplash-button"
+                  type="button"
+                  class="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Search Unsplash
+                </button>
+                <span class="text-xs text-slate-400">or</span>
+                <label
+                  for="content-image-file"
+                  class="inline-block cursor-pointer rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Choose File
+                </label>
+                <input id="content-image-file" type="file" accept="image/*" class="sr-only" />
+              </div>
+              <p id="content-image-status" class="text-xs text-slate-500"></p>
+              <img id="content-image-preview" class="hidden h-32 w-auto rounded-md border border-slate-200 object-cover" />
               <input
                 id="content-image-alt"
                 type="text"
                 placeholder="Describe what's in the photo"
                 class="w-full rounded-md border border-slate-300 px-4 py-2 text-sm"
               />
-              <p id="content-image-status" class="text-xs text-slate-500"></p>
             </div>
             <p class="locked-view rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700" data-locked-value></p>
             <p class="tier-note mt-1 text-xs text-slate-500">
               Included as an agency-managed field on your plan — suggest a change below.
             </p>
             <SuggestEdit fieldLabel="Hero image" />
+
+            <!--
+              Hero layout — never shown for a 'Counselor Profile' page,
+              which doesn't use Hero.astro at all (see
+              CounselorProfile.astro's own header card). Lives inside this
+              same [data-field="images"] container so it shares its
+              editable/locked tier-gating rather than needing a second
+              lock group for something this closely tied to the hero
+              image itself.
+            -->
+            <div id="content-hero-style-wrap" class="mt-4 space-y-3 border-t border-slate-100 pt-4">
+              <div class="editable-view">
+                <label class="mb-1 block text-sm font-semibold text-slate-700">Hero layout</label>
+                <select id="content-hero-style" class="w-full rounded-md border border-slate-300 px-4 py-2 text-sm">
+                  <option value="default">Default — image beside text</option>
+                  <option value="overlay">Full-width image with color overlay</option>
+                </select>
+              </div>
+              <div id="content-hero-overlay-controls" class="editable-view hidden space-y-3 rounded-md bg-slate-50 p-3">
+                <div>
+                  <label class="mb-1 block text-xs font-semibold text-slate-700">Overlay color</label>
+                  <input id="content-hero-overlay-color" type="color" class="h-10 w-16 rounded border border-slate-300" />
+                </div>
+                <div>
+                  <label class="mb-1 block text-xs font-semibold text-slate-700">
+                    Overlay opacity — <span id="content-hero-overlay-opacity-readout">50</span>%
+                  </label>
+                  <input
+                    id="content-hero-overlay-opacity"
+                    type="range"
+                    min="0"
+                    max="100"
+                    class="w-full"
+                  />
+                  <p class="mt-1 text-xs text-slate-500">
+                    Darkens or lightens the image behind your heading so it stays easy to read no matter what photo you pick.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
           <button
@@ -210,6 +268,8 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
       <div id="your-suggestions-list" class="space-y-3"></div>
     </section>
   </div>
+
+  <UnsplashSearchModal />
 </AdminLayout>
 
 <script>
@@ -217,6 +277,7 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
   import { initRichTextEditor } from '../../lib/richTextEditor';
   import { renderCopy } from '../../lib/markdown';
   import { triggerRebuild } from '../../lib/publishFunction';
+  import { initUnsplashSearchModal, type UnsplashPhoto } from '../../lib/unsplashSearch';
 
   type ContentPage = {
     id: string;
@@ -227,13 +288,16 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
     focus_keyword: string | null;
     hero_subhead: string | null;
     copy: string | null;
-    images: { hero?: { url: string; alt: string } } | null;
+    images: { hero?: { url: string; alt: string; creditName?: string; creditUrl?: string } } | null;
     testimonial_quote: string | null;
     testimonial_author: string | null;
     testimonial_role: string | null;
     author_name: string | null;
     credentials: string | null;
     date_modified: string | null;
+    hero_style: 'default' | 'overlay';
+    hero_overlay_color: string;
+    hero_overlay_opacity: number;
   };
 
   type Business = {
@@ -261,6 +325,8 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
   let selectedTestimonialPage: ContentPage | null = null;
   let selectedContentPage: ContentPage | null = null;
   let uploadedImageUrl: string | null = null;
+  let uploadedImageCreditName: string | null = null;
+  let uploadedImageCreditUrl: string | null = null;
 
   // ---------------------------------------------------------------------
   // Business info
@@ -392,6 +458,13 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
   const contentImageFile = document.getElementById('content-image-file') as HTMLInputElement;
   const contentImageAlt = document.getElementById('content-image-alt') as HTMLInputElement;
   const contentImageStatus = document.getElementById('content-image-status')!;
+  const contentImagePreview = document.getElementById('content-image-preview') as HTMLImageElement;
+  const contentHeroStyleWrap = document.getElementById('content-hero-style-wrap')!;
+  const contentHeroStyle = document.getElementById('content-hero-style') as HTMLSelectElement;
+  const contentHeroOverlayControls = document.getElementById('content-hero-overlay-controls')!;
+  const contentHeroOverlayColor = document.getElementById('content-hero-overlay-color') as HTMLInputElement;
+  const contentHeroOverlayOpacity = document.getElementById('content-hero-overlay-opacity') as HTMLInputElement;
+  const contentHeroOverlayOpacityReadout = document.getElementById('content-hero-overlay-opacity-readout')!;
   const contentSaveButton = document.getElementById('content-save-button')!;
   const contentSaveStatus = document.getElementById('content-save-status')!;
   const contentBylineSection = document.getElementById('content-byline-section')!;
@@ -533,11 +606,32 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
     document.querySelector('[data-field="copy"] [data-locked-value-html]')!.innerHTML = renderCopy(selectedContentPage.copy);
 
     uploadedImageUrl = selectedContentPage.images?.hero?.url ?? null;
+    uploadedImageCreditName = selectedContentPage.images?.hero?.creditName ?? null;
+    uploadedImageCreditUrl = selectedContentPage.images?.hero?.creditUrl ?? null;
     contentImageAlt.value = selectedContentPage.images?.hero?.alt ?? '';
     contentImageStatus.textContent = uploadedImageUrl ? 'Current image on file — choose a new one to replace it.' : '';
+    if (uploadedImageUrl) {
+      contentImagePreview.src = uploadedImageUrl;
+      contentImagePreview.classList.remove('hidden');
+    } else {
+      contentImagePreview.src = '';
+      contentImagePreview.classList.add('hidden');
+    }
     document.querySelector('[data-field="images"] [data-locked-value]')!.textContent = uploadedImageUrl
       ? `Current image: ${selectedContentPage.images?.hero?.alt}`
       : 'No image set.';
+
+    // Hero.astro isn't used at all on a Counselor Profile page (it has
+    // its own header card instead — see CounselorProfile.astro), so a
+    // hero-layout choice would have no effect there. Hidden rather than
+    // just left inert, so nobody wonders why picking "overlay" for a
+    // counselor page never seems to do anything.
+    contentHeroStyleWrap.classList.toggle('hidden', selectedContentPage.page_type === 'Counselor Profile');
+    contentHeroStyle.value = selectedContentPage.hero_style;
+    contentHeroOverlayColor.value = selectedContentPage.hero_overlay_color;
+    contentHeroOverlayOpacity.value = String(selectedContentPage.hero_overlay_opacity);
+    contentHeroOverlayOpacityReadout.textContent = String(selectedContentPage.hero_overlay_opacity);
+    contentHeroOverlayControls.classList.toggle('hidden', selectedContentPage.hero_style !== 'overlay');
 
     // Content Pillar and Service Hub both render this byline (see
     // ContentPillar.astro and ServiceHub.astro) — a Service Hub is a
@@ -556,6 +650,14 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
 
   contentPageSelect.addEventListener('change', loadContentForm);
 
+  contentHeroStyle.addEventListener('change', () => {
+    contentHeroOverlayControls.classList.toggle('hidden', contentHeroStyle.value !== 'overlay');
+  });
+
+  contentHeroOverlayOpacity.addEventListener('input', () => {
+    contentHeroOverlayOpacityReadout.textContent = contentHeroOverlayOpacity.value;
+  });
+
   contentImageFile.addEventListener('change', async () => {
     const file = contentImageFile.files?.[0];
     if (!file) return;
@@ -568,7 +670,27 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
     }
     const { data: urlData } = supabase.storage.from('site-images').getPublicUrl(path);
     uploadedImageUrl = urlData.publicUrl;
+    // A direct upload has no Unsplash attribution — clear any credit left
+    // over from a previous Unsplash selection.
+    uploadedImageCreditName = null;
+    uploadedImageCreditUrl = null;
+    contentImagePreview.src = urlData.publicUrl;
+    contentImagePreview.classList.remove('hidden');
     contentImageStatus.textContent = 'Image uploaded.';
+  });
+
+  initUnsplashSearchModal({
+    onSelect: (photo: UnsplashPhoto) => {
+      uploadedImageUrl = photo.fullUrl;
+      uploadedImageCreditName = photo.creditName || null;
+      uploadedImageCreditUrl = photo.creditUrl || null;
+      if (!contentImageAlt.value.trim()) contentImageAlt.value = photo.alt;
+      contentImagePreview.src = photo.fullUrl;
+      contentImagePreview.classList.remove('hidden');
+      contentImageStatus.textContent = photo.creditName
+        ? `Selected — photo by ${photo.creditName} on Unsplash.`
+        : 'Selected.';
+    },
   });
 
   contentSaveButton.addEventListener('click', async () => {
@@ -593,7 +715,27 @@ import SuggestEdit from '../../components/SuggestEdit.astro';
     if (canEditField('hero_subhead')) payload.hero_subhead = contentHeroSubhead.value.trim() || null;
     if (canEditField('copy')) payload.copy = copyEditor.getMarkdown();
     if (canEditField('images')) {
-      payload.images = uploadedImageUrl ? { hero: { url: uploadedImageUrl, alt: contentImageAlt.value.trim() } } : {};
+      payload.images = uploadedImageUrl
+        ? {
+            hero: {
+              url: uploadedImageUrl,
+              alt: contentImageAlt.value.trim(),
+              ...(uploadedImageCreditName && uploadedImageCreditUrl
+                ? { creditName: uploadedImageCreditName, creditUrl: uploadedImageCreditUrl }
+                : {}),
+            },
+          }
+        : {};
+      // Hero layout lives in this same lock group — see the markup
+      // comment on #content-hero-style-wrap for why it isn't a separate
+      // tier gate. Hidden entirely (not just disabled) for a Counselor
+      // Profile page, so nothing here overwrites a value that template
+      // never reads anyway.
+      if (selectedContentPage.page_type !== 'Counselor Profile') {
+        payload.hero_style = contentHeroStyle.value;
+        payload.hero_overlay_color = contentHeroOverlayColor.value;
+        payload.hero_overlay_opacity = Number(contentHeroOverlayOpacity.value);
+      }
     }
 
     const { error } = await supabase.from('pages').update(payload).eq('id', selectedContentPage.id);
