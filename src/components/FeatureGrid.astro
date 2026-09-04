@@ -15,13 +15,21 @@ interface Item {
 interface Props {
   items: Item[];
   heading: string;
+  // Alternating-band rhythm is a per-page-layout decision, not something
+  // this component can assume — e.g. Homepage already has a Testimonial
+  // band using brand-tint right after this one, so a second consecutive
+  // tinted band here would read as one undifferentiated block instead of
+  // real alternation. Default false (matches every existing call site's
+  // prior behavior); opt in per template where the surrounding rhythm
+  // actually calls for it.
+  tint?: boolean;
 }
 
-const { items, heading } = Astro.props;
+const { items, heading, tint = false } = Astro.props;
 ---
 
 {items.length > 0 && (
-  <section class="py-14">
+  <section class:list={['py-14', tint && 'bg-brand-tint']}>
     <div class="mx-auto max-w-5xl px-6">
       <h2 class="mb-8 text-center font-[family-name:var(--font-heading)] text-2xl font-extrabold tracking-tight text-brand-ink">
         {heading}

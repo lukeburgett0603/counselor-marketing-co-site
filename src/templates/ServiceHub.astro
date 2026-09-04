@@ -73,7 +73,7 @@ const updatedDate = page.date_modified
       <Fragment set:html={renderCopy(page.copy)} />
     </article>
   </div>
-  <FeatureGrid items={page.concerns} heading="What this can help with" />
+  <FeatureGrid items={page.concerns} heading="What this can help with" tint />
   <PlanSteps steps={page.plan_steps} />
   {page.category && <BlogPreview posts={categoryPosts} category={page.category} />}
   {relatedPages.length > 0 && (
