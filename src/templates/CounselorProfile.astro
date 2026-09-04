@@ -1,6 +1,8 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Section from '../components/Section.astro';
+import PlanSteps from '../components/PlanSteps.astro';
+import FAQ from '../components/FAQ.astro';
 import CTA from '../components/CTA.astro';
 import LeadGenerator from '../components/LeadGenerator.astro';
 import LeadMagnet from '../components/LeadMagnet.astro';
@@ -44,6 +46,8 @@ const counselors = getCounselorOptions(allPages);
   <Section>
     <Fragment set:html={renderCopy(page.copy)} />
   </Section>
+  <PlanSteps steps={page.plan_steps} heading="What to expect in your first session" />
+  <FAQ faqs={page.faqs} />
   <CTA heading={page.cta_heading ?? `Book with ${page.title}`} buttonText={page.cta_button_text ?? undefined} />
   <LeadMagnet pageId={page.id} />
   <LeadGenerator
