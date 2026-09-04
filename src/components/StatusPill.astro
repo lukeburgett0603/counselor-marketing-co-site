@@ -1,0 +1,29 @@
+---
+// A counselor's availability status — only meaningful on a 'Counselor
+// Profile' page (page.availability_status). Renders nothing when null
+// (no status set yet); see 0028_counselor_card.sql for why this is
+// never defaulted/guessed. Colors are semantic (real red/amber/green),
+// deliberately not brand tokens — a status indicator needs to read as
+// universally red/yellow/green regardless of a given client's palette.
+// Low-saturation Tailwind 50/100 shades, not the full-opacity 500/600
+// range, per the brief: "subtle colors."
+interface Props {
+  status: 'accepting' | 'almost_full' | 'not_accepting' | null;
+}
+
+const { status } = Astro.props;
+
+const STYLES: Record<NonNullable<Props['status']>, { label: string; classes: string }> = {
+  accepting: { label: 'Accepting New Clients', classes: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
+  almost_full: { label: 'Almost Full', classes: 'bg-amber-50 text-amber-800 border-amber-200' },
+  not_accepting: { label: 'Not Accepting New Clients', classes: 'bg-red-50 text-red-800 border-red-200' },
+};
+
+const style = status ? STYLES[status] : null;
+---
+
+{style && (
+  <span class:list={['inline-block rounded-full border px-3 py-1 text-xs font-semibold', style.classes]}>
+    {style.label}
+  </span>
+)}

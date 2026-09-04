@@ -1,0 +1,156 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Counselor status | Admin" current="availability">
+  <div class="max-w-lg space-y-6">
+    <section>
+      <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold text-brand-ink">Counselor status</h2>
+      <p class="mb-4 text-sm text-slate-600">
+        Shown as a pill next to your name on your counselor page. Update it any time your availability changes.
+      </p>
+
+      <div id="picker-wrap" class="hidden mb-4">
+        <label class="mb-1 block text-sm font-semibold text-slate-700">Counselor</label>
+        <select id="availability-page-select" class="w-full rounded-md border border-slate-300 px-4 py-2"></select>
+      </div>
+
+      <div id="not-linked-notice" class="hidden rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        Your login isn't linked to a counselor page yet — ask the site owner to link one from the Team page.
+      </div>
+
+      <div id="status-form" class="hidden space-y-4">
+        <p id="status-page-name" class="font-semibold text-brand-ink"></p>
+        <div class="space-y-2">
+          <label class="flex items-center gap-2 rounded-md border border-slate-200 px-4 py-2.5">
+            <input type="radio" name="availability-status" value="accepting" class="availability-radio" />
+            <span class="text-sm font-medium">Accepting New Clients</span>
+          </label>
+          <label class="flex items-center gap-2 rounded-md border border-slate-200 px-4 py-2.5">
+            <input type="radio" name="availability-status" value="almost_full" class="availability-radio" />
+            <span class="text-sm font-medium">Almost Full</span>
+          </label>
+          <label class="flex items-center gap-2 rounded-md border border-slate-200 px-4 py-2.5">
+            <input type="radio" name="availability-status" value="not_accepting" class="availability-radio" />
+            <span class="text-sm font-medium">Not Accepting New Clients</span>
+          </label>
+        </div>
+        <button
+          id="availability-save-button"
+          type="button"
+          class="rounded-md bg-brand-primary px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+        >
+          Save
+        </button>
+        <p id="availability-status-msg" class="text-sm" role="status"></p>
+      </div>
+    </section>
+  </div>
+</AdminLayout>
+
+<script>
+  import { supabase, initAdminAuth, type AdminUser } from '../../lib/adminAuth';
+  import { triggerRebuild } from '../../lib/publishFunction';
+
+  type CounselorPage = {
+    id: string;
+    title: string;
+    availability_status: 'accepting' | 'almost_full' | 'not_accepting' | null;
+  };
+
+  const pickerWrap = document.getElementById('picker-wrap')!;
+  const pageSelect = document.getElementById('availability-page-select') as HTMLSelectElement;
+  const notLinkedNotice = document.getElementById('not-linked-notice')!;
+  const statusForm = document.getElementById('status-form')!;
+  const statusPageName = document.getElementById('status-page-name')!;
+  const saveButton = document.getElementById('availability-save-button')!;
+  const statusMsg = document.getElementById('availability-status-msg')!;
+  const radios = document.querySelectorAll<HTMLInputElement>('.availability-radio');
+
+  let counselorPages: CounselorPage[] = [];
+  let selectedPage: CounselorPage | null = null;
+
+  function escapeHtml(value: string): string {
+    const div = document.createElement('div');
+    div.textContent = value;
+    return div.innerHTML;
+  }
+
+  function loadForm() {
+    if (!selectedPage) {
+      statusForm.classList.add('hidden');
+      return;
+    }
+    statusForm.classList.remove('hidden');
+    statusPageName.textContent = selectedPage.title;
+    radios.forEach((r) => {
+      r.checked = r.value === selectedPage!.availability_status;
+    });
+    statusMsg.textContent = '';
+  }
+
+  pageSelect.addEventListener('change', () => {
+    selectedPage = counselorPages.find((p) => p.id === pageSelect.value) ?? null;
+    loadForm();
+  });
+
+  saveButton.addEventListener('click', async () => {
+    if (!selectedPage) return;
+    const checked = document.querySelector<HTMLInputElement>('.availability-radio:checked');
+    statusMsg.textContent = 'Saving...';
+    statusMsg.className = 'text-sm text-slate-600';
+    const { error } = await supabase
+      .from('pages')
+      .update({ availability_status: checked?.value ?? null })
+      .eq('id', selectedPage.id);
+    if (error) {
+      statusMsg.textContent = 'Could not save: ' + error.message;
+      statusMsg.className = 'text-sm text-red-600';
+      return;
+    }
+    selectedPage.availability_status = (checked?.value as CounselorPage['availability_status']) ?? null;
+    statusMsg.textContent = 'Saving your site...';
+    const result = await triggerRebuild();
+    statusMsg.textContent = result.ok
+      ? 'Saved! Your site will update shortly.'
+      : 'Saved, but the update trigger failed — it will go live on the next rebuild.';
+    statusMsg.className = result.ok ? 'text-sm text-emerald-700' : 'text-sm text-amber-700';
+  });
+
+  async function onAuthed(adminUser: AdminUser) {
+    if (adminUser.role === 'owner' || adminUser.role === 'agency') {
+      const { data } = await supabase
+        .from('pages')
+        .select('id, title, availability_status')
+        .eq('page_type', 'Counselor Profile')
+        .order('title');
+      counselorPages = (data ?? []) as CounselorPage[];
+      pickerWrap.classList.remove('hidden');
+      pageSelect.innerHTML = counselorPages.map((p) => `<option value="${p.id}">${escapeHtml(p.title)}</option>`).join('');
+      selectedPage = counselorPages[0] ?? null;
+      loadForm();
+      return;
+    }
+
+    // staff: only their own linked page, no picker, and RLS backs this up
+    // regardless — see the "linked counselor can update own page" policy.
+    if (!adminUser.linked_counselor_page_id) {
+      notLinkedNotice.classList.remove('hidden');
+      return;
+    }
+    const { data } = await supabase
+      .from('pages')
+      .select('id, title, availability_status')
+      .eq('id', adminUser.linked_counselor_page_id)
+      .maybeSingle();
+    if (!data) {
+      notLinkedNotice.classList.remove('hidden');
+      return;
+    }
+    counselorPages = [data as CounselorPage];
+    selectedPage = counselorPages[0];
+    loadForm();
+  }
+
+  initAdminAuth(onAuthed, { allowedRoles: ['owner', 'agency', 'staff'] });
+</script>

@@ -1,0 +1,33 @@
+---
+// A counselor's specialty list (page.specialties) as pill badges —
+// clickable, with a subtle hover lift, when a real matching page exists
+// (specialty.page_slug); plain, non-interactive pills otherwise. Never
+// forces a link to an inaccurate page — see 0028_counselor_card.sql and
+// the specialty-to-hub-page mapping table in CLAUDE.md.
+import { withBase } from '../lib/url';
+
+interface Props {
+  specialties: { label: string; page_slug: string | null }[];
+}
+
+const { specialties } = Astro.props;
+---
+
+{specialties.length > 0 && (
+  <div class="flex flex-wrap justify-center gap-2">
+    {specialties.map((s) =>
+      s.page_slug ? (
+        <a
+          href={withBase(`/${s.page_slug}`)}
+          class="rounded-full border border-brand-primary/30 bg-white px-4 py-1.5 text-sm font-semibold text-brand-primary transition duration-150 hover:-translate-y-0.5 hover:border-brand-primary hover:bg-brand-primary hover:text-white hover:shadow-sm"
+        >
+          {s.label}
+        </a>
+      ) : (
+        <span class="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm font-semibold text-slate-600">
+          {s.label}
+        </span>
+      )
+    )}
+  </div>
+)}

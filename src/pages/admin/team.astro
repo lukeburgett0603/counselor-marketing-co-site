@@ -39,6 +39,15 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
             <option value="owner">Owner — full access</option>
           </select>
         </div>
+        <div id="invite-counselor-link-wrap" class="hidden">
+          <label class="mb-1 block text-sm font-semibold text-slate-700">Link to counselor page (optional)</label>
+          <select id="invite-counselor-link" class="w-full rounded-md border border-slate-300 px-4 py-2">
+            <option value="">None</option>
+          </select>
+          <p class="mt-1 text-xs text-slate-500">
+            Lets this login update their own Availability status pill on that page — see Counselor status.
+          </p>
+        </div>
         <button
           id="invite-submit-button"
           type="button"
@@ -69,15 +78,39 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     email: string;
     role: 'owner' | 'staff' | 'agency';
     status: 'pending' | 'active';
+    linked_counselor_page_id: string | null;
   };
+
+  type CounselorPage = { id: string; title: string };
 
   const tableBody = document.getElementById('team-table-body')!;
   const inviteEmail = document.getElementById('invite-email') as HTMLInputElement;
   const inviteRole = document.getElementById('invite-role') as HTMLSelectElement;
+  const inviteCounselorLinkWrap = document.getElementById('invite-counselor-link-wrap')!;
+  const inviteCounselorLink = document.getElementById('invite-counselor-link') as HTMLSelectElement;
   const inviteSubmitButton = document.getElementById('invite-submit-button') as HTMLButtonElement;
   const inviteStatus = document.getElementById('invite-status')!;
 
   let currentAdminUser: AdminUser | null = null;
+  let counselorPages: CounselorPage[] = [];
+  let existingMembers: TeamMember[] = [];
+
+  // Only offer a Counselor Profile page that isn't already linked to
+  // another staff login — one counselor, one login, matches the
+  // one-status-pill-per-page mental model. Re-run after every load so a
+  // page freed up by a revoke reappears as an option.
+  function populateCounselorLinkOptions() {
+    const linkedIds = new Set(existingMembers.map((m) => m.linked_counselor_page_id).filter(Boolean));
+    const available = counselorPages.filter((p) => !linkedIds.has(p.id));
+    inviteCounselorLink.innerHTML =
+      '<option value="">None</option>' +
+      available.map((p) => `<option value="${p.id}">${escapeHtml(p.title)}</option>`).join('');
+  }
+
+  function updateInviteRoleUI() {
+    inviteCounselorLinkWrap.classList.toggle('hidden', inviteRole.value !== 'staff');
+  }
+  inviteRole.addEventListener('change', updateInviteRoleUI);
 
   function escapeHtml(value: string): string {
     const div = document.createElement('div');
@@ -92,6 +125,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       return;
     }
     const members = (data ?? []) as TeamMember[];
+    existingMembers = members;
     tableBody.innerHTML = members
       .map((member) => {
         const isSelf = member.id === currentAdminUser?.id;
@@ -99,6 +133,10 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           member.status === 'active'
             ? '<span class="text-emerald-700">Active</span>'
             : '<span class="text-amber-700">Pending</span>';
+        const linkedPage = counselorPages.find((p) => p.id === member.linked_counselor_page_id);
+        const roleCell = linkedPage
+          ? `Staff <span class="text-xs text-slate-400">(${escapeHtml(linkedPage.title)})</span>`
+          : escapeHtml(member.role);
         const actions: string[] = [];
         if (member.status === 'pending') {
           actions.push(`<button data-resend-id="${member.id}" class="resend-button text-brand-primary hover:underline">Resend invite</button>`);
@@ -113,12 +151,13 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         return `
       <tr class="border-b border-slate-100 last:border-0">
         <td class="px-4 py-3">${escapeHtml(member.email)}${isSelf ? ' <span class="text-xs text-slate-400">(you)</span>' : ''}</td>
-        <td class="px-4 py-3 capitalize">${escapeHtml(member.role)}</td>
+        <td class="px-4 py-3">${member.role === 'staff' ? roleCell : `<span class="capitalize">${escapeHtml(member.role)}</span>`}</td>
         <td class="px-4 py-3">${statusLabel}</td>
         <td class="px-4 py-3 text-right space-x-3">${actions.join('')}</td>
       </tr>`;
       })
       .join('');
+    populateCounselorLinkOptions();
   }
 
   tableBody.addEventListener('click', async (event) => {
@@ -163,6 +202,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       email,
       role: inviteRole.value,
       redirectTo: inviteRedirectTo,
+      linkedCounselorPageId: inviteRole.value === 'staff' && inviteCounselorLink.value ? inviteCounselorLink.value : null,
     });
 
     inviteSubmitButton.disabled = false;
@@ -174,6 +214,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     inviteStatus.textContent = 'Invite sent.';
     inviteStatus.className = 'text-sm text-emerald-700';
     inviteEmail.value = '';
+    inviteCounselorLink.value = '';
     await loadTeam();
   });
 
@@ -188,6 +229,13 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       agencyOption.textContent = 'Agency — full CMC support access';
       inviteRole.appendChild(agencyOption);
     }
+    const { data } = await supabase
+      .from('pages')
+      .select('id, title')
+      .eq('page_type', 'Counselor Profile')
+      .order('title');
+    counselorPages = (data ?? []) as CounselorPage[];
+    updateInviteRoleUI();
     await loadTeam();
   }
 

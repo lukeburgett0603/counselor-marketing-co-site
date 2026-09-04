@@ -1,0 +1,34 @@
+---
+// A counselor's own personal quote (page.testimonial_quote/_author),
+// distinct from Testimonial.astro's full-bleed tinted band — that
+// component is reserved for genuine third-party client testimonials
+// elsewhere on the site (see its own comment); reusing its exact visual
+// treatment here would blur "a client said this about us" with "this
+// is the counselor's own philosophy." Renders as a bordered card with a
+// large decorative accent quote mark and italic Fraunces serif, per the
+// brief's "needs to pop more" ask. The decorative mark means the stored
+// quote text itself should NOT include literal "..." characters (unlike
+// the site's usual blockquote-in-copy convention) — this component
+// supplies the visual quote mark on its own.
+interface Props {
+  quote: string | null;
+  author: string | null;
+}
+
+const { quote, author } = Astro.props;
+---
+
+{quote && (
+  <section class="mx-auto max-w-2xl px-6 pb-14">
+    <blockquote class="rounded-lg border border-brand-primary/15 bg-white px-8 py-8 text-center shadow-sm">
+      <span
+        class="font-[family-name:var(--font-heading)] text-5xl font-medium leading-none text-brand-primary/30"
+        aria-hidden="true"
+      >
+        &ldquo;
+      </span>
+      <p class="mt-2 font-[family-name:var(--font-heading)] text-xl font-medium italic text-brand-ink">{quote}</p>
+      {author && <footer class="mt-4 text-sm font-semibold text-brand-primary">&mdash; {author}</footer>}
+    </blockquote>
+  </section>
+)}

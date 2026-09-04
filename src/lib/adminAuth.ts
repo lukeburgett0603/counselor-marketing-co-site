@@ -21,12 +21,16 @@ export interface AdminUser {
   // (see the enforce_content_permission trigger).
   role: 'owner' | 'staff' | 'agency';
   status: 'pending' | 'active';
+  // Set only on a 'staff' row that's a specific counselor's own login —
+  // see 0028_counselor_card.sql. Grants access to admin/availability.astro
+  // for that one page only, on top of the normal 'staff' blog access.
+  linked_counselor_page_id: string | null;
 }
 
 const ROLE_NAV_ACCESS: Record<AdminUser['role'], string[]> = {
-  owner: ['leads', 'crm', 'blog', 'content', 'lead-magnets', 'team'],
+  owner: ['leads', 'crm', 'blog', 'content', 'lead-magnets', 'team', 'availability'],
   staff: ['blog'],
-  agency: ['leads', 'crm', 'blog', 'content', 'lead-magnets', 'suggestions', 'team'],
+  agency: ['leads', 'crm', 'blog', 'content', 'lead-magnets', 'suggestions', 'team', 'availability'],
 };
 
 interface InitAdminAuthOptions {
@@ -83,10 +87,17 @@ export function initAdminAuth(
   // Every /admin/* page's sidebar nav item carries data-nav-key (see
   // AdminLayout.astro) — hide the ones this role can't use rather than
   // relying on the RLS-rejected-write UX alone for "you can't do this."
-  function applyNavAccess(role: AdminUser['role']) {
-    const allowed = ROLE_NAV_ACCESS[role];
+  // A linked-counselor staff login sees the Availability nav item too,
+  // on top of the static role-based list above — everyone else's access
+  // to it is already role-based (owner/agency), so this only ever adds,
+  // never removes.
+  function applyNavAccess(adminUser: AdminUser) {
+    const allowed = new Set(ROLE_NAV_ACCESS[adminUser.role]);
+    if (adminUser.role === 'staff' && adminUser.linked_counselor_page_id) {
+      allowed.add('availability');
+    }
     document.querySelectorAll<HTMLElement>('[data-nav-key]').forEach((el) => {
-      el.classList.toggle('hidden', !allowed.includes(el.dataset.navKey!));
+      el.classList.toggle('hidden', !allowed.has(el.dataset.navKey!));
     });
   }
 
@@ -136,7 +147,7 @@ export function initAdminAuth(
     }
     hideAllViews();
     adminContent.style.display = '';
-    applyNavAccess(adminUser.role);
+    applyNavAccess(adminUser);
     if (adminUser.role === 'agency') {
       updateSuggestionsBadge();
     }

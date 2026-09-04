@@ -78,6 +78,20 @@ export interface Page {
   // instead of relying on a manually-curated list that's easy to forget
   // to update when a new Service Page is added.
   service_group: 'deliverable' | 'segment' | null;
+  // Only meaningful on a 'Counselor Profile' page - rendered as clickable
+  // pill links by SpecialtyPills.astro. page_slug is null when no real
+  // page accurately matches that specialty; the pill renders as plain,
+  // non-clickable text rather than forcing an inaccurate link. See
+  // 0028_counselor_card.sql - deliberately a structured column, not the
+  // old flat "**Specialties:** A, B, C" string in `copy`, since a string
+  // can't carry a real link.
+  specialties: { label: string; page_slug: string | null }[];
+  // Only meaningful on a 'Counselor Profile' page - rendered as a subtle
+  // colored pill by StatusPill.astro. Null means no status has been set
+  // yet, which renders no pill at all (never invented/guessed - see
+  // 0028_counselor_card.sql). Self-service editable by the counselor's
+  // own linked 'staff' admin login on admin/availability.astro.
+  availability_status: 'accepting' | 'almost_full' | 'not_accepting' | null;
 }
 
 export interface Business {

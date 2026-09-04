@@ -188,11 +188,19 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: inviteError?.message ?? 'Could not send invite' }, 400);
     }
 
+    // Only meaningful for role 'staff' (see 0028_counselor_card.sql) —
+    // links this login to the one Counselor Profile page it may
+    // self-service its own availability_status on. Not validated against
+    // role here since an unused/ignored value on a non-staff row is
+    // harmless; the caller's own UI only offers this field for staff.
+    const linkedCounselorPageId = typeof body.linkedCounselorPageId === 'string' ? body.linkedCounselorPageId : null;
+
     const { error: insertError } = await adminClient.from('admin_users').insert({
       id: inviteData.user.id,
       email,
       role,
       status: 'pending',
+      linked_counselor_page_id: linkedCounselorPageId,
     });
     if (insertError) {
       return jsonResponse({ error: insertError.message }, 500);
@@ -209,7 +217,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: targetRow } = await adminClient
     .from('admin_users')
-    .select('email, role, status')
+    .select('email, role, status, linked_counselor_page_id')
     .eq('id', userId)
     .maybeSingle();
   if (!targetRow) {
@@ -259,6 +267,7 @@ Deno.serve(async (req: Request) => {
     email: targetRow.email,
     role: targetRow.role,
     status: 'pending',
+    linked_counselor_page_id: targetRow.linked_counselor_page_id,
   });
   if (reinsertError) {
     return jsonResponse({ error: reinsertError.message }, 500);
