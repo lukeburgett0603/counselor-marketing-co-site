@@ -4,6 +4,7 @@ import Hero from '../components/Hero.astro';
 import Section from '../components/Section.astro';
 import CTA from '../components/CTA.astro';
 import Testimonial from '../components/Testimonial.astro';
+import FeatureGrid from '../components/FeatureGrid.astro';
 import PlanSteps from '../components/PlanSteps.astro';
 import LeadGenerator from '../components/LeadGenerator.astro';
 import LeadMagnet from '../components/LeadMagnet.astro';
@@ -54,6 +55,7 @@ const counselors = getCounselorOptions(allPages);
   <Section>
     <Fragment set:html={renderCopy(page.copy)} />
   </Section>
+  <FeatureGrid items={page.concerns} heading="Why families choose us" />
   {page.testimonial_quote && page.testimonial_author && (
     <Testimonial quote={page.testimonial_quote} author={page.testimonial_author} role={page.testimonial_role} />
   )}

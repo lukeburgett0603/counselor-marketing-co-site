@@ -3,6 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import KeyTakeaways from '../components/KeyTakeaways.astro';
 import TableOfContents from '../components/TableOfContents.astro';
+import FeatureGrid from '../components/FeatureGrid.astro';
 import PlanSteps from '../components/PlanSteps.astro';
 import BlogPreview from '../components/BlogPreview.astro';
 import FAQ from '../components/FAQ.astro';
@@ -72,6 +73,7 @@ const updatedDate = page.date_modified
       <Fragment set:html={renderCopy(page.copy)} />
     </article>
   </div>
+  <FeatureGrid items={page.concerns} heading="What this can help with" />
   <PlanSteps steps={page.plan_steps} />
   {page.category && <BlogPreview posts={categoryPosts} category={page.category} />}
   {relatedPages.length > 0 && (

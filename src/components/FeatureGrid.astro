@@ -1,0 +1,39 @@
+---
+// Renders a flat, unordered set of short title+description items (e.g. "what
+// this counseling can help with," "why families choose us") as a real card
+// grid instead of a run of bolded-lead-in paragraphs buried in `copy` — the
+// sibling pattern to PlanSteps.astro/FAQ.astro, but deliberately unnumbered:
+// a numbered badge would misleadingly imply an order these lists don't
+// actually have. Pulled out of `copy` into pages.concerns precisely so it
+// can get this distinct treatment; see 0027_concerns.sql. Only renders when
+// real item data exists; never invents items.
+interface Item {
+  title: string;
+  description: string;
+}
+
+interface Props {
+  items: Item[];
+  heading: string;
+}
+
+const { items, heading } = Astro.props;
+---
+
+{items.length > 0 && (
+  <section class="py-14">
+    <div class="mx-auto max-w-5xl px-6">
+      <h2 class="mb-8 text-center font-[family-name:var(--font-heading)] text-2xl font-extrabold tracking-tight text-brand-ink">
+        {heading}
+      </h2>
+      <div class="grid gap-6 md:grid-cols-2">
+        {items.map((item) => (
+          <div class="rounded-lg border border-black/5 bg-white p-6 shadow-md transition duration-200 hover:-translate-y-1 hover:shadow-xl">
+            <h3 class="mb-2 font-[family-name:var(--font-heading)] font-bold text-brand-ink">{item.title}</h3>
+            <p class="text-sm text-slate-600">{item.description}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+)}

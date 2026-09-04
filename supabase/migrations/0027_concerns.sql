@@ -1,0 +1,14 @@
+-- Structured storage for a flat, unordered set of short title+description
+-- items -- "what this counseling can help with," "why families choose us,"
+-- etc. Same shape as plan_steps ({title, description}[]) but semantically
+-- distinct: plan_steps is a real sequence (PlanSteps.astro always renders
+-- a numbered badge), concerns is never ordered --
+-- reusing plan_steps for this content would put a misleading numbered
+-- badge on a genuinely parallel list. Rendered by the new FeatureGrid.astro
+-- component. Pulled out of `copy` (where these currently live as bolded-
+-- lead-in paragraphs on Homepage and every Service Hub page) into this
+-- column precisely so it can get a real card-grid treatment instead of
+-- being buried in flowing prose -- see the "wall of text" work in Freedom
+-- Counseling Services' NOTES.md for the concrete example that prompted
+-- this.
+alter table pages add column concerns jsonb not null default '[]'::jsonb;

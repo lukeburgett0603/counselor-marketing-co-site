@@ -56,6 +56,11 @@ export interface Page {
   testimonial_role: string | null;
   plan_steps: { title: string; description: string }[];
   faqs: { question: string; answer: string }[];
+  // Same shape as plan_steps, deliberately not reused for it — this is a
+  // flat, unordered set (e.g. "what this can help with"), rendered by
+  // FeatureGrid.astro without PlanSteps.astro's numbered badge, which
+  // would misleadingly imply a sequence. See 0027_concerns.sql.
+  concerns: { title: string; description: string }[];
   // Free-text taxonomy — a 'Blog Post' row's own topic, or (on a 'Content
   // Pillar' hub row) which category feeds its embedded spoke-post section.
   // Independent of the service list on purpose — see 0007_blog.sql.
