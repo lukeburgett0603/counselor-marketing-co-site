@@ -90,8 +90,19 @@ export interface Page {
   // colored pill by StatusPill.astro. Null means no status has been set
   // yet, which renders no pill at all (never invented/guessed - see
   // 0028_counselor_card.sql). Self-service editable by the counselor's
-  // own linked 'staff' admin login on admin/availability.astro.
+  // own linked 'staff' admin login on admin/counselor-settings.astro.
   availability_status: 'accepting' | 'almost_full' | 'not_accepting' | null;
+  // Only meaningful on a 'Counselor Profile' page - a plain boolean pill
+  // in the header card. Defaults false (no pill) for the same
+  // never-invent/guess reason as availability_status - self-service
+  // editable, see 0029_counselor_card_v2.sql.
+  telehealth_available: boolean;
+  // Only meaningful on a 'Counselor Profile' page - a counselor's own
+  // list of clinical training/approaches (e.g. "EMDR", "ACT"), rendered
+  // by Modalities.astro as its own H2 section below the personal quote.
+  // Plain string tags, not linked anywhere (unlike specialties) - purely
+  // self-service, see 0029_counselor_card_v2.sql.
+  modalities: string[];
 }
 
 export interface Business {

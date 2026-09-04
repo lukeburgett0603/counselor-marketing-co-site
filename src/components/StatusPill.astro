@@ -6,24 +6,28 @@
 // deliberately not brand tokens — a status indicator needs to read as
 // universally red/yellow/green regardless of a given client's palette.
 // Low-saturation Tailwind 50/100 shades, not the full-opacity 500/600
-// range, per the brief: "subtle colors."
+// range, per the brief: "subtle colors." Rendered as an overlay badge on
+// the header card's headshot (CounselorProfile.astro positions it) —
+// shadow-sm keeps it legible over a photo of any color, and the small
+// solid dot gives it a scannable at-a-glance signal on top of the text.
 interface Props {
   status: 'accepting' | 'almost_full' | 'not_accepting' | null;
 }
 
 const { status } = Astro.props;
 
-const STYLES: Record<NonNullable<Props['status']>, { label: string; classes: string }> = {
-  accepting: { label: 'Accepting New Clients', classes: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
-  almost_full: { label: 'Almost Full', classes: 'bg-amber-50 text-amber-800 border-amber-200' },
-  not_accepting: { label: 'Not Accepting New Clients', classes: 'bg-red-50 text-red-800 border-red-200' },
+const STYLES: Record<NonNullable<Props['status']>, { label: string; classes: string; dot: string }> = {
+  accepting: { label: 'Accepting New Clients', classes: 'bg-emerald-50 text-emerald-800', dot: 'bg-emerald-500' },
+  almost_full: { label: 'Almost Full', classes: 'bg-amber-50 text-amber-800', dot: 'bg-amber-500' },
+  not_accepting: { label: 'Not Accepting New Clients', classes: 'bg-red-50 text-red-800', dot: 'bg-red-500' },
 };
 
 const style = status ? STYLES[status] : null;
 ---
 
 {style && (
-  <span class:list={['inline-block rounded-full border px-3 py-1 text-xs font-semibold', style.classes]}>
+  <span class:list={['inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold shadow-sm', style.classes]}>
+    <span class:list={['h-1.5 w-1.5 rounded-full', style.dot]} aria-hidden="true"></span>
     {style.label}
   </span>
 )}

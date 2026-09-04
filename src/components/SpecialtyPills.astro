@@ -14,17 +14,17 @@ const { specialties } = Astro.props;
 ---
 
 {specialties.length > 0 && (
-  <div class="flex flex-wrap justify-center gap-2">
+  <div class="flex flex-wrap justify-center gap-2 sm:justify-start">
     {specialties.map((s) =>
       s.page_slug ? (
         <a
           href={withBase(`/${s.page_slug}`)}
-          class="rounded-full border border-brand-primary/30 bg-white px-4 py-1.5 text-sm font-semibold text-brand-primary transition duration-150 hover:-translate-y-0.5 hover:border-brand-primary hover:bg-brand-primary hover:text-white hover:shadow-sm"
+          class="rounded-full border border-brand-primary/30 bg-brand-neutral px-4 py-1.5 text-sm font-semibold text-brand-primary transition duration-150 hover:-translate-y-0.5 hover:border-brand-primary hover:bg-brand-primary hover:text-white hover:shadow-sm"
         >
           {s.label}
         </a>
       ) : (
-        <span class="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm font-semibold text-slate-600">
+        <span class="rounded-full border border-slate-200 bg-brand-neutral px-4 py-1.5 text-sm font-semibold text-slate-600">
           {s.label}
         </span>
       )

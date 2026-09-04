@@ -2,26 +2,29 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 ---
 
-<AdminLayout title="Counselor status | Admin" current="availability">
+<AdminLayout title="Counselor settings | Admin" current="counselor-settings">
   <div class="max-w-lg space-y-6">
     <section>
-      <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold text-brand-ink">Counselor status</h2>
+      <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold text-brand-ink">Counselor settings</h2>
       <p class="mb-4 text-sm text-slate-600">
-        Shown as a pill next to your name on your counselor page. Update it any time your availability changes.
+        Shown on your counselor page — your availability pill, telehealth badge, and training/modalities tags.
+        Update any of these any time.
       </p>
 
       <div id="picker-wrap" class="hidden mb-4">
         <label class="mb-1 block text-sm font-semibold text-slate-700">Counselor</label>
-        <select id="availability-page-select" class="w-full rounded-md border border-slate-300 px-4 py-2"></select>
+        <select id="counselor-page-select" class="w-full rounded-md border border-slate-300 px-4 py-2"></select>
       </div>
 
       <div id="not-linked-notice" class="hidden rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
         Your login isn't linked to a counselor page yet — ask the site owner to link one from the Team page.
       </div>
 
-      <div id="status-form" class="hidden space-y-4">
-        <p id="status-page-name" class="font-semibold text-brand-ink"></p>
+      <div id="settings-form" class="hidden space-y-6">
+        <p id="settings-page-name" class="font-semibold text-brand-ink"></p>
+
         <div class="space-y-2">
+          <label class="mb-1 block text-sm font-semibold text-slate-700">Availability</label>
           <label class="flex items-center gap-2 rounded-md border border-slate-200 px-4 py-2.5">
             <input type="radio" name="availability-status" value="accepting" class="availability-radio" />
             <span class="text-sm font-medium">Accepting New Clients</span>
@@ -35,14 +38,31 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
             <span class="text-sm font-medium">Not Accepting New Clients</span>
           </label>
         </div>
+
+        <label class="flex items-center gap-2 rounded-md border border-slate-200 px-4 py-2.5">
+          <input type="checkbox" id="telehealth-checkbox" />
+          <span class="text-sm font-medium">Telehealth available</span>
+        </label>
+
+        <div>
+          <label class="mb-1 block text-sm font-semibold text-slate-700">Training &amp; modalities</label>
+          <input
+            id="modalities-input"
+            type="text"
+            placeholder="EMDR, ACT, CBT"
+            class="w-full rounded-md border border-slate-300 px-4 py-2"
+          />
+          <p class="mt-1 text-xs text-slate-500">Separate each one with a comma — shown as tags on your page.</p>
+        </div>
+
         <button
-          id="availability-save-button"
+          id="settings-save-button"
           type="button"
           class="rounded-md bg-brand-primary px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90"
         >
           Save
         </button>
-        <p id="availability-status-msg" class="text-sm" role="status"></p>
+        <p id="settings-status-msg" class="text-sm" role="status"></p>
       </div>
     </section>
   </div>
@@ -56,15 +76,19 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     id: string;
     title: string;
     availability_status: 'accepting' | 'almost_full' | 'not_accepting' | null;
+    telehealth_available: boolean;
+    modalities: string[];
   };
 
   const pickerWrap = document.getElementById('picker-wrap')!;
-  const pageSelect = document.getElementById('availability-page-select') as HTMLSelectElement;
+  const pageSelect = document.getElementById('counselor-page-select') as HTMLSelectElement;
   const notLinkedNotice = document.getElementById('not-linked-notice')!;
-  const statusForm = document.getElementById('status-form')!;
-  const statusPageName = document.getElementById('status-page-name')!;
-  const saveButton = document.getElementById('availability-save-button')!;
-  const statusMsg = document.getElementById('availability-status-msg')!;
+  const settingsForm = document.getElementById('settings-form')!;
+  const settingsPageName = document.getElementById('settings-page-name')!;
+  const telehealthCheckbox = document.getElementById('telehealth-checkbox') as HTMLInputElement;
+  const modalitiesInput = document.getElementById('modalities-input') as HTMLInputElement;
+  const saveButton = document.getElementById('settings-save-button')!;
+  const statusMsg = document.getElementById('settings-status-msg')!;
   const radios = document.querySelectorAll<HTMLInputElement>('.availability-radio');
 
   let counselorPages: CounselorPage[] = [];
@@ -78,14 +102,16 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 
   function loadForm() {
     if (!selectedPage) {
-      statusForm.classList.add('hidden');
+      settingsForm.classList.add('hidden');
       return;
     }
-    statusForm.classList.remove('hidden');
-    statusPageName.textContent = selectedPage.title;
+    settingsForm.classList.remove('hidden');
+    settingsPageName.textContent = selectedPage.title;
     radios.forEach((r) => {
       r.checked = r.value === selectedPage!.availability_status;
     });
+    telehealthCheckbox.checked = selectedPage.telehealth_available;
+    modalitiesInput.value = (selectedPage.modalities ?? []).join(', ');
     statusMsg.textContent = '';
   }
 
@@ -97,18 +123,24 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   saveButton.addEventListener('click', async () => {
     if (!selectedPage) return;
     const checked = document.querySelector<HTMLInputElement>('.availability-radio:checked');
+    const modalities = modalitiesInput.value
+      .split(',')
+      .map((m) => m.trim())
+      .filter(Boolean);
     statusMsg.textContent = 'Saving...';
     statusMsg.className = 'text-sm text-slate-600';
-    const { error } = await supabase
-      .from('pages')
-      .update({ availability_status: checked?.value ?? null })
-      .eq('id', selectedPage.id);
+    const payload = {
+      availability_status: checked?.value ?? null,
+      telehealth_available: telehealthCheckbox.checked,
+      modalities,
+    };
+    const { error } = await supabase.from('pages').update(payload).eq('id', selectedPage.id);
     if (error) {
       statusMsg.textContent = 'Could not save: ' + error.message;
       statusMsg.className = 'text-sm text-red-600';
       return;
     }
-    selectedPage.availability_status = (checked?.value as CounselorPage['availability_status']) ?? null;
+    Object.assign(selectedPage, payload);
     statusMsg.textContent = 'Saving your site...';
     const result = await triggerRebuild();
     statusMsg.textContent = result.ok
@@ -121,7 +153,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     if (adminUser.role === 'owner' || adminUser.role === 'agency') {
       const { data } = await supabase
         .from('pages')
-        .select('id, title, availability_status')
+        .select('id, title, availability_status, telehealth_available, modalities')
         .eq('page_type', 'Counselor Profile')
         .order('title');
       counselorPages = (data ?? []) as CounselorPage[];
@@ -140,7 +172,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     }
     const { data } = await supabase
       .from('pages')
-      .select('id, title, availability_status')
+      .select('id, title, availability_status, telehealth_available, modalities')
       .eq('id', adminUser.linked_counselor_page_id)
       .maybeSingle();
     if (!data) {

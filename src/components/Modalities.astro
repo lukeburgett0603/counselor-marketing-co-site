@@ -1,0 +1,26 @@
+---
+// A counselor's own list of clinical training/approaches
+// (page.modalities) as a titled tag section below the personal quote.
+// Plain, non-clickable tags — distinct from SpecialtyPills.astro's
+// linkable style, since these don't point anywhere, they're just
+// informational. Only renders when real data exists; never invents
+// entries. See 0029_counselor_card_v2.sql.
+interface Props {
+  modalities: string[];
+}
+
+const { modalities } = Astro.props;
+---
+
+{modalities.length > 0 && (
+  <section class="mx-auto max-w-2xl px-6 pb-14 text-center">
+    <h2 class="mb-4 font-[family-name:var(--font-heading)] text-lg font-extrabold tracking-tight text-brand-ink">
+      Training &amp; Modalities
+    </h2>
+    <div class="flex flex-wrap justify-center gap-2">
+      {modalities.map((m) => (
+        <span class="rounded-full bg-brand-tint/40 px-4 py-1.5 text-sm font-medium text-brand-ink">{m}</span>
+      ))}
+    </div>
+  </section>
+)}

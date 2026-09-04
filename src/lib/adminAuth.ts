@@ -22,15 +22,16 @@ export interface AdminUser {
   role: 'owner' | 'staff' | 'agency';
   status: 'pending' | 'active';
   // Set only on a 'staff' row that's a specific counselor's own login —
-  // see 0028_counselor_card.sql. Grants access to admin/availability.astro
-  // for that one page only, on top of the normal 'staff' blog access.
+  // see 0028_counselor_card.sql. Grants access to
+  // admin/counselor-settings.astro for that one page only, on top of the
+  // normal 'staff' blog access.
   linked_counselor_page_id: string | null;
 }
 
 const ROLE_NAV_ACCESS: Record<AdminUser['role'], string[]> = {
-  owner: ['leads', 'crm', 'blog', 'content', 'lead-magnets', 'team', 'availability'],
+  owner: ['leads', 'crm', 'blog', 'content', 'lead-magnets', 'team', 'counselor-settings'],
   staff: ['blog'],
-  agency: ['leads', 'crm', 'blog', 'content', 'lead-magnets', 'suggestions', 'team', 'availability'],
+  agency: ['leads', 'crm', 'blog', 'content', 'lead-magnets', 'suggestions', 'team', 'counselor-settings'],
 };
 
 interface InitAdminAuthOptions {
@@ -87,14 +88,14 @@ export function initAdminAuth(
   // Every /admin/* page's sidebar nav item carries data-nav-key (see
   // AdminLayout.astro) — hide the ones this role can't use rather than
   // relying on the RLS-rejected-write UX alone for "you can't do this."
-  // A linked-counselor staff login sees the Availability nav item too,
-  // on top of the static role-based list above — everyone else's access
-  // to it is already role-based (owner/agency), so this only ever adds,
-  // never removes.
+  // A linked-counselor staff login sees the Counselor settings nav item
+  // too, on top of the static role-based list above — everyone else's
+  // access to it is already role-based (owner/agency), so this only ever
+  // adds, never removes.
   function applyNavAccess(adminUser: AdminUser) {
     const allowed = new Set(ROLE_NAV_ACCESS[adminUser.role]);
     if (adminUser.role === 'staff' && adminUser.linked_counselor_page_id) {
-      allowed.add('availability');
+      allowed.add('counselor-settings');
     }
     document.querySelectorAll<HTMLElement>('[data-nav-key]').forEach((el) => {
       el.classList.toggle('hidden', !allowed.has(el.dataset.navKey!));
@@ -135,7 +136,14 @@ export function initAdminAuth(
     noAccessView.style.display = '';
   }
 
-  async function tryShowAuthed() {
+  // isFreshLogin is only true right after the login form or the
+  // invite/set-password form actually submits — not on every page
+  // load's existing-session check. A linked counselor's single task on
+  // this admin is their own settings, so the moment they log in they're
+  // sent straight there rather than wherever they happened to land (a
+  // bookmarked /admin/blog link, say) — but a later page refresh, or
+  // clicking a different nav item, doesn't fight them back to it.
+  async function tryShowAuthed(isFreshLogin = false) {
     const adminUser = await resolveAdminUser();
     if (!adminUser || adminUser.status !== 'active') {
       showNoAccessState();
@@ -143,6 +151,15 @@ export function initAdminAuth(
     }
     if (options.allowedRoles && !options.allowedRoles.includes(adminUser.role)) {
       window.location.href = withBase('/admin/blog');
+      return;
+    }
+    if (
+      isFreshLogin &&
+      adminUser.role === 'staff' &&
+      adminUser.linked_counselor_page_id &&
+      !window.location.pathname.replace(/\/$/, '').endsWith('/admin/counselor-settings')
+    ) {
+      window.location.href = withBase('/admin/counselor-settings');
       return;
     }
     hideAllViews();
@@ -184,7 +201,7 @@ export function initAdminAuth(
       loginStatus.textContent = error.message;
       return;
     }
-    await tryShowAuthed();
+    await tryShowAuthed(true);
   });
 
   setPasswordForm.addEventListener('submit', async (event) => {
@@ -210,7 +227,7 @@ export function initAdminAuth(
       await supabase.from('admin_users').update({ status: 'active' }).eq('id', userData.user.id);
     }
     history.replaceState(null, '', window.location.pathname);
-    await tryShowAuthed();
+    await tryShowAuthed(true);
   });
 
   // A real self-service "Forgot password?" flow — this is also the fix
