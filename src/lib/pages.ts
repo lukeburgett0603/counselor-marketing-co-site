@@ -201,6 +201,22 @@ export function getCounselorOptions(allPages: Page[]): { id: string; title: stri
     .map((p) => ({ id: p.id, title: p.title }));
 }
 
+// Best-effort avatar lookup for a Blog Post card's byline — matches
+// `author_name` against a live Counselor Profile page's title (case/
+// whitespace-insensitive), same "derive, don't invent" discipline as
+// getCounselorOptions above. Returns null (renders no avatar, never a
+// broken image) for any author with no matching Counselor Profile page —
+// the normal case for a client with no Counselor Profile page type at
+// all (e.g. Counselor Marketing Co.'s own site).
+export function getAuthorHeadshot(authorName: string | null, allPages: Page[]): ImageSlot | null {
+  if (!authorName) return null;
+  const normalized = authorName.trim().toLowerCase();
+  const match = allPages.find(
+    (p) => p.page_type === 'Counselor Profile' && p.title.trim().toLowerCase() === normalized
+  );
+  return match?.images.headshot ?? null;
+}
+
 // Breadcrumb chain from a page up through its parent_page_id ancestors,
 // root first — used for BreadcrumbList schema (never hand-written).
 export function buildBreadcrumbChain(page: Page, allPages: Page[]): Page[] {

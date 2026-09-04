@@ -75,7 +75,7 @@ const updatedDate = page.date_modified
   </div>
   <FeatureGrid items={page.concerns} heading="What this can help with" tint />
   <PlanSteps steps={page.plan_steps} />
-  {page.category && <BlogPreview posts={categoryPosts} category={page.category} />}
+  {page.category && <BlogPreview posts={categoryPosts} category={page.category} allPages={allPages} />}
   {relatedPages.length > 0 && (
     <section class="mx-auto max-w-3xl px-6 pb-10">
       <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold tracking-tight text-brand-ink">Related</h2>

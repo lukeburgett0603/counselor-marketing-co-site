@@ -21,9 +21,17 @@ interface Props {
   // general "every image needs a caption" rule.
   creditName?: string;
   creditUrl?: string;
+  // Default true. Set false only when this image already sits inside
+  // another <a> (a card whose whole body links to the full post/page) —
+  // the credit badge is itself an <a>, and a nested <a> is invalid HTML
+  // that breaks click behavior unpredictably. The full, uncropped image
+  // this thumbnail links to should still show real attribution on its
+  // own page; this just avoids a second, nested link on the card.
+  showCredit?: boolean;
 }
 
-const { src, alt, class: className, loading = 'lazy', widths, sizes, creditName, creditUrl } = Astro.props;
+const { src, alt, class: className, loading = 'lazy', widths, sizes, creditName, creditUrl, showCredit = true } =
+  Astro.props;
 
 // Unsplash's API guidelines require utm_source to identify the actual
 // registered Unsplash Application, not the end client's business — the
@@ -37,7 +45,7 @@ const unsplashAppName = import.meta.env.PUBLIC_UNSPLASH_APP_NAME || 'local-busin
 
 <div class="relative">
   <Image src={src} alt={alt} inferSize class={className} loading={loading} widths={widths} sizes={sizes} />
-  {creditName && creditUrl && (
+  {showCredit && creditName && creditUrl && (
     <a
       href={`${creditUrl}?utm_source=${unsplashAppName}&utm_medium=referral`}
       target="_blank"

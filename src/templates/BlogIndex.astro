@@ -1,8 +1,8 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Section from '../components/Section.astro';
+import BlogPostCard from '../components/BlogPostCard.astro';
 import { renderCopy } from '../lib/markdown';
-import { withBase } from '../lib/url';
 import type { Page, Business } from '../lib/pages';
 
 interface Props {
@@ -36,17 +36,9 @@ const categories = [...new Set(posts.map((p) => p.category).filter((c): c is str
   {posts.length > 0 && (
     <div class="mx-auto max-w-5xl px-6 pb-14">
       {featured && (
-        <a
-          id="featured-post"
-          href={withBase(`/${featured.slug}`)}
-          class="mb-10 block rounded-lg border border-black/5 bg-white p-8 shadow-sm transition hover:shadow-lg"
-        >
-          <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-accent">Featured</p>
-          <h2 class="mb-2 font-[family-name:var(--font-heading)] text-2xl font-extrabold text-brand-ink">
-            {featured.h1 ?? featured.title}
-          </h2>
-          {featured.meta_description && <p class="text-slate-600">{featured.meta_description}</p>}
-        </a>
+        <div class="mb-10">
+          <BlogPostCard post={featured} allPages={allPages} featured />
+        </div>
       )}
 
       {categories.length > 0 && (
@@ -64,17 +56,7 @@ const categories = [...new Set(posts.map((p) => p.category).filter((c): c is str
 
       <div id="post-grid" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {posts.map((post) => (
-          <a
-            href={withBase(`/${post.slug}`)}
-            data-category={post.category ?? ''}
-            class="post-card block rounded-lg border border-black/5 bg-white p-6 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-xl"
-          >
-            {post.category && (
-              <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-brand-accent">{post.category}</p>
-            )}
-            <h3 class="mb-2 font-[family-name:var(--font-heading)] font-bold text-brand-ink">{post.h1 ?? post.title}</h3>
-            {post.meta_description && <p class="text-sm text-slate-600">{post.meta_description}</p>}
-          </a>
+          <BlogPostCard post={post} allPages={allPages} />
         ))}
       </div>
     </div>

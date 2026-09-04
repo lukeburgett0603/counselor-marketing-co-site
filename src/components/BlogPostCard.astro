@@ -1,0 +1,110 @@
+---
+// A blog post card — used for BlogIndex.astro's featured post and grid,
+// and BlogPreview.astro's related-articles grid, so all three stay in
+// sync instead of drifting apart as separately hand-rolled markup. Shows
+// the post's own hero image (never a placeholder — no image, no <img>),
+// the author's headshot when a matching Counselor Profile page exists
+// (getAuthorHeadshot(), never invented), the publish date, and an
+// estimated read time (estimateReadingTime()). `featured` switches to a
+// larger horizontal layout with an image-left/content-right split and
+// drops the avatar/read-time row, matching a typical blog index's
+// featured-post treatment.
+import { withBase } from '../lib/url';
+import { getAuthorHeadshot } from '../lib/pages';
+import { estimateReadingTime } from '../lib/readingTime';
+import OptimizedImage from './OptimizedImage.astro';
+import type { Page } from '../lib/pages';
+
+interface Props {
+  post: Page;
+  allPages: Page[];
+  featured?: boolean;
+}
+
+const { post, allPages, featured = false } = Astro.props;
+const headshot = getAuthorHeadshot(post.author_name, allPages);
+const publishedDate = post.date_published
+  ? new Date(post.date_published).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+  : null;
+const readMinutes = estimateReadingTime(post.copy);
+// The featured post is a bigger, standalone section on the page (was a
+// real <h2> before this became a shared component) — a grid card's
+// title is one item among many, correctly an <h3>. Dynamic tag so the
+// heading hierarchy stays right in both contexts.
+const HeadingTag = featured ? 'h2' : 'h3';
+---
+
+<a
+  href={withBase(`/${post.slug}`)}
+  data-category={post.category ?? ''}
+  id={featured ? 'featured-post' : undefined}
+  class:list={[
+    'post-card block overflow-hidden rounded-lg border border-black/5 bg-white shadow-sm transition duration-200',
+    featured ? 'flex flex-col hover:shadow-lg sm:flex-row' : 'hover:-translate-y-1 hover:shadow-xl',
+  ]}
+>
+  {post.images.hero && (
+    <div class:list={['shrink-0 overflow-hidden', featured ? 'h-56 w-full sm:h-auto sm:w-1/2' : 'h-40 w-full']}>
+      <OptimizedImage
+        src={post.images.hero.url}
+        alt={post.images.hero.alt}
+        class="h-full w-full object-cover"
+        loading={featured ? 'eager' : 'lazy'}
+        widths={featured ? [400, 800] : [320, 640]}
+        sizes={
+          featured
+            ? '(min-width: 640px) 50vw, 100vw'
+            : '(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw'
+        }
+        creditName={post.images.hero.creditName}
+        creditUrl={post.images.hero.creditUrl}
+        showCredit={false}
+      />
+    </div>
+  )}
+  <div class:list={['p-6', featured && 'flex-1 sm:p-8']}>
+    <div class="mb-2 flex flex-wrap items-center gap-2">
+      {featured && (
+        <span class="rounded-full bg-brand-primary px-3 py-1 text-xs font-semibold text-white">Featured</span>
+      )}
+      {post.category && (
+        <span
+          class:list={[
+            'text-xs font-semibold uppercase tracking-wide text-brand-accent',
+            featured && 'rounded-full bg-brand-tint/40 px-3 py-1 normal-case text-brand-ink',
+          ]}
+        >
+          {post.category}
+        </span>
+      )}
+    </div>
+    <HeadingTag
+      class:list={[
+        'mb-2 font-[family-name:var(--font-heading)] font-bold text-brand-ink',
+        featured && 'text-2xl',
+      ]}
+    >
+      {post.h1 ?? post.title}
+    </HeadingTag>
+    {post.meta_description && <p class="mb-4 text-sm text-slate-600">{post.meta_description}</p>}
+
+    {featured ? (
+      publishedDate && <p class="text-xs text-slate-500">{publishedDate}</p>
+    ) : (
+      <div class="flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
+        <div class="flex items-center gap-2">
+          {headshot && (
+            <div class="h-7 w-7 shrink-0 overflow-hidden rounded-full">
+              <OptimizedImage src={headshot.url} alt="" class="h-full w-full object-cover" widths={[28, 56]} sizes="28px" />
+            </div>
+          )}
+          {post.author_name && <span class="font-semibold text-slate-700">{post.author_name}</span>}
+        </div>
+        <div class="text-right">
+          {publishedDate && <p>{publishedDate}</p>}
+          <p>{readMinutes} min read</p>
+        </div>
+      </div>
+    )}
+  </div>
+</a>
