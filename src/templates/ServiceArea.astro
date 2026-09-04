@@ -2,6 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import Section from '../components/Section.astro';
+import Testimonial from '../components/Testimonial.astro';
 import CTA from '../components/CTA.astro';
 import LeadGenerator from '../components/LeadGenerator.astro';
 import LeadMagnet from '../components/LeadMagnet.astro';
@@ -33,6 +34,9 @@ const counselors = getCounselorOptions(allPages);
   <Section>
     <Fragment set:html={renderCopy(page.copy)} />
   </Section>
+  {page.testimonial_quote && page.testimonial_author && (
+    <Testimonial quote={page.testimonial_quote} author={page.testimonial_author} role={page.testimonial_role} />
+  )}
   <CTA heading={page.cta_heading ?? `Serving ${page.area_served_name ?? 'your area'}`} buttonText={page.cta_button_text ?? undefined} />
   <LeadMagnet pageId={page.id} />
   <LeadGenerator
