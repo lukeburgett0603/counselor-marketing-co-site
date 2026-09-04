@@ -59,3 +59,16 @@ body {
 .prose h3 {
   scroll-margin-top: 6rem;
 }
+
+/* Tailwind Typography adds its own decorative smart quotes around a
+   blockquote's first/last paragraph by default (`content: open-quote` /
+   `close-quote`) — real, live bug found on every counselor bio's pull-quote,
+   where `copy` markdown already has to write literal quotation marks around
+   a person's actual words (`> "..."`), producing a doubled `""...""`. Turn
+   the plugin's auto-quotes off globally rather than trying to keep every
+   future blockquote's markdown quote-mark-free, which nobody will remember
+   to do consistently. */
+.prose blockquote p:first-of-type::before,
+.prose blockquote p:last-of-type::after {
+  content: none;
+}
