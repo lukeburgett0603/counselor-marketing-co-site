@@ -30,7 +30,10 @@ const title = page.meta_title ?? page.title;
 const description = page.meta_description ?? '';
 const ogImage = page.images.hero?.url ?? business.logo_url ?? undefined;
 
-const pageSchemas = buildPageSchemas(page, business, siteUrl);
+// True once any real 'Blog Post' rows exist — switches Article schema to
+// the more specific BlogPosting type (see buildArticleSchema).
+const hasBlog = allPages.some((p) => p.page_type === 'Blog Post');
+const pageSchemas = buildPageSchemas(page, business, siteUrl, { hasBlog });
 const breadcrumbChain = buildBreadcrumbChain(page, allPages);
 const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbChain, siteUrl);
 ---
@@ -55,7 +58,7 @@ const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbChain, siteUrl);
       rel="stylesheet"
     />
 
-    <meta property="og:type" content={page.page_type === 'Content Pillar' ? 'article' : 'website'} />
+    <meta property="og:type" content={page.page_type === 'Content Pillar' || page.page_type === 'Service Hub' || page.page_type === 'Blog Post' ? 'article' : 'website'} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalUrl} />

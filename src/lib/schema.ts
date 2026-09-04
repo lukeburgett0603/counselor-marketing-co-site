@@ -210,6 +210,7 @@ export function buildPageSchemas(
       case 'Service Page':
         return [buildServiceSchema(page, siteUrl)];
       case 'Content Pillar':
+      case 'Service Hub':
       case 'Blog Post':
         return [buildArticleSchema(page, siteUrl, options.hasBlog ?? false)];
       case 'Counselor Profile':

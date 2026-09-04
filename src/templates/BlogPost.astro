@@ -21,8 +21,14 @@ const counselors = getCounselorOptions(allPages);
 // The hub page whose `category` matches this post's — used for the
 // "back to [category]" link so a spoke post links back to its pillar,
 // same as the pillar links out to its spokes (BlogPreview.astro).
+// Both 'Content Pillar' and 'Service Hub' can own a category (see
+// CLAUDE.md's "Service Hub" section) — a client whose categories are
+// all Service Hub pages (e.g. Freedom Counseling Services) would
+// otherwise never get a working back-link on any of its blog posts.
 const hubPage = page.category
-  ? allPages.find((p) => p.page_type === 'Content Pillar' && p.category === page.category)
+  ? allPages.find(
+      (p) => (p.page_type === 'Content Pillar' || p.page_type === 'Service Hub') && p.category === page.category
+    )
   : undefined;
 
 const publishedDate = page.date_published
