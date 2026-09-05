@@ -116,6 +116,16 @@ export interface Page {
   // a page to inherit it without an admin having touched it yet.
   hero_overlay_color: string;
   hero_overlay_opacity: number;
+  // Biases the hero image's object-fit: cover crop toward the top or
+  // bottom of the source photo instead of always centering on the
+  // frame - a photo whose actual subject isn't centered in the frame
+  // (headroom, rule-of-thirds compositions, etc.) gets clipped across
+  // the subject under a plain centered crop otherwise. Applies to
+  // whichever Hero layout is active (default or overlay) - it's a
+  // property of the image, not the layout. Defaults to 'center', the
+  // same crop every existing page already gets. See
+  // 0031_hero_image_focal_point.sql.
+  hero_image_focal_y: 'top' | 'center' | 'bottom';
 }
 
 export interface Business {

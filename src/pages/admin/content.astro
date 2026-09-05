@@ -172,8 +172,8 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
             <SuggestEdit fieldLabel="Hero image" />
 
             <!--
-              Hero layout — never shown for a 'Counselor Profile' page,
-              which doesn't use Hero.astro at all (see
+              Hero layout + focal point — never shown for a 'Counselor
+              Profile' page, which doesn't use Hero.astro at all (see
               CounselorProfile.astro's own header card). Lives inside this
               same [data-field="images"] container so it shares its
               editable/locked tier-gating rather than needing a second
@@ -182,6 +182,19 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
             -->
             <div id="content-hero-style-wrap" class="mt-4 space-y-3 border-t border-slate-100 pt-4">
               <div class="editable-view space-y-3">
+                <div>
+                  <label class="mb-1 block text-sm font-semibold text-slate-700">Image focal point</label>
+                  <select id="content-hero-focal-y" class="w-full rounded-md border border-slate-300 px-4 py-2 text-sm">
+                    <option value="top">Keep the top of the photo visible</option>
+                    <option value="center">Center (default)</option>
+                    <option value="bottom">Keep the bottom of the photo visible</option>
+                  </select>
+                  <p class="mt-1 text-xs text-slate-500">
+                    If the subject in your photo is getting cropped out, use this to tell it which part of the
+                    photo matters most — e.g. choose "bottom" if the subject sits low in the frame with empty
+                    space above it.
+                  </p>
+                </div>
                 <div>
                   <label class="mb-1 block text-sm font-semibold text-slate-700">Hero layout</label>
                   <select id="content-hero-style" class="w-full rounded-md border border-slate-300 px-4 py-2 text-sm">
@@ -311,6 +324,7 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
     hero_style: 'default' | 'overlay';
     hero_overlay_color: string;
     hero_overlay_opacity: number;
+    hero_image_focal_y: 'top' | 'center' | 'bottom';
   };
 
   type Business = {
@@ -473,6 +487,7 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
   const contentImageStatus = document.getElementById('content-image-status')!;
   const contentImagePreview = document.getElementById('content-image-preview') as HTMLImageElement;
   const contentHeroStyleWrap = document.getElementById('content-hero-style-wrap')!;
+  const contentHeroFocalY = document.getElementById('content-hero-focal-y') as HTMLSelectElement;
   const contentHeroStyle = document.getElementById('content-hero-style') as HTMLSelectElement;
   const contentHeroOverlayControls = document.getElementById('content-hero-overlay-controls')!;
   const contentHeroOverlayColor = document.getElementById('content-hero-overlay-color') as HTMLInputElement;
@@ -640,6 +655,7 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
     // just left inert, so nobody wonders why picking "overlay" for a
     // counselor page never seems to do anything.
     contentHeroStyleWrap.classList.toggle('hidden', selectedContentPage.page_type === 'Counselor Profile');
+    contentHeroFocalY.value = selectedContentPage.hero_image_focal_y;
     contentHeroStyle.value = selectedContentPage.hero_style;
     contentHeroOverlayColor.value = selectedContentPage.hero_overlay_color;
     contentHeroOverlayOpacity.value = String(selectedContentPage.hero_overlay_opacity);
@@ -745,6 +761,7 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
       // Profile page, so nothing here overwrites a value that template
       // never reads anyway.
       if (selectedContentPage.page_type !== 'Counselor Profile') {
+        payload.hero_image_focal_y = contentHeroFocalY.value;
         payload.hero_style = contentHeroStyle.value;
         payload.hero_overlay_color = contentHeroOverlayColor.value;
         payload.hero_overlay_opacity = Number(contentHeroOverlayOpacity.value);

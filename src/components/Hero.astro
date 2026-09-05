@@ -18,6 +18,12 @@ interface Props {
   style?: 'default' | 'overlay';
   overlayColor?: string;
   overlayOpacity?: number;
+  // Biases the object-fit: cover crop toward the top or bottom of the
+  // source photo — a plain centered crop centers on the *frame*, not
+  // the *subject*, so a photo whose subject sits low in frame (headroom,
+  // rule-of-thirds compositions) gets clipped across the subject even
+  // though the crop is technically centered. Applies in both layouts.
+  imageFocalY?: 'top' | 'center' | 'bottom';
 }
 
 const {
@@ -33,9 +39,17 @@ const {
   style = 'default',
   overlayColor = '#1f2937',
   overlayOpacity = 50,
+  imageFocalY = 'center',
 } = Astro.props;
 
 const isOverlay = style === 'overlay' && !!imageUrl;
+
+const FOCAL_Y_CLASS: Record<NonNullable<Props['imageFocalY']>, string> = {
+  top: 'object-top',
+  center: 'object-center',
+  bottom: 'object-bottom',
+};
+const focalYClass = FOCAL_Y_CLASS[imageFocalY] ?? 'object-center';
 
 // Admin-entered via a real <input type="color">, which only ever
 // produces #rrggbb - validated anyway before it reaches a raw inline
@@ -58,7 +72,7 @@ const showAside = isOverlay ? Astro.slots.has('aside') : !imageUrl && Astro.slot
       <OptimizedImage
         src={imageUrl!}
         alt={imageAlt ?? ''}
-        class="h-full w-full object-cover"
+        class:list={['h-full w-full object-cover', focalYClass]}
         loading="eager"
         widths={[800, 1200, 1600]}
         sizes="100vw"
@@ -123,7 +137,7 @@ const showAside = isOverlay ? Astro.slots.has('aside') : !imageUrl && Astro.slot
           <OptimizedImage
             src={imageUrl}
             alt={imageAlt ?? ''}
-            class="w-full rounded-xl object-cover"
+            class:list={['w-full rounded-xl object-cover', focalYClass]}
             loading="eager"
             widths={[400, 800, 1200]}
             sizes="(min-width: 768px) 50vw, 100vw"
