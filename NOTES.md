@@ -156,3 +156,55 @@ the founder's own account, 2026-09-03):
   point for this positioning right now; expect a second once another
   Christian-counselor client is onboarded (founder's early client base is
   expected to skew toward Christian counselors).
+
+## Site-wide writing-voice pass (2026-09-05)
+
+Rewrote real copy across all 21 pages to remove the same AI-writing tics
+flagged and fixed on Freedom Counseling Services' site the same day (see
+that site's own NOTES.md for the full list and the process). This site's
+copy needed it more: 274 em dashes in `copy` alone (vs. Freedom's 283
+across ~2,900 more words), 164 "actually," 118 "real" as filler, 108
+trailing "not X" sentence tails, and 27 "honest/honestly" instances
+site-wide before the pass — noticeably denser than Freedom's, on the
+agency's own sales copy. After: "honest," "gap," and "quietly" are at
+zero everywhere including headings; em dashes cut to 129 in `copy`; "real"
+and "actually" cut to the low 30s, with every remaining instance checked
+individually and confirmed as a legitimate contrastive use (e.g. "genuine
+faith integration" vs. performative, not filler).
+
+**Real complication unique to this site's content shape**: several
+`**bolded**` spans in `copy` are NOT first-use keyword markers the way
+Freedom's are — they're feature-list/FAQ-style headers (e.g. `**Does your
+current site quietly turn visitors away**`) that themselves contained the
+flagged tics. Had to hand-curate, per page, which bolded phrases were
+genuinely frozen keyword anchors (the literal focus_keyword phrase, plus
+a few cross-linked service-page keywords reused as anchor text on other
+pages) versus which were editable list headers — a blanket "never touch
+bold" rule (which worked fine for Freedom) would have left real tics
+sitting inside bolded text untouched here.
+
+**A real gap found mid-pass, worth remembering for next time**: this
+site's Content Pillar pages have a `key_takeaways` column (a plain array
+of strings, rendered as the "KEY TAKEAWAYS" checklist under the hero) —
+a field that doesn't exist as meaningful content on Freedom's site (it's
+in the schema everywhere but empty there), so it wasn't part of the
+original fetch/agent-instruction set and got missed on the first pass
+across 4 pages (Therapist Websites, Therapist Branding, SEO & Marketing,
+Practice Growth). Caught by spot-checking the live rendered page against
+the database rather than trusting the "no more matches" scan alone, since
+the scan only covered the fields it was told to fetch. Fixed directly
+afterward. **Any future content-voice or content-accuracy pass on this
+site needs to explicitly include `key_takeaways`** in whatever fields get
+fetched/scanned — it's easy to forget since it's not part of the
+copy/faqs/plan_steps/testimonial set every other page type uses.
+
+Also caught and fixed one heading-level miss: `### The real question
+isn't which builder is best` on Therapist Websites was a literal instance
+of the negation-then-affirmation tic split across a heading and its
+following paragraph — survived the main pass because headings were
+(correctly, in general) treated as off-limits to avoid unwanted
+restructuring, but this one heading *was* the tic. Same for six other
+headings containing literal "honest"/"honestly"/"quietly" text (Practice
+Growth ×3, Google Ads for Therapists ×2, Therapist Websites ×1) — fixed
+individually afterward, keeping each heading's meaning and the page's H1/
+meta_description/focus_keyword untouched throughout.
