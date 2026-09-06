@@ -208,3 +208,20 @@ headings containing literal "honest"/"honestly"/"quietly" text (Practice
 Growth ×3, Google Ads for Therapists ×2, Therapist Websites ×1) — fixed
 individually afterward, keeping each heading's meaning and the page's H1/
 meta_description/focus_keyword untouched throughout.
+
+## `show_crisis_resources` set to `false` (2026-09-06)
+
+`business.show_crisis_resources` (added in the template's
+`0032_crisis_resource_line.sql`, gates a crisis-resource line in
+`send-nurture-emails`' shared email footer) defaults to `true` because
+every other real client of this template is a counseling practice. **CMC
+is the one deliberate exception** — set explicitly to `false` on this
+site's own `business` row via a disposable agency session, verified
+afterward (`{"show_crisis_resources":false}` confirmed via a direct
+`SELECT`). CMC's own nurture emails go to prospective therapist/counselor
+clients asking about website and marketing services, not to individuals
+seeking mental health care, so a "if you're in a mental health crisis"
+line in that footer would be nonsensical. If this project's `business`
+row is ever recreated or reset, this needs to be set back to `false`
+manually — it will silently default to `true` otherwise, which is the
+right default for every other client but the wrong one here.

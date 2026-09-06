@@ -1,0 +1,26 @@
+-- Nurture emails can legitimately touch on emotional distress (e.g. "what
+-- if it feels worse before it feels better" in a lead-magnet sequence
+-- about starting counseling) without any crisis-resource safety net in
+-- the footer, unlike this template's own pages — Contact.astro already
+-- carries "If you're in a mental health crisis, call or text 988..." on
+-- every counseling-practice client site. send-nurture-emails/index.ts
+-- (the Edge Function that actually sends these) needs the same line in
+-- its shared footer, not just the site's own pages.
+--
+-- Defaults to true because every real client this template has been used
+-- for so far is a counseling/mental-health practice, where this is the
+-- responsible default rather than an opt-in most clients would forget to
+-- turn on. Opt-out, not opt-in — same reasoning as collect_website_in_leads
+-- and collect_counselor_preference being opt-in the other direction: the
+-- default should match what the common case actually needs.
+--
+-- IMPORTANT: Counselor Marketing Co.'s own site (counselor-marketing-co-site)
+-- is built from this same template but is NOT a counseling practice — it's
+-- the marketing agency itself, and its nurture emails go to prospective
+-- therapist/counselor clients inquiring about website and marketing
+-- services, not to individuals seeking mental health care. A crisis-line
+-- disclaimer on CMC's own nurture emails would be nonsensical and
+-- potentially confusing. CMC's business row must have this explicitly set
+-- to false — do not let it inherit the true default silently. See
+-- CLAUDE.md's "Nurture email crisis-resource line" section.
+alter table business add column show_crisis_resources boolean not null default true;

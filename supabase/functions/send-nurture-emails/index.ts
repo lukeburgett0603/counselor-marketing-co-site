@@ -86,7 +86,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: business } = await supabase
     .from('business')
-    .select('display_name, street_address, address_locality, address_region, postal_code')
+    .select('display_name, street_address, address_locality, address_region, postal_code, show_crisis_resources')
     .maybeSingle();
   const mailingAddress = business
     ? [business.street_address, business.address_locality, business.address_region, business.postal_code]
@@ -94,6 +94,12 @@ Deno.serve(async (req: Request) => {
         .join(', ')
     : '';
   const fromHeader = business?.display_name ? `${business.display_name} <${senderEmail}>` : senderEmail;
+  // Opt-out, defaults true — see 0032_crisis_resource_line.sql. Counselor
+  // Marketing Co.'s own site is the one real client this must be false
+  // for: it's the marketing agency itself, not a counseling practice, so
+  // its nurture emails go to prospective therapist clients, not
+  // individuals seeking mental health care.
+  const showCrisisResources = business?.show_crisis_resources !== false;
 
   const { data: leads, error: leadsError } = await supabase
     .from('leads')
@@ -140,9 +146,12 @@ Deno.serve(async (req: Request) => {
     }
 
     const unsubscribeUrl = `${supabaseUrl}/functions/v1/unsubscribe-lead?lead=${lead.id}`;
+    const crisisLine = showCrisisResources
+      ? '<p style="font-size:12px;color:#888;">If you are in a mental health crisis, call or text 988 to reach the Suicide &amp; Crisis Lifeline, available 24/7.</p>\n'
+      : '';
     const html = `${renderEmailBody(step.body)}
 <hr style="border:none;border-top:1px solid #ddd;margin:24px 0;">
-<p style="font-size:12px;color:#888;">
+${crisisLine}<p style="font-size:12px;color:#888;">
   ${mailingAddress ? mailingAddress + '<br>' : ''}
   <a href="${unsubscribeUrl}">Unsubscribe from these emails</a>
 </p>`;
