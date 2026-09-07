@@ -37,7 +37,7 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
             <SuggestEdit fieldLabel="Hero subheading" />
           </div>
 
-          <div data-field="copy">
+          <div id="content-plain-copy-wrap" data-field="copy">
             <label class="mb-1 block text-sm font-semibold text-slate-700">Page copy</label>
             <div class="editable-view">
               <RichTextEditor id="content-copy-editor" />
@@ -48,6 +48,108 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
               Included as an agency-managed field on your plan — suggest a change below.
             </p>
             <SuggestEdit fieldLabel="Page copy" />
+          </div>
+
+          <!--
+            StoryBrand section-by-section copy — shown instead of the plain
+            "Page copy" box above, only for Homepage/Service Page/Counselor
+            Profile (see STORYBRAND_SPLIT_PAGE_TYPES in lib/pages.ts). These
+            3 page types are short/compact enough that the whole page is
+            basically one pass through the StoryBrand arc, so breaking the
+            narrative into its own labeled box per section keeps a client
+            from having to hunt through one long text field to change just
+            one part. Content Pillar and Service Hub deliberately keep the
+            single "Page copy" box above instead — both are long-form,
+            TOC-organized informational content where forcing this same
+            5-part split would fight the page's actual job. See CLAUDE.md's
+            "StoryBrand section-by-section copy editing" section.
+          -->
+          <div id="content-storybrand-fields" class="hidden space-y-6">
+            <p class="text-xs text-slate-500">
+              This page is broken into StoryBrand sections instead of one big text box, so it's easy to update just
+              the part that needs changing. Most pages read best when every section below has at least a short
+              paragraph, but it's fine to leave one blank if it genuinely doesn't apply.
+            </p>
+
+            <div data-field="storybrand_problem">
+              <label class="mb-1 block text-sm font-semibold text-slate-700">The Problem</label>
+              <div class="editable-view">
+                <RichTextEditor
+                  id="content-storybrand-problem-editor"
+                  helpText={`StoryBrand's "Problem" section. Describe the problem your visitor is facing when they land on this page — go beyond the surface issue to how it makes them feel and why it feels unfair. The goal: a visitor reads this and thinks, "they understand exactly what I'm going through."`}
+                />
+              </div>
+              <div class="locked-view prose prose-sm max-w-none rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700" data-locked-value-html>
+              </div>
+              <p class="tier-note mt-1 text-xs text-slate-500">
+                Included as an agency-managed field on your plan — suggest a change below.
+              </p>
+              <SuggestEdit fieldLabel="The Problem" />
+            </div>
+
+            <div data-field="storybrand_guide_empathy">
+              <label class="mb-1 block text-sm font-semibold text-slate-700">We Understand</label>
+              <div class="editable-view">
+                <RichTextEditor
+                  id="content-storybrand-guide-empathy-editor"
+                  helpText={`StoryBrand's "Guide — Empathy" section. Show that you truly understand what your visitor is going through, before you ever mention what you offer. This is where trust starts to build — proving you "get it," not listing credentials yet (that comes through your testimonials and results elsewhere on the page).`}
+                />
+              </div>
+              <div class="locked-view prose prose-sm max-w-none rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700" data-locked-value-html>
+              </div>
+              <p class="tier-note mt-1 text-xs text-slate-500">
+                Included as an agency-managed field on your plan — suggest a change below.
+              </p>
+              <SuggestEdit fieldLabel="We Understand" />
+            </div>
+
+            <div data-field="storybrand_pitch">
+              <label class="mb-1 block text-sm font-semibold text-slate-700">The Full Picture</label>
+              <div class="editable-view">
+                <RichTextEditor
+                  id="content-storybrand-pitch-editor"
+                  helpText={`StoryBrand's fuller explanation. For visitors who want more detail before deciding — explain your approach and why it's the right next step. Write like you're personally reassuring someone who still has questions.`}
+                />
+              </div>
+              <div class="locked-view prose prose-sm max-w-none rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700" data-locked-value-html>
+              </div>
+              <p class="tier-note mt-1 text-xs text-slate-500">
+                Included as an agency-managed field on your plan — suggest a change below.
+              </p>
+              <SuggestEdit fieldLabel="The Full Picture" />
+            </div>
+
+            <div data-field="storybrand_success">
+              <label class="mb-1 block text-sm font-semibold text-slate-700">What's Possible</label>
+              <div class="editable-view">
+                <RichTextEditor
+                  id="content-storybrand-success-editor"
+                  helpText={`StoryBrand's "Success" section. Paint a specific, hopeful picture of what life looks like once this problem is solved. Be concrete — a real, specific picture lands better than vague optimism.`}
+                />
+              </div>
+              <div class="locked-view prose prose-sm max-w-none rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700" data-locked-value-html>
+              </div>
+              <p class="tier-note mt-1 text-xs text-slate-500">
+                Included as an agency-managed field on your plan — suggest a change below.
+              </p>
+              <SuggestEdit fieldLabel="What's Possible" />
+            </div>
+
+            <div data-field="storybrand_failure">
+              <label class="mb-1 block text-sm font-semibold text-slate-700">Why It's Worth Acting Now</label>
+              <div class="editable-view">
+                <RichTextEditor
+                  id="content-storybrand-failure-editor"
+                  helpText={`StoryBrand's "Failure" section. A brief, honest reminder of what it costs to keep putting this off. Keep it factual and caring, not fear-mongering — and keep it short, since your call-to-action follows right after this.`}
+                />
+              </div>
+              <div class="locked-view prose prose-sm max-w-none rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700" data-locked-value-html>
+              </div>
+              <p class="tier-note mt-1 text-xs text-slate-500">
+                Included as an agency-managed field on your plan — suggest a change below.
+              </p>
+              <SuggestEdit fieldLabel="Why It's Worth Acting Now" />
+            </div>
           </div>
 
           <div data-field="images">
@@ -162,6 +264,108 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
           <p id="content-save-status" class="text-sm" role="status"></p>
 
           <!--
+            Additional page elements — plan_steps/faqs/concerns/cta_heading/
+            cta_button_text all already existed as real columns the public
+            templates render, but none were ever editable from any admin
+            screen before this. Not tier-gated (enforce_content_permission
+            doesn't cover these columns — same "safe on every tier" category
+            as Testimonials on the Business info page), so this gets its own
+            always-on save button rather than folding into
+            content-save-button's tier-gated visibility. Each sub-block is
+            shown only for the page types whose template actually reads that
+            field — see the PLAN_STEPS/FAQS/CONCERNS/CTA _PAGE_TYPES consts
+            below, sourced directly from grepping every template file for
+            these column names, not guessed from the docs.
+          -->
+          <div id="content-page-details-section" class="hidden space-y-6 border-t border-slate-200 pt-6">
+            <h3 class="text-sm font-semibold text-slate-700">Additional page elements</h3>
+            <p class="text-xs text-slate-500">
+              These are separate from the plan tiers above — always editable, on every plan.
+            </p>
+
+            <div id="content-plan-steps-wrap" class="hidden space-y-2">
+              <label class="mb-1 block text-sm font-semibold text-slate-700">Plan steps</label>
+              <p class="mb-2 text-xs text-slate-500">
+                The 3–4 simple steps a visitor takes to work with you (e.g. "Book a free call," "Meet your
+                counselor," "Start your first session"). Rendered as a numbered list on the page — leave this empty
+                and it just won't show.
+              </p>
+              <div id="content-plan-steps-list" class="space-y-2"></div>
+              <button
+                type="button"
+                id="content-plan-steps-add"
+                class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                + Add a step
+              </button>
+            </div>
+
+            <div id="content-faqs-wrap" class="hidden space-y-2">
+              <label class="mb-1 block text-sm font-semibold text-slate-700">FAQs</label>
+              <p class="mb-2 text-xs text-slate-500">
+                Real questions a visitor would actually ask about this page's topic, with honest answers. Never add a
+                question just to have one — this also feeds this page's FAQ markup for Google, so it needs to match
+                what's genuinely on the page.
+              </p>
+              <div id="content-faqs-list" class="space-y-2"></div>
+              <button
+                type="button"
+                id="content-faqs-add"
+                class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                + Add a question
+              </button>
+            </div>
+
+            <div id="content-concerns-wrap" class="hidden space-y-2">
+              <label class="mb-1 block text-sm font-semibold text-slate-700">Benefits list</label>
+              <p class="mb-2 text-xs text-slate-500">
+                A short, unordered set of benefits or things you help with (e.g. "Flexible scheduling," "Telehealth
+                available"). Rendered as a simple grid — not a numbered sequence like Plan steps, since these aren't
+                meant to be followed in order.
+              </p>
+              <div id="content-concerns-list" class="space-y-2"></div>
+              <button
+                type="button"
+                id="content-concerns-add"
+                class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                + Add a benefit
+              </button>
+            </div>
+
+            <div id="content-cta-wrap" class="hidden space-y-3">
+              <div>
+                <label class="mb-1 block text-sm font-semibold text-slate-700">Call-to-action heading</label>
+                <input
+                  id="content-cta-heading"
+                  type="text"
+                  placeholder="Ready to get started?"
+                  class="w-full rounded-md border border-slate-300 px-4 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label class="mb-1 block text-sm font-semibold text-slate-700">Call-to-action button text</label>
+                <input
+                  id="content-cta-button-text"
+                  type="text"
+                  placeholder="Get Started"
+                  class="w-full rounded-md border border-slate-300 px-4 py-2 text-sm"
+                />
+              </div>
+            </div>
+
+            <button
+              id="content-details-save-button"
+              type="button"
+              class="rounded-md bg-brand-primary px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+            >
+              Save
+            </button>
+            <p id="content-details-save-status" class="text-sm" role="status"></p>
+          </div>
+
+          <!--
             Reviewer byline — pillar/hub pages only ("Content Pillar" and
             "Service Hub" page types; see BYLINE_PAGE_TYPES below). Not
             tier-gated like the fields above: author_name/credentials/
@@ -218,6 +422,7 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
   import { renderCopy } from '../../../lib/markdown';
   import { triggerRebuild } from '../../../lib/publishFunction';
   import { initUnsplashSearchModal, type UnsplashPhoto } from '../../../lib/unsplashSearch';
+  import { STORYBRAND_SPLIT_PAGE_TYPES } from '../../../lib/pages';
 
   type ContentPage = {
     id: string;
@@ -228,6 +433,16 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
     focus_keyword: string | null;
     hero_subhead: string | null;
     copy: string | null;
+    storybrand_problem: string | null;
+    storybrand_guide_empathy: string | null;
+    storybrand_pitch: string | null;
+    storybrand_success: string | null;
+    storybrand_failure: string | null;
+    plan_steps: { title: string; description: string }[];
+    faqs: { question: string; answer: string }[];
+    concerns: { title: string; description: string }[];
+    cta_heading: string | null;
+    cta_button_text: string | null;
     images: { hero?: { url: string; alt: string; creditName?: string; creditUrl?: string } } | null;
     author_name: string | null;
     credentials: string | null;
@@ -237,6 +452,30 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
     hero_overlay_opacity: number;
     hero_image_focal_y: 'top' | 'center' | 'bottom';
   };
+
+  // Which page types each "Additional page elements" field applies to —
+  // sourced by grepping every src/templates/*.astro file for these exact
+  // column names, not guessed from the reference docs (which turned out to
+  // have drifted from the actual code on at least one of these). Keep this
+  // in sync if a future template starts or stops reading one of these
+  // fields.
+  const PLAN_STEPS_PAGE_TYPES = ['Counselor Profile', 'Homepage', 'Service Area', 'Service Hub', 'Service Page'];
+  const FAQS_PAGE_TYPES = ['Content Pillar', 'Counselor Profile', 'Service Area', 'Service Hub', 'Service Page'];
+  const CONCERNS_PAGE_TYPES = ['Homepage', 'Service Hub'];
+  const CTA_PAGE_TYPES = [
+    'About',
+    'Blog Post',
+    'Content Pillar',
+    'Counselor Profile',
+    'Counselors Overview',
+    'Homepage',
+    'Service Area',
+    'Service Areas Overview',
+    'Service Hub',
+    'Service Page',
+    'Services Overview',
+    'Who We Serve',
+  ];
 
   type Business = {
     id: string;
@@ -280,6 +519,13 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
   const contentFocusKeyword = document.getElementById('content-focus-keyword') as HTMLInputElement;
   const contentHeroSubhead = document.getElementById('content-hero-subhead') as HTMLInputElement;
   const copyEditor = initRichTextEditor('content-copy-editor');
+  const contentPlainCopyWrap = document.getElementById('content-plain-copy-wrap')!;
+  const contentStorybrandFields = document.getElementById('content-storybrand-fields')!;
+  const storybrandProblemEditor = initRichTextEditor('content-storybrand-problem-editor');
+  const storybrandGuideEmpathyEditor = initRichTextEditor('content-storybrand-guide-empathy-editor');
+  const storybrandPitchEditor = initRichTextEditor('content-storybrand-pitch-editor');
+  const storybrandSuccessEditor = initRichTextEditor('content-storybrand-success-editor');
+  const storybrandFailureEditor = initRichTextEditor('content-storybrand-failure-editor');
   const contentImageFile = document.getElementById('content-image-file') as HTMLInputElement;
   const contentImageAlt = document.getElementById('content-image-alt') as HTMLInputElement;
   const contentImageStatus = document.getElementById('content-image-status')!;
@@ -299,6 +545,70 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
   const contentBylineDate = document.getElementById('content-byline-date') as HTMLInputElement;
   const contentBylineSaveButton = document.getElementById('content-byline-save-button')!;
   const contentBylineStatus = document.getElementById('content-byline-status')!;
+
+  const contentPageDetailsSection = document.getElementById('content-page-details-section')!;
+  const contentPlanStepsWrap = document.getElementById('content-plan-steps-wrap')!;
+  const contentFaqsWrap = document.getElementById('content-faqs-wrap')!;
+  const contentConcernsWrap = document.getElementById('content-concerns-wrap')!;
+  const contentCtaWrap = document.getElementById('content-cta-wrap')!;
+  const contentCtaHeading = document.getElementById('content-cta-heading') as HTMLInputElement;
+  const contentCtaButtonText = document.getElementById('content-cta-button-text') as HTMLInputElement;
+  const contentDetailsSaveButton = document.getElementById('content-details-save-button')!;
+  const contentDetailsSaveStatus = document.getElementById('content-details-save-status')!;
+
+  // Generic add/remove/collect editor for a list of two-field items
+  // (plan_steps, faqs, concerns all share this exact {a, b} shape under
+  // different real column names) — written once and instantiated 3 times
+  // below rather than hand-rolling near-identical markup/JS for each.
+  function createItemListEditor(containerId: string, addButtonId: string, placeholderA: string, placeholderB: string) {
+    const container = document.getElementById(containerId)!;
+    const addButton = document.getElementById(addButtonId)!;
+
+    function addRow(a = '', b = '') {
+      const row = document.createElement('div');
+      row.className = 'item-row flex flex-col gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-start';
+      row.innerHTML = `
+        <div class="flex-1 space-y-2">
+          <input type="text" class="item-a w-full rounded-md border border-slate-300 px-3 py-2 text-sm" placeholder="${escapeHtml(placeholderA)}" value="${escapeHtml(a)}" />
+          <textarea rows="2" class="item-b w-full rounded-md border border-slate-300 px-3 py-2 text-sm" placeholder="${escapeHtml(placeholderB)}">${escapeHtml(b)}</textarea>
+        </div>
+        <button type="button" class="remove-item-button shrink-0 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100">Remove</button>
+      `;
+      row.querySelector('.remove-item-button')!.addEventListener('click', () => row.remove());
+      container.appendChild(row);
+    }
+
+    addButton.addEventListener('click', () => addRow());
+
+    return {
+      setItems(items: { a: string; b: string }[]) {
+        container.innerHTML = '';
+        items.forEach((item) => addRow(item.a, item.b));
+      },
+      getItems(): { a: string; b: string }[] {
+        return Array.from(container.querySelectorAll<HTMLElement>('.item-row'))
+          .map((row) => ({
+            a: (row.querySelector('.item-a') as HTMLInputElement).value.trim(),
+            b: (row.querySelector('.item-b') as HTMLTextAreaElement).value.trim(),
+          }))
+          .filter((item) => item.a || item.b);
+      },
+    };
+  }
+
+  const planStepsEditor = createItemListEditor(
+    'content-plan-steps-list',
+    'content-plan-steps-add',
+    'Step title (e.g. "Book a free call")',
+    'Step description'
+  );
+  const faqsEditor = createItemListEditor('content-faqs-list', 'content-faqs-add', 'Question', 'Answer');
+  const concernsEditor = createItemListEditor(
+    'content-concerns-list',
+    'content-concerns-add',
+    'Benefit title (e.g. "Telehealth available")',
+    'Benefit description (optional)'
+  );
 
   const ALWAYS_LOCKED_FIELDS = ['h1', 'meta_description', 'focus_keyword'];
 
@@ -333,6 +643,16 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
         return selectedContentPage.hero_subhead ?? '';
       case 'copy':
         return selectedContentPage.copy ?? '';
+      case 'storybrand_problem':
+        return selectedContentPage.storybrand_problem ?? '';
+      case 'storybrand_guide_empathy':
+        return selectedContentPage.storybrand_guide_empathy ?? '';
+      case 'storybrand_pitch':
+        return selectedContentPage.storybrand_pitch ?? '';
+      case 'storybrand_success':
+        return selectedContentPage.storybrand_success ?? '';
+      case 'storybrand_failure':
+        return selectedContentPage.storybrand_failure ?? '';
       case 'images':
         return selectedContentPage.images?.hero
           ? `${selectedContentPage.images.hero.url} (alt: ${selectedContentPage.images.hero.alt})`
@@ -431,6 +751,34 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
     copyEditor.setMarkdown(selectedContentPage.copy);
     document.querySelector('[data-field="copy"] [data-locked-value-html]')!.innerHTML = renderCopy(selectedContentPage.copy);
 
+    // StoryBrand section-by-section fields replace the plain "Page copy"
+    // box entirely for the 3 short/compact page types — see
+    // STORYBRAND_SPLIT_PAGE_TYPES's own comment in lib/pages.ts for why
+    // Content Pillar/Service Hub are excluded.
+    const isStorybrandSplit = STORYBRAND_SPLIT_PAGE_TYPES.includes(selectedContentPage.page_type as never);
+    contentPlainCopyWrap.classList.toggle('hidden', isStorybrandSplit);
+    contentStorybrandFields.classList.toggle('hidden', !isStorybrandSplit);
+    storybrandProblemEditor.setMarkdown(selectedContentPage.storybrand_problem);
+    document.querySelector('[data-field="storybrand_problem"] [data-locked-value-html]')!.innerHTML = renderCopy(
+      selectedContentPage.storybrand_problem
+    );
+    storybrandGuideEmpathyEditor.setMarkdown(selectedContentPage.storybrand_guide_empathy);
+    document.querySelector('[data-field="storybrand_guide_empathy"] [data-locked-value-html]')!.innerHTML = renderCopy(
+      selectedContentPage.storybrand_guide_empathy
+    );
+    storybrandPitchEditor.setMarkdown(selectedContentPage.storybrand_pitch);
+    document.querySelector('[data-field="storybrand_pitch"] [data-locked-value-html]')!.innerHTML = renderCopy(
+      selectedContentPage.storybrand_pitch
+    );
+    storybrandSuccessEditor.setMarkdown(selectedContentPage.storybrand_success);
+    document.querySelector('[data-field="storybrand_success"] [data-locked-value-html]')!.innerHTML = renderCopy(
+      selectedContentPage.storybrand_success
+    );
+    storybrandFailureEditor.setMarkdown(selectedContentPage.storybrand_failure);
+    document.querySelector('[data-field="storybrand_failure"] [data-locked-value-html]')!.innerHTML = renderCopy(
+      selectedContentPage.storybrand_failure
+    );
+
     uploadedImageUrl = selectedContentPage.images?.hero?.url ?? null;
     uploadedImageCreditName = selectedContentPage.images?.hero?.creditName ?? null;
     uploadedImageCreditUrl = selectedContentPage.images?.hero?.creditUrl ?? null;
@@ -470,6 +818,25 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
     contentBylineCredential.value = selectedContentPage.credentials ?? '';
     contentBylineDate.value = selectedContentPage.date_modified ?? '';
     contentBylineStatus.textContent = '';
+
+    // Additional page elements — not tier-gated, shown per-page-type per
+    // the *_PAGE_TYPES consts above (sourced from the actual templates,
+    // not the reference docs).
+    const showPlanSteps = PLAN_STEPS_PAGE_TYPES.includes(selectedContentPage.page_type);
+    const showFaqs = FAQS_PAGE_TYPES.includes(selectedContentPage.page_type);
+    const showConcerns = CONCERNS_PAGE_TYPES.includes(selectedContentPage.page_type);
+    const showCta = CTA_PAGE_TYPES.includes(selectedContentPage.page_type);
+    contentPlanStepsWrap.classList.toggle('hidden', !showPlanSteps);
+    contentFaqsWrap.classList.toggle('hidden', !showFaqs);
+    contentConcernsWrap.classList.toggle('hidden', !showConcerns);
+    contentCtaWrap.classList.toggle('hidden', !showCta);
+    contentPageDetailsSection.classList.toggle('hidden', !(showPlanSteps || showFaqs || showConcerns || showCta));
+    planStepsEditor.setItems(selectedContentPage.plan_steps.map((s) => ({ a: s.title, b: s.description })));
+    faqsEditor.setItems(selectedContentPage.faqs.map((f) => ({ a: f.question, b: f.answer })));
+    concernsEditor.setItems(selectedContentPage.concerns.map((c) => ({ a: c.title, b: c.description })));
+    contentCtaHeading.value = selectedContentPage.cta_heading ?? '';
+    contentCtaButtonText.value = selectedContentPage.cta_button_text ?? '';
+    contentDetailsSaveStatus.textContent = '';
 
     contentSaveStatus.textContent = '';
     renderTierUI();
@@ -540,7 +907,16 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
     if (canEditField('meta_description')) payload.meta_description = contentMetaDescription.value.trim() || null;
     if (canEditField('focus_keyword')) payload.focus_keyword = contentFocusKeyword.value.trim() || null;
     if (canEditField('hero_subhead')) payload.hero_subhead = contentHeroSubhead.value.trim() || null;
-    if (canEditField('copy')) payload.copy = copyEditor.getMarkdown();
+    if (STORYBRAND_SPLIT_PAGE_TYPES.includes(selectedContentPage.page_type as never)) {
+      if (canEditField('storybrand_problem')) payload.storybrand_problem = storybrandProblemEditor.getMarkdown();
+      if (canEditField('storybrand_guide_empathy'))
+        payload.storybrand_guide_empathy = storybrandGuideEmpathyEditor.getMarkdown();
+      if (canEditField('storybrand_pitch')) payload.storybrand_pitch = storybrandPitchEditor.getMarkdown();
+      if (canEditField('storybrand_success')) payload.storybrand_success = storybrandSuccessEditor.getMarkdown();
+      if (canEditField('storybrand_failure')) payload.storybrand_failure = storybrandFailureEditor.getMarkdown();
+    } else if (canEditField('copy')) {
+      payload.copy = copyEditor.getMarkdown();
+    }
     if (canEditField('images')) {
       payload.images = uploadedImageUrl
         ? {
@@ -609,6 +985,48 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
     contentBylineStatus.className = result.ok ? 'text-sm text-emerald-700' : 'text-sm text-amber-700';
   });
 
+  // Additional page elements — independent of contentSaveButton above,
+  // same reasoning as the byline save button: plan_steps/faqs/concerns/
+  // cta_heading/cta_button_text aren't tier-locked (see
+  // enforce_content_permission), so this stays editable and savable even
+  // for a restricted-tier owner who can't touch the copy fields above.
+  // Only sends the fields actually visible for this page's type, so a
+  // hidden field's stale value can't accidentally overwrite real data.
+  contentDetailsSaveButton.addEventListener('click', async () => {
+    if (!selectedContentPage) return;
+    contentDetailsSaveStatus.textContent = 'Saving...';
+    contentDetailsSaveStatus.className = 'text-sm text-slate-600';
+
+    const payload: Record<string, unknown> = {};
+    if (PLAN_STEPS_PAGE_TYPES.includes(selectedContentPage.page_type)) {
+      payload.plan_steps = planStepsEditor.getItems().map((item) => ({ title: item.a, description: item.b }));
+    }
+    if (FAQS_PAGE_TYPES.includes(selectedContentPage.page_type)) {
+      payload.faqs = faqsEditor.getItems().map((item) => ({ question: item.a, answer: item.b }));
+    }
+    if (CONCERNS_PAGE_TYPES.includes(selectedContentPage.page_type)) {
+      payload.concerns = concernsEditor.getItems().map((item) => ({ title: item.a, description: item.b }));
+    }
+    if (CTA_PAGE_TYPES.includes(selectedContentPage.page_type)) {
+      payload.cta_heading = contentCtaHeading.value.trim() || null;
+      payload.cta_button_text = contentCtaButtonText.value.trim() || null;
+    }
+
+    const { error } = await supabase.from('pages').update(payload).eq('id', selectedContentPage.id);
+    if (error) {
+      contentDetailsSaveStatus.textContent = 'Could not save: ' + error.message;
+      contentDetailsSaveStatus.className = 'text-sm text-red-600';
+      return;
+    }
+    Object.assign(selectedContentPage, payload);
+    contentDetailsSaveStatus.textContent = 'Saving your site...';
+    const detailsResult = await triggerRebuild();
+    contentDetailsSaveStatus.textContent = detailsResult.ok
+      ? 'Saved! Your site will update shortly.'
+      : 'Saved, but the update trigger failed — it will go live on the next rebuild.';
+    contentDetailsSaveStatus.className = detailsResult.ok ? 'text-sm text-emerald-700' : 'text-sm text-amber-700';
+  });
+
   // ---------------------------------------------------------------------
   // Your suggestions — a client-facing status list of what they've
   // submitted (owner only; agency has the dedicated Suggestions review
@@ -621,6 +1039,11 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
     focus_keyword: 'Focus keyword',
     hero_subhead: 'Hero subheading',
     copy: 'Page copy',
+    storybrand_problem: 'The Problem',
+    storybrand_guide_empathy: 'We Understand',
+    storybrand_pitch: 'The Full Picture',
+    storybrand_success: "What's Possible",
+    storybrand_failure: "Why It's Worth Acting Now",
     images: 'Hero image',
   };
 

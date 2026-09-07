@@ -8,6 +8,40 @@ file never gets copied back there. Generic, reusable patterns and bugs
 live in `CLAUDE.md` instead (synced from the template) — see its "Where
 client-specific decisions get written down" note.
 
+## StoryBrand section split — content migration (2026-09-07)
+
+The template-wide "StoryBrand section-by-section copy editing" feature
+(see the template repo's `CLAUDE.md` for the full feature) needed every
+existing `Homepage`/`Service Page` row's `copy` split by hand into the 5
+new `storybrand_*` columns — this site has 9 such pages (Home + 8 real
+Service Pages: Website Design, SEO, Full-Service Marketing, Google Ads
+for Therapists, Solo/Group Practice Marketing, Psychologist Marketing,
+Christian Counseling Marketing), 0 `Counselor Profile` rows. Read each
+page's real copy and placed every paragraph by what it actually does
+(diagnostic "why generic X doesn't work" content → Problem; genuine
+customer/referral-source-understanding content plus any credential/
+case-study "I built X" proof → Guide's Empathy; concrete deliverables
+lists → Pitch) — no content invented, several pages ended up with
+`storybrand_success`/`storybrand_failure` genuinely blank since the
+original copy had no distinct paragraph for that beat. **`Website
+Design`'s "What happens next" paragraph had a clean, explicit
+"first...then...then..." sequence**, extracted into real `plan_steps`
+data instead of staying flowing prose — the only page on either site
+where migration restructured prose into a new structured field rather
+than just relocating existing paragraphs. `copy` was set to `null` on
+all 9 pages once split. Migrated via a disposable agency Supabase
+session (recreated once mid-migration after the first session's access
+token expired from a conversation gap), verified via direct REST reads
+afterward, session deleted after.
+
+**Real opportunity, not a defect**: `Full-Service Marketing`,
+`Google Ads for Therapists` (Success only), `Group Practice Marketing`
+(Success only), `Psychologist Marketing`, and `Christian Counseling
+Marketing` all ended up with one or both of Success/Failure blank —
+worth a future content pass adding an honest, specific line for
+whichever beat a given page is missing, rather than leaving the arc
+incomplete indefinitely.
+
 ## Open action items
 
 - **No custom domain yet.** The site is live on the raw

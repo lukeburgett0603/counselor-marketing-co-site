@@ -370,6 +370,144 @@ before touching the related code on a future client site.
   for it directly. Before adding a new field to a `pages` row, check
   whether `schema.ts` already reads it for that `page_type` — if so, either
   render it visibly or don't populate it, never populate-but-hide.
+- **A new `page_type` that's meant to stand in for an existing one needs
+  every place that switches on the old type updated, not just the
+  template file itself.** `Service Hub` was introduced as `ContentPillar
+  .astro`'s full feature set plus `PlanSteps`/a CTA button (see below),
+  but two other places still only recognized `'Content Pillar'`:
+  `BlogPost.astro`'s lookup of a spoke post's owning hub page (`allPages
+  .find((p) => p.page_type === 'Content Pillar' && ...)`), and `schema.ts`
+  `buildPageSchemas()`'s switch statement, which fell through to the
+  generic `WebPageSchema` default for any `Service Hub` page instead of
+  `buildArticleSchema()`. Found while starting Freedom Counseling
+  Services' real blog posts — every one of their spoke posts would have
+  linked back to nothing, and none of their 8 hub pages would have gotten
+  Article/BlogPosting schema, despite having real bylines and long-form
+  copy identical in shape to a Content Pillar's. `BaseLayout.astro`'s
+  `og:type` meta tag had the same `'Content Pillar'`-only check (fixed to
+  include `Service Hub` and, since it was an obvious analogous gap once
+  spotted, `Blog Post` too — a blog post's own OG type should also be
+  `article`, not the `website` default it was silently getting). When
+  adding a page type that's explicitly meant to share another type's
+  behavior, grep for every literal `page_type === 'Content Pillar'` (or
+  whichever type it extends) — a template file being updated doesn't mean
+  `schema.ts` or a sibling template's cross-reference logic was.
+- **Tailwind Typography's `.prose` class adds its own decorative smart
+  quotes around a blockquote's first/last paragraph by default**
+  (`content: open-quote`/`close-quote`) — a markdown pull-quote written
+  the natural way, with literal quotation marks around a person's actual
+  words (`> "..."`, the pattern every `Counselor Profile` bio on Freedom
+  Counseling Services uses), rendered as a doubled `""...""` on the live
+  page. Not caught on a first "looks done" pass — it only showed up while
+  visually verifying a freshly-published page, not from reading the
+  markdown source or the component code, since nothing in either one
+  looks wrong in isolation. Fixed globally in `global.css` (`.prose
+  blockquote p:first-of-type::before, .prose blockquote p:last-of-type
+  ::after { content: none; }`) rather than stripping the quote marks out
+  of existing/future `copy` content — a global CSS fix means nobody has
+  to remember a special "no literal quotes in a blockquote" rule when
+  writing copy later. Check any page with a markdown blockquote (`>` in
+  `copy`) after this fix lands on a given client site, to confirm the
+  double-quote artifact is actually gone, not just that the CSS rule was
+  added.
+- **`admin/blog.astro`'s hero-image upload/Unsplash picker has existed
+  since Lead Magnets (see that section below) — but neither
+  `BlogIndex.astro`'s cards nor `BlogPreview.astro`'s related-articles
+  cards ever rendered `page.images.hero`, `author_name`, `date_published`,
+  or a read-time estimate.** The exact same "populated but nothing
+  renders it" shape as the Reviewed-by byline bug and the FAQ-schema bug
+  above, just on blog cards instead of a page field — found the same way,
+  by actually looking at a real client's live blog index (Freedom
+  Counseling Services), not by reading the admin form or the component
+  code in isolation. All 10 of Freedom's real posts already had a real
+  hero image on file (sourced through the admin's existing Unsplash
+  picker) — this was purely a rendering gap, not a missing-content one.
+  Fixed by extracting a shared `BlogPostCard.astro` (image, category,
+  title, excerpt, author avatar via the new `getAuthorHeadshot()`
+  helper, publish date, `estimateReadingTime()`'s "X min read") used by
+  both `BlogIndex.astro` (its featured post *and* grid, via a `featured`
+  prop that switches to a horizontal image-left layout — was two
+  separately hand-rolled card markups before, now one component) and
+  `BlogPreview.astro`'s related-articles grid, so a future change to
+  what a blog card shows can't land in one place and drift from the
+  other two. When adding a new template that lists `Blog Post` pages as
+  cards, reuse `BlogPostCard.astro` — don't hand-roll a fourth copy.
+  - **A card's own image can't reuse `OptimizedImage.astro` at its
+    default settings when the whole card is already an `<a>`** — the
+    component's Unsplash-attribution badge is itself an `<a>`, and a
+    nested `<a>` inside another `<a>` is invalid HTML with unpredictable
+    click behavior across browsers. Caught this before it shipped, not
+    after, by tracing through what `OptimizedImage` actually renders
+    rather than assuming a component reuse would just work. Fixed with a
+    new `showCredit?: boolean` prop (default `true`) on
+    `OptimizedImage.astro` — `BlogPostCard.astro` passes `false` for
+    both its hero thumbnail and the author-headshot thumbnail, since
+    both sit inside the card's own outer link. The full, real attribution
+    still shows on the post's own article page (`BlogPost.astro`'s
+    `Hero`, which isn't nested inside another link) — this only avoids a
+    second, nested one on the card. Any future image placed inside a
+    card-as-link needs the same `showCredit={false}`, not a raw `<img>`
+    that skips `OptimizedImage`'s compression/dimensions entirely.
+  - **`getAuthorHeadshot(authorName, allPages)`** (`src/lib/pages.ts`,
+    next to `getCounselorOptions`) matches a Blog Post's `author_name`
+    against a live `Counselor Profile` page's `title` — same
+    derive-don't-invent discipline as everything else in this project.
+    Returns `null` (no avatar rendered, never a broken image) for any
+    client with no `Counselor Profile` page type at all, which is the
+    normal case for a non-counseling client like Counselor Marketing
+    Co.'s own site — the component degrades gracefully rather than
+    needing a per-client opt-out.
+- **`OptimizedImage.astro`'s own wrapper `<div>` had no height, so a
+  percentage-based `h-full`/`object-cover` on the `<img>` inside it had
+  nothing definite to resolve against.** CSS only honors `height: 100%`
+  when the element's containing block itself has a definite height — a
+  plain block `<div>` with no height set falls back to `auto` (sized to
+  its content), so `height: 100%` on the image inside it is not a
+  percentage of anything and the image renders at its own natural aspect
+  ratio instead of being cropped to fill the space. Found while building
+  the Hero image focal-point feature: `Hero.astro`'s full-bleed overlay
+  image looked visually identical whether `imageFocalY` was `'top'` or
+  `'bottom'`, and a live JS inspection of the rendered `<img>` showed its
+  `renderedHeight` almost exactly equal to its own `naturalHeight` —
+  the tell that it was never actually being cropped into the hero band
+  at all, so the focal-point class had nothing to do. This silently also
+  affected every other place `OptimizedImage` is asked to fill a sized
+  parent via `h-full w-full object-cover` — `BlogPostCard.astro`'s hero
+  thumbnails and its author-headshot circles both use this exact pattern
+  and were equally uncropped the whole time (`CounselorProfile.astro`'s
+  headshot was unaffected — it sizes the `<img>` with fixed `h-56 w-56`,
+  not a percentage, which doesn't need a container height to resolve).
+  Fixed once, at the component level (`<div class="relative h-full
+  w-full">`) rather than patching each call site — this only changes
+  behavior where a parent already provides a definite height (the exact
+  cases that were broken); everywhere else `height: 100%` still resolves
+  to `auto` exactly as before, so this can't regress a normal-flow image.
+  Any future component wrapping a sized, filled image needs to pass
+  `h-full`/`w-full` sizing all the way down to whichever element actually
+  has `object-fit`/`object-position` applied, not just to the innermost
+  one — a percentage-based size class has no effect unless every
+  ancestor up to the one with a real, definite size also carries it.
+- **A template-level fix landing here doesn't mean it reached every
+  existing client repo — that's still a manual sync, not automatic.**
+  Audited CMC's repo (2026-09-07) against the template and found it was
+  still running the pre-fix, buggy `OptimizedImage.astro` above (its
+  wrapper `<div>` had no `h-full w-full`) — the fix had landed here and
+  in Freedom Counseling's repo (created later, from an already-fixed
+  template snapshot) but the "sync this into every existing client"
+  step for CMC specifically never happened. Also found two small
+  `global.css` polish rules (the StoryBrand Plan's numbered-list accent
+  markers, a tighter/heavier Tailwind Typography heading-weight
+  override) missing from CMC's copy, and one of the two missing from
+  Freedom Counseling's — `global.css`'s `@theme` color tokens are
+  deliberately excluded from a wholesale template→client sync (see the
+  font-loading section below for why), but a *generic* rule added
+  alongside those tokens still needs manually porting into every client
+  copy when it lands, and that step is easy to forget precisely because
+  the file as a whole is supposed to diverge. All three gaps fixed by
+  hand-porting directly, confirmed via `diff` against the template
+  afterward, not just "looks right." Worth an occasional `diff -rq` of a
+  client repo's `src/` against the template's to catch this class of
+  drift rather than waiting to notice it live.
 
 ## Client dashboard (`/admin/leads` login)
 
@@ -539,6 +677,53 @@ here until "assign leads to staff" (backlogged, see below) is built.
   - Archive/delete logic (`setArchived`, `deleteLead`) is written once
     and called from both the row menu and the detail view — same reuse
     discipline as the status-select extraction above.
+
+## Contacts vs. leads (built 2026-09-06)
+
+A lead-magnet download (`leads.lead_magnet_id` set) and a real
+appointment-request submission (`lead_magnet_id` null) are kept as two
+distinct categories across the admin, not blended into one "leads"
+number — a download is a much earlier-funnel, lower-intent signal than
+someone actually asking to be matched with a counselor. No schema
+change needed: this is purely a UI/dashboard-logic split on data that
+already existed.
+
+- **Leads and analytics (`admin/leads.astro`) filters every stat/chart/
+  table down to real leads only** (`lead_magnet_id IS NULL`) — total,
+  this-month/last-month, the weekly chart, "Leads by page," and the
+  table all exclude downloads entirely, protecting this page's original
+  founding rule (see "Client dashboard" above): a clean, numbers-only
+  "proof of value" view a client's own customer can point to, never
+  inflated by a lower-intent signal.
+- **A dashed-border, muted "Guide downloads" widget on that same page**
+  surfaces the download numbers anyway, deliberately separate and
+  visually subordinate rather than a 4th stat in the main grid — this-
+  month/last-month raw counts (un-deduplicated, consistent with how the
+  main lead stats count every submission, not distinct people), plus an
+  all-time **"X downloads → Y became leads (Z%)"** conversion stat.
+  Hidden entirely (not just empty) on any site with zero lead-magnet
+  downloads. The conversion stat matches by normalized email
+  (`trim().toLowerCase()`) across `Set`s of contact/lead emails,
+  deduplicated on both sides — someone who downloaded two guides or
+  submitted the appointment form twice isn't double-counted.
+- **The CRM (`admin/crm.astro`) gets a Leads/Contacts segmented toggle**
+  above the filter bar — deliberately only two options, no "All," since
+  the whole point is to never see the two blended together by default.
+  Switching views repartitions the table, changes what the Source
+  filter's own dropdown options mean (Contact form/Manually added for
+  Leads; a live list of guide titles for Contacts), hides "+ Add lead"
+  in the Contacts view (a manually-added row is always a real lead, so
+  it would never even show up there), and changes the CSV export
+  filename (`leads-<date>.csv` / `contacts-<date>.csv`) and the
+  singular/plural noun in the row-count text. A new **Source** column
+  in the table shows which guide a contact downloaded, or "Contact
+  form"/"Manually added" for a real lead.
+- **Verification pattern**: typechecked (`astro check`) and built
+  (`npm run build`) clean in the template repo and both live client
+  repos (Freedom, CMC) before syncing — no seeded test data needed here
+  since this is pure client-side filtering/rendering logic over data
+  the existing `loadLeads()` fetch already returns, not a new query or
+  a new write path.
 
 ## Multi-provider lead routing ("Select a Counselor", built 2026-09-03)
 
@@ -804,10 +989,7 @@ The child's own distinct key (`content-business-info` /
 `content-page-copy`) is only used for current-route highlighting and the
 default-expanded check, never for role gating. If a future page ever
 needs the two children gated separately by role, `ROLE_NAV_ACCESS` and
-this shared-`navKey` trick both need revisiting together. **This repo's
-`admin/directory.astro` page keeps its own extra `'directory'` member on
-`AdminLayout.astro`'s `Props.current` union** — client-repo-only, not
-part of the template, restored after syncing this change in from there.
+this shared-`navKey` trick both need revisiting together.
 
 **Multi-user roles (`admin_users`, built 2026-08-31) — two roles only,
 `owner` and `staff`.** Owner has full access; staff is scoped to blog
@@ -1226,6 +1408,52 @@ body left blank is skipped (represented as no DB row, not an empty one).
   is what caught the missing-mailing-address gap above — a curl-only
   test of the auth logic wouldn't have surfaced it.
 
+## Nurture email crisis-resource line (built 2026-09-06)
+
+`business.show_crisis_resources` (boolean, `0032_crisis_resource_line.sql`)
+gates a line in `send-nurture-emails`' shared footer: *"If you are in a
+mental health crisis, call or text 988 to reach the Suicide & Crisis
+Lifeline, available 24/7."* — the same line `Contact.astro` already
+carries on every counseling-practice client site. Added after drafting a
+real 4-email nurture sequence for Freedom Counseling Services and
+checking it against the ACA 2014 Code of Ethics: nurture content that
+legitimately discusses emotional distress (e.g. "what if it feels worse
+before it feels better") had no safety-net resource in the footer the
+way the site's own pages do.
+
+- **Defaults to `true`, not an opt-in.** Every real client this template
+  has been used for is a counseling/mental-health practice, where this
+  is the responsible default — same reasoning as this file's other
+  business-level flags defaulting to whatever the common case actually
+  needs (see `collect_website_in_leads`, `collect_counselor_preference`),
+  just inverted: this one defaults *on* because leaving it off by
+  default is the riskier failure mode for this specific line.
+- **Counselor Marketing Co.'s own site is the one real exception, and
+  it must be set explicitly — it will NOT inherit correctly by
+  accident.** CMC's site is built from this same template, but CMC
+  itself is the marketing agency, not a counseling practice — its
+  nurture emails go to prospective therapist/counselor clients asking
+  about website and marketing services, not to individuals seeking
+  mental health care. A crisis-line disclaimer on those emails would be
+  nonsensical. `business.show_crisis_resources` was set to `false`
+  directly on CMC's live `business` row — this is the one client site
+  where the migration's default is deliberately wrong for that business
+  and must be overridden, not left as-is. Any future non-counseling
+  client built from this template needs the same explicit override.
+- **Like the other business-level flags in this section, there's no
+  admin UI toggle for this** — it's set once via the migration default
+  or a direct per-client override, matching how `collect_website_in_leads`
+  and `collect_counselor_preference` are already handled. Add an admin
+  toggle only if a real client actually needs to change it themselves.
+- **Not live-tested with a real send** — neither Freedom's nor CMC's
+  `lead_magnets` table has an active magnet yet (the nurture sequence
+  infrastructure exists but hasn't been turned on for either site), so
+  this was verified by reading the Edge Function's logic and the
+  rendered HTML string directly, not by triggering a real cron run.
+  Verify with a real send (per this section's own established pattern
+  above — disposable inbox, temporary lead, manual function invocation)
+  the first time a client's nurture sequence actually goes live.
+
 ## Hub-and-spoke content (Content Pillar + Blog Post + Blog Index)
 
 Built 2026-08-29, first shipped on Counselor Marketing Co. — see
@@ -1415,38 +1643,475 @@ services (Website Design, SEO) are.
   explicitly per client at Phase 1 (site-structure-planner-supabase),
   not by default.
 
-## Real webfont loading is data-driven, not a per-client file edit (`business.google_fonts_url`, synced from the template 2026-09-07)
+## Counselor Profile header card + self-service settings (built 2026-09-04, revised same day)
 
-`BaseLayout.astro` used to have no webfont loading at all in the shared
-template — CMC's own repo (and, independently, Freedom Counseling's) had
-each hand-written the same `<link rel="preconnect">`/font `<link>` pair
-straight into its own copy of `BaseLayout.astro` to load its real Inter
-font, on a file that's otherwise meant to be identical across every site.
+A card-style header for `CounselorProfile.astro` — headshot, name (stays
+the real H1), credentials, a one-line "who they help" summary, an
+availability-status pill, a telehealth pill, clickable specialty pills,
+and an in-card CTA button — plus a more prominent personal-quote block
+and a dynamic "Training & Modalities" section, replacing a plain
+photo/name block with everything else buried as flat markdown in `copy`.
+First built for Freedom Counseling Services (5 counselors); generic
+template feature since any future group-practice client has the same
+shape. Revised same day after seeing it live: wider card (`max-w-5xl`,
+spans the page's content width, not `max-w-3xl`), bigger headshot
+(`h-56 w-56`, was `h-32 w-32`), specialty pills moved *into* the card
+(were their own section below the quote), a telehealth pill, and an
+in-card CTA — client feedback, working from a reference screenshot of a
+comparable real counseling-site card.
+
+- **Three fields moved out of `copy` into structured columns, same
+  "pull it out, don't render it twice" discipline as `plan_steps`/
+  `faqs`/`concerns`.** The "who they help" one-liner reuses
+  `hero_subhead` (already existed, unused on this template — no
+  migration). The personal quote reuses `testimonial_quote`/
+  `testimonial_author` (same reasoning — already existed, unused here).
+  Specialties needed a genuinely new column, `pages.specialties jsonb`
+  (`{label, page_slug}[]`, `0028_counselor_card.sql`) — a flat
+  `"**Specialties:** A, B, C"` string can't carry a real link, so each
+  specialty needs an explicit slug.
+- **A specialty pill only links when a real, accurate matching page
+  exists — `page_slug` is null otherwise, and `SpecialtyPills.astro`
+  renders those as plain, non-clickable text.** Several of Freedom's
+  real specialty labels (Men's Counseling, Perfectionism, Identity,
+  Women's Counseling, OCD & Intrusive Thoughts) don't map to any of the
+  8 real Service Hub pages — never force an inaccurate link just to make
+  every pill clickable.
+- **Specialty pills live inside the header card now (v2), not their own
+  section below the quote.** `SpecialtyPills.astro` itself didn't need a
+  structural change — just a background swap (`bg-white` → `bg-brand-
+  neutral`, the page's own cream token) so the pills stay visually
+  distinct sitting on the card's white background instead of the page's
+  cream one, and a `sm:justify-start` so they left-align under the name
+  on desktop instead of always centering.
+- **The header card gained an in-card CTA button** (v2) — reuses
+  `page.cta_button_text` (falls back to `'Start Counseling'`, the same
+  fallback `ServiceHub.astro`'s Hero CTA uses), linking to `#lead-
+  generator`. That id already exists on `LeadGenerator.astro`'s outer
+  `<section>` whenever it's rendered non-`embedded` (the default, and
+  what every template including this one uses) — no new anchor/id
+  needed, just point at what was already there.
+- **`Modalities.astro` is a new, separate component from
+  `SpecialtyPills.astro`, not a reuse** — modalities are plain tags
+  ("EMDR", "ACT") that don't link anywhere, unlike a specialty's
+  `{label, page_slug}` shape, and they render as their own H2-headed
+  section ("Training & Modalities") below the personal quote rather than
+  inside the hero card, so a long modality list doesn't compete with the
+  card's already-busy layout (photo, name, credentials, telehealth pill,
+  bio, specialties, CTA). Muted tag styling (`bg-brand-tint/40`, no
+  border/hover) deliberately reads as informational, not interactive —
+  the opposite intent from `SpecialtyPills.astro`'s clickable ones.
+  Renders nothing when `modalities` is empty, same never-invent
+  discipline as everything else on this card.
+- **The quote gets its own component, `CounselorQuote.astro`, not
+  `Testimonial.astro`.** `Testimonial.astro`'s full-bleed tinted band is
+  reserved for genuine third-party client testimonials elsewhere on the
+  site (ServiceArea, etc.) — reusing its exact treatment for a
+  counselor's own words about themselves would blur "a client said this"
+  with "this is the counselor's own philosophy." `CounselorQuote.astro`
+  borrows the same visual language (large decorative accent quote mark,
+  centered Fraunces) but as a bordered card, italic, no tint band.
+  **Its decorative quote mark means the stored `testimonial_quote` text
+  should NOT include literal `"..."` characters** — unlike this site's
+  usual blockquote-in-copy convention (see the Group C pull-quote
+  entries in the real-bugs list above), this component supplies its own
+  visual quote mark, so a literal quote in the stored text would double
+  up.
+- **`availability_status` (`'accepting' | 'almost_full' | 'not_accepting'
+  | null`) is never defaulted or guessed** — null renders no pill at all
+  (`StatusPill.astro`), matching this project's standing rule against
+  inventing content. Colors are real semantic red/amber/green (Tailwind's
+  light 50-level shades, not brand tokens or full-saturation 500/600) —
+  a status indicator needs to read as universally red/yellow/green
+  regardless of a given client's palette, and "subtle, not full opacity"
+  was an explicit design ask. Same never-invent discipline extended to
+  the two v2 additions: `telehealth_available` (`0029_counselor_card_v2
+  .sql`) defaults `false` (no pill) rather than assuming every counselor
+  offers it, and `modalities` (`jsonb`, plain string tags — "EMDR",
+  "ACT", not a `{label, page_slug}` shape like specialties, since these
+  don't link anywhere) defaults `'[]'` — `Modalities.astro` renders
+  nothing, not an empty section, until real tags exist. All three are
+  self-service fields a counselor sets themselves, not agency-populated
+  defaults.
+- **`StatusPill.astro` is an overlay badge on the headshot, not an inline
+  label next to credentials** (v2 revision) — `CounselorProfile.astro`
+  wraps the image in a `relative` container and absolutely-positions the
+  pill at the bottom-left corner, `shadow-sm` so it stays legible over a
+  photo of any color/brightness. Gained a small solid color dot
+  (`h-1.5 w-1.5 rounded-full`) ahead of the label text, matching the
+  reference screenshot's at-a-glance scannability — the component itself
+  stays position-agnostic (just renders the pill), so a future template
+  that wants it inline instead isn't fighting baked-in `absolute`
+  classes.
+- **Self-service editing needed a real, narrow extension to the RLS/role
+  system, not a new admin role.** A counselor should be able to update
+  their own status pill without going through the practice owner, but a
+  4th role (`'counselor'`, touching only this one field) would have meant
+  threading a new role value through every existing `is_owner()`/
+  `is_agency()`-style check for a single-field permission. Instead:
+  `admin_users.linked_counselor_page_id` (nullable FK to `pages`) links
+  an existing `'staff'` login to one Counselor Profile page. A new,
+  narrow UPDATE policy (`"linked counselor can update own page"`) grants
+  that login row-level access to only their own linked page — and
+  `enforce_content_permission()` (the same trigger from the content-tier
+  system) gained an early, separate branch: a linked-counselor caller who
+  isn't owner/agency may change `availability_status`,
+  `telehealth_available`, and `modalities` (the v2 additions folded into
+  the same carve-out — `0029_counselor_card_v2.sql`) and *nothing else*
+  on that row, checked via `to_jsonb(new) - 'availability_status' -
+  'telehealth_available' - 'modalities' is distinct from the same diff on
+  `old`` rather than hand-enumerating every other column (robust against
+  future columns for free — adding a 4th self-service field later is
+  just one more subtracted key on both sides). This is stricter than what
+  a full-tier owner can touch — a linked counselor can't edit their own
+  `hero_subhead`/`copy` even though an owner on the full plan could.
+  - A linked-counselor login incidentally keeps the blog-authoring access
+    `'staff'` already has — deliberate, not an oversight: building an
+    even narrower "status-only, no blog" role for a need that was purely
+    hypothetical would repeat the mistake this file already warns
+    against elsewhere (see Lead Magnets' "No new admin role" note).
+- **`admin/counselor-settings.astro`** (renamed from `admin/
+  availability.astro` the same day, before any real counselor had been
+  invited — the page grew a telehealth checkbox and a comma-separated
+  modalities text input alongside the original 3-way status radio, so
+  the old name undersold what it does) serves both audiences on one
+  screen: owner/agency get a page picker across every Counselor Profile
+  page (same pattern as Testimonials' page picker on `admin/content
+  .astro`); a linked-counselor staff login sees only their own page, no
+  picker — and a staff login with no link sees a plain "ask the owner to
+  link one" notice rather than a broken empty form. RLS is still the
+  real boundary regardless of what the UI shows (same discipline as
+  every other role-gated screen in this app). Modalities is a plain
+  comma-separated text field ("EMDR, ACT, CBT"), not a repeatable-row
+  tag-input widget — proportionate for a handful of short tags, same
+  "don't build UI complexity a form field doesn't need" call as
+  everywhere else in this admin.
+- **A linked counselor is redirected straight to Counselor settings the
+  moment they log in** — but only right then, not on every later page
+  load. `adminAuth.ts`'s `tryShowAuthed()` takes an `isFreshLogin`
+  parameter, `true` only from the login-form and set-password-form
+  submit handlers (the two places an actual "login" happens), `false`
+  from the plain existing-session check every `/admin/*` page runs on
+  load. A blanket redirect-on-every-load would have also bounced a
+  linked counselor off `/admin/blog` on a simple page refresh, fighting
+  the fact `'staff'` keeps its normal blog access — this only fires at
+  the moment of authenticating, exactly matching "upon login, bring them
+  to their settings" without trapping them there afterward.
+- **`admin/team.astro`'s invite form gained an optional "Link to
+  counselor page" picker**, shown only when inviting role `staff`,
+  offering only Counselor Profile pages not already linked to another
+  staff login (one counselor, one login). The value is threaded through
+  `publish-site`'s `invite` action (a new `linkedCounselorPageId` field
+  on the request, inserted as `admin_users.linked_counselor_page_id`)
+  and preserved across a `resend` (the reinsert now also copies the
+  original row's link, not just role/email).
+- **Nav visibility for "Counselor settings" is role-based (owner/agency,
+  always) *plus* conditional for staff** — `adminAuth.ts`'s
+  `applyNavAccess()` takes the full `AdminUser`, not just its role, so it
+  can add `'counselor-settings'` for a staff login whose
+  `linked_counselor_page_id` is set, on top of the static per-role list.
+  Any future nav item that depends on more than just role needs the same
+  shape, not a second hard-coded role map.
+
+## Hero overlay style (built 2026-09-04)
+
+A second `Hero.astro` layout — full-bleed background image with a
+tintable color/opacity overlay for legibility, H1/subhead on top of it,
+and (when the page has one) its `aside` form rendered as a frosted-glass
+card beside the text instead of the default side-by-side image/form
+split. First requested for Freedom Counseling Services' homepage, from a
+reference screenshot of a comparable real site; built as a real per-page
+opt-in rather than hardcoded to Homepage, since nothing about the layout
+is homepage-specific.
+
+- **`pages.hero_style` (`'default' | 'overlay'`, `0030_hero_overlay_style
+  .sql`), defaulting to `'default'`** — every existing page on every
+  existing client site keeps today's exact layout unless a page
+  explicitly opts in. **Never available on `'Counselor Profile'` pages**
+  — that page type doesn't use `Hero.astro` at all (it has its own
+  header card; see the Counselor Profile header card section above), so
+  `admin/content.astro` hides the whole "Hero layout" control block for
+  that `page_type` rather than showing a setting with no effect.
+- **`hero_overlay_color`/`hero_overlay_opacity` get real DB defaults** (a
+  dark neutral tint at 50%), not left null — this is a technical
+  rendering default, not invented business content, so a page is fine to
+  inherit it without an admin ever having touched it; a `<input
+  type="color">` + `<input type="range">` pair in `admin/content.astro`
+  let an admin tune both live once "Full-width image with color overlay"
+  is selected.
+- **`Hero.astro`'s overlay mode only actually renders once a real image
+  is on file** — `isOverlay = style === 'overlay' && !!imageUrl`. A page
+  that picked the overlay style but hasn't set a hero image yet falls
+  back to the plain default layout rather than showing a broken empty
+  tinted band; `Homepage.astro` computes the identical condition once
+  itself (`isOverlayHero`) so the aside form's field set/styling can't
+  drift out of sync with what `Hero.astro` actually decides to render.
+- **The image and the `aside` slot were mutually exclusive before this
+  (`showAside = !imageUrl && Astro.slots.has('aside')`) — overlay mode
+  needed both at once**, so `Hero.astro` now branches into two full
+  layouts (`isOverlay ? (...) : (...)`) rather than trying to thread one
+  shared markup block through both cases; the default layout's markup is
+  untouched, copy-pasted as-is into its own branch, specifically so
+  nothing about existing pages' rendering could regress from
+  restructuring the conditionals around it.
+- **No separate CTA button when the form is already visible, in either
+  layout** — overlay mode reuses the exact same `showAside`-based
+  suppression the default layout already had (`ctaText && !showAside`),
+  not a new rule. The form itself is the CTA, per the original ask.
+- **`LeadGenerator.astro`'s `embedded` prop used to conflate two
+  different things: card-vs-section wrapper styling, and which fields
+  show (phone/message dropped).** The overlay style's reference
+  screenshot wanted a card (not a full-width section) that *still* shows
+  every field — a combination the old single `embedded` boolean couldn't
+  express. Split into `embedded` (wrapper/tag only) and a new `compact`
+  prop (field set only, `compact = embedded` by default so every
+  existing call site keeps its exact current behavior without being
+  touched) plus a new `frosted` prop (translucent `bg-white/70
+  backdrop-blur-md` card instead of solid white, only meaningful when
+  `embedded` is true). `Homepage.astro` passes `compact={!isOverlayHero}
+  frosted={isOverlayHero}` — default style unchanged, overlay style gets
+  the full-fields frosted card.
+- **Two full-fields forms on one homepage (hero + bottom-of-page) is not
+  an SEO or duplicate-content issue** — raised directly by the client
+  before building this. Google's duplicate-content signals concern
+  substantive *text* content duplicated across separate URLs, not a UI
+  widget repeated within a single page; this is a normal, common
+  conversion pattern (top for quick converters, bottom for scrollers).
+  The one real technical trap — two forms sharing an `id` — was already
+  avoided years earlier in this project (`LeadGenerator.astro` uses
+  `.lead-form`/`querySelectorAll`, not `getElementById`, specifically
+  because it can render more than once per page; see the real-bugs list
+  above).
+- **`admin/content.astro`'s hero image field only ever supported direct
+  upload — no Unsplash search**, unlike `admin/blog.astro` and
+  `admin/lead-magnets.astro`. Fixed as part of this pass (needed either
+  way, since the overlay style leans on the hero image existing and
+  looking good) by wiring in the same shared `UnsplashSearchModal.astro`
+  + `initUnsplashSearchModal()` pattern — the third reuse of that pair,
+  exactly what its own code comment anticipated. **Its trigger button's
+  id is hardcoded (`search-unsplash-button`) inside `initUnsplashSearchModal`
+  itself, not parameterized** — reusing it means the button must use
+  that exact id, not a page-specific one; got this wrong on the first
+  pass (used a prefixed id) and the modal silently never opened until
+  fixed.
+- **A quieter, second real bug on the same field, same shape as this
+  file's other "populated but not rendered" entries**: `admin/content
+  .astro`'s image save payload only ever wrote `{ url, alt }` — never
+  `creditName`/`creditUrl` — even though `ImageSlot` has always supported
+  them and `OptimizedImage.astro` has always rendered the attribution
+  link when present. Any hero image ever selected through this admin
+  screen (as opposed to seeded directly via SQL/REST) would have silently
+  lost its Unsplash attribution on save. Fixed alongside adding the
+  search picker, tracking `uploadedImageCreditName`/`uploadedImageCreditUrl`
+  the same way `admin/blog.astro` already does and including them in the
+  saved `images.hero` object whenever both are present.
+- **`hero_style`/`hero_overlay_color`/`hero_overlay_opacity` had to be
+  added to `enforce_content_permission()`'s existing hero_subhead/copy/
+  images tier check, not left ungated** — the admin UI bundles them
+  under the same "Hero image" field group (a hero layout choice is
+  closely tied to the hero image itself) for a restricted-tier owner,
+  but that grouping is only real if the *trigger* enforces it too; the
+  UI hiding a control is not enforcement on its own (see this file's
+  standing rule on that, established back in Phase 4's original
+  content-permission work). Caught and fixed before deploying, not after
+  — before, this would have been silent UI-only theater, exactly the gap
+  this trigger exists to close everywhere else.
+
+## Hero image focal point (built 2026-09-05)
+
+`pages.hero_image_focal_y` (`'top' | 'center' | 'bottom'`, default
+`'center'`, `0031_hero_image_focal_point.sql`) biases `Hero.astro`'s
+`object-fit: cover` crop toward the top or bottom of the source photo,
+mapped straight to Tailwind's `object-top`/`object-center`/`object-bottom`
+utilities. Applies in both Hero layouts (default and overlay) — it's a
+property of the image, not the layout choice.
+
+- **The real bug this fixes isn't "the crop isn't centered" — it already
+  was.** A plain centered crop centers on the *frame*, not the *subject*.
+  Found on Freedom Counseling Services' real homepage hero photo: a
+  father carrying his son on his shoulders, composed with the subjects in
+  the lower two-thirds of the frame and a large empty sky filling the top
+  third (a normal, deliberate photographic composition choice — headroom,
+  rule-of-thirds). A frame-centered crop under `object-fit: cover`
+  removes equal amounts top and bottom *of the frame*, which on this
+  photo means clipping into the subjects while barely touching the empty
+  sky — exactly the "subject too far down, bottom clipped" symptom the
+  client reported. No CSS default fixes this, because the browser has no
+  way to know where the subject actually is; only a per-image adjustment
+  can.
+- **A per-page setting, not a one-off fix for this one photo** — any
+  future client's photo with an off-center subject hits the identical
+  problem, and demanding "only pick photos with the subject exactly
+  centered" is an unreasonable constraint on real photography. Same
+  reasoning as the overlay color/opacity controls: build the reusable
+  capability once a real instance of the problem shows up, rather than
+  patching the one client.
+- **Added to `enforce_content_permission()`'s tier-gated group from the
+  start**, not as a follow-up fix — `hero_overlay_color`/
+  `hero_overlay_opacity`/`hero_style` needed a follow-up commit for this
+  exact thing the day before (see "Hero overlay style" above); the fix
+  there was to remember it this time, not repeat the gap.
+- **`admin/content.astro`'s "Image focal point" selector sits next to
+  "Hero layout"**, inside the same `#content-hero-style-wrap` block —
+  same visibility rule (hidden entirely for `Counselor Profile` pages,
+  which don't use `Hero.astro`) and same tier-gating, since it's edited
+  in the same place as the image itself. Plain-language option labels
+  ("Keep the top of the photo visible" / "Keep the bottom of the photo
+  visible"), not CSS terminology — a non-technical client needs to
+  reason about "which part of my photo matters," not `object-position`
+  keyword semantics, which are easy to get backwards even for someone
+  who does know CSS (`object-position: bottom` keeps the *bottom* of the
+  image visible by cropping the *top* — the option label says the effect
+  directly rather than the mechanism).
+
+## Real webfont loading is data-driven, not a per-client file edit (`business.google_fonts_url`, built 2026-09-07)
+
+`BaseLayout.astro` used to have no webfont loading at all — the two real
+clients built on this template so far (Counselor Marketing Co., Freedom
+Counseling Services) each independently hand-wrote the same `<link
+rel="preconnect">`/font `<link>` pair straight into their own copy of
+`BaseLayout.astro` to load their real brand font(s), since the template's
+placeholder version relies on the OS system-font fallback. Same few lines,
+reinvented per client, on a file that's otherwise meant to be identical
+across every site (see the real-bugs list's `OptimizedImage.astro` entry
+for what happens when a real template fix can't reach a client repo whose
+copy of a file has silently diverged for an unrelated reason — this was
+the same shape of problem, just self-inflicted instead of a missed sync).
 
 - **`business.google_fonts_url`** (nullable `text`,
-  `0033_google_fonts_url.sql`) now holds the exact Google Fonts CSS2 URL
-  — set on CMC's row to
-  `https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap`,
-  the same URL this repo's `BaseLayout.astro` used to hardcode.
-  `BaseLayout.astro` itself was replaced with the template's version
-  (verified byte-identical via `diff`) — it now renders the font tags
-  itself whenever this column is set, so this file needs zero per-client
-  changes and can't drift on this axis again.
-- **A same-pass audit also found this repo was still running a pre-fix,
-  buggy `OptimizedImage.astro`** (its wrapper `<div>` had no `h-full
-  w-full`, so percentage-based image cropping silently never worked —
-  see the template CLAUDE.md's real-bugs list for the original bug) —
-  the template fix had landed months ago but never got manually synced
-  into this specific repo. Fixed by copying the template's current
-  `OptimizedImage.astro` in directly (confirmed identical via `diff`).
-  Two CSS rules I initially also suspected were missing from this repo's
-  `global.css` (accent numbered-list markers, heavier heading weight)
-  turned out to already be present and correct on closer inspection —
-  only the explanatory comments above them differed, which is harmless.
-  Worth an occasional `diff -rq` of this repo's `src/` against the
-  template's to catch this class of drift before it's noticed live,
-  rather than assuming every apparent gap is real without checking the
-  actual rendered rule/file, not just a comment or a doc mention.
+  `0033_google_fonts_url.sql`) holds the exact Google Fonts CSS2 URL
+  (`https://fonts.googleapis.com/css2?family=...&display=swap`) for a
+  client's real brand font(s) — set once during the design-direction phase,
+  alongside `brand_colors`/`brand_fonts`, the same way as any other content
+  write (service_role key, see `supabase-technical-setup.md`). `null` means
+  no webfont — falls back to the OS system font, same as any other unset
+  optional field.
+- **Storing the full URL rather than deriving one from `brand_fonts`'s font
+  names** sidesteps encoding which weights/optical sizes each client's
+  fonts actually need, which is exactly what varies client to client (CMC:
+  `Inter:wght@400;500;600;700;800;900` alone; Freedom Counseling:
+  `Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600` paired with the
+  same Inter weights) — a derived-from-name approach would need its own
+  per-font weight table for no real benefit over just storing the URL a
+  human already has after picking the fonts on Google Fonts.
+- **`BaseLayout.astro` now needs zero per-client changes for fonts** —
+  it renders the preconnect + stylesheet tags itself whenever
+  `business.google_fonts_url` is set. This closes off font loading as a
+  source of future per-client `BaseLayout.astro` drift; `global.css`'s
+  `@theme` color tokens remain the one genuine, intentional per-client
+  divergence in this file's file-level exclusion from a future template
+  `rsync`.
+- **CMC and Freedom Counseling's own hand-written font `<link>` tags were
+  removed from their `BaseLayout.astro` copies and replaced by setting
+  `google_fonts_url` on their `business` row instead** — both sites now
+  match the template's `BaseLayout.astro` byte-for-byte, verified via
+  `diff`, not just "looks the same" from the rendered page.
+
+## StoryBrand section-by-section copy editing (built 2026-09-07)
+
+`admin/content/page-copy.astro`'s single flowing "Page copy" box is now
+split into 5 separate StoryBrand fields for the 3 page types short/compact
+enough that the whole page is basically one pass through the StoryBrand
+arc — `Homepage`, `Service Page`, `Counselor Profile`
+(`STORYBRAND_SPLIT_PAGE_TYPES`, `src/lib/pages.ts`) — so a client can
+change just the section that needs changing instead of hunting through
+one long text field. Each field ships with real instructional copy (in
+`RichTextEditor`'s `helpText` prop) explaining what StoryBrand part it
+maps to and what to actually write there, sourced from
+`storybrand-framework.md`'s own elicitation questions but rewritten for
+someone filling out a form, not a copywriter.
+
+- **`Content Pillar` and `Service Hub` were deliberately excluded**, even
+  though `page-types.md` calls both "Full tier" alongside the 3 split
+  types. Both are long-form (1,800+ words), TOC-organized informational
+  content — forcing a rigid 5-beat sales narrative onto that shape risks
+  reading as promotional rather than helpful, a real SEO/E-E-A-T risk for
+  pages meant to rank on informational intent, not just a style
+  preference. Confirmed this wasn't a guess: queried both live client
+  sites directly — Freedom Counseling (a real counseling practice) has
+  **zero** `Service Page` or `Content Pillar` rows at all; every one of
+  its 8 real service pages is `Service Hub`. CMC (a non-counseling
+  business) has the opposite pattern — real `Service Page` and `Content
+  Pillar` rows, zero `Service Hub`. `Service Hub` **is** `Content
+  Pillar`'s full feature set plus a few bolted-on conversion pieces (see
+  its own section above), so the same reasoning against splitting
+  `Content Pillar` applies to it directly.
+- **The 5 fields map onto the 4 wireframe sections in
+  `storybrand-framework.md` that didn't already have a dedicated
+  column** — Plan already has `plan_steps`, Guide's Authority already has
+  `testimonial_quote`/`concerns`, the Direct CTA already has
+  `cta_heading`/`cta_button_text`:
+  - `storybrand_problem` ("The Problem") → wireframe section 3
+    (Stakes/Problem)
+  - `storybrand_guide_empathy` ("We Understand") → wireframe section 4's
+    Empathy **and** Authority halves combined — the original wireframe
+    bundles Empathy + Authority into one "Guide" section, so credential/
+    case-study/"I built X" proof belongs here too, not split out
+  - `storybrand_pitch` ("The Full Picture") → wireframe section 6
+    (Explanatory paragraph)
+  - `storybrand_success` ("What's Possible") → wireframe section 7
+    (Success vision)
+  - `storybrand_failure` ("Why It's Worth Acting Now") → wireframe
+    section 8 (Failure/stakes reminder)
+- **Joins the same tier-gated group as `hero_subhead`/`copy`/`images`** in
+  `enforce_content_permission()` (`0034_storybrand_sections.sql`) — these
+  5 columns carry the same brand-voice/SEO-sensitive narrative content
+  `copy` used to carry for these page types, so they need the same
+  server-side enforcement, added from the start rather than as a
+  follow-up fix (see the hero-overlay/focal-point sections above for what
+  happens when this step gets missed).
+- **Homepage/ServicePage/CounselorProfile.astro render each field as its
+  own conditional `<Section>`**, only when that field has content — no
+  default heading is forced (matching how `copy` never had one either),
+  so a copywriter's own `##`/`###` headings inside the field carry
+  through exactly as before. `plan_steps`/`FAQ`/`Testimonial`/
+  `FeatureGrid`/`CTA` stay in their existing template positions relative
+  to the 5 new sections (Problem → Guide Empathy → existing Authority
+  elements → Plan → Pitch → Success → Failure → FAQ → CTA).
+- **"Additional page elements" — plan_steps/faqs/concerns/cta_heading/
+  cta_button_text are now editable in the admin for the first time**,
+  built in the same pass since they were a real, glaring gap found while
+  building this: all 5 columns already existed and were already rendered
+  by the public templates, but **no admin screen had ever exposed any of
+  them** — only the agency could set them, directly via Supabase. Not
+  tier-gated (same "safe on every tier" category as Testimonials — none
+  of these 5 columns are in `enforce_content_permission()`'s check), so
+  this gets its own always-on save button, shown per-page-type via
+  `PLAN_STEPS_PAGE_TYPES`/`FAQS_PAGE_TYPES`/`CONCERNS_PAGE_TYPES`/
+  `CTA_PAGE_TYPES` in `page-copy.astro` — **sourced by grepping every
+  `src/templates/*.astro` file for these exact column names, not derived
+  from `page-templates.md`**, since that doc had already drifted from
+  the actual code on at least one of these (it doesn't mention `Content
+  Pillar` rendering `FAQ`, even though the real-bugs list above documents
+  that fix landing). A generic `createItemListEditor()` factory (add/
+  remove/collect rows) is instantiated 3 times for `plan_steps`/`faqs`/
+  `concerns` rather than hand-rolling near-identical markup/JS 3 times.
+- **Existing live content on both Freedom and CMC was migrated by hand,
+  not auto-split** — read every existing `Homepage`/`Service Page`/
+  `Counselor Profile` row's `copy` (6 pages on Freedom, 9 on CMC) and
+  manually re-distributed each real paragraph into whichever of the 5
+  fields it actually matched, using a consistent rule (diagnostic "why
+  generic X doesn't work" content → Problem; genuine customer-psychology/
+  understanding content and any credential/case-study proof → Guide
+  Empathy; concrete deliverables/approach explanation → Pitch), rather
+  than attempting any automatic paragraph-splitting heuristic. **Left a
+  field genuinely blank rather than inventing content to fill it** — several
+  pages on both sites have no distinct Success-vision or Failure-stakes
+  paragraph in their original copy, and those fields were left null
+  rather than fabricated. Freedom's `Website Design` page's "What happens
+  next" paragraph had an explicit "first... then... then..." sequence
+  clean enough to extract into real `plan_steps` data instead of leaving
+  it as flowing prose — this is the only page where prose was restructured
+  into a new structured field during migration; every other page's
+  `plan_steps`/`faqs`/`concerns` were left exactly as they already were
+  (mostly empty, since nothing had ever populated them before this pass).
+  `copy` was set to `null` on every migrated page once split, rather than
+  left as stale, unread duplicate content.
+- **`webpage-copywriter`'s `storybrand-framework.md`/`page-types.md` and
+  `site-structure-planner-supabase`'s Content Sync step both need
+  updating so future pages get authored directly into these fields** —
+  flagged as the next piece of this work, not yet done as of this
+  section being written.
 
 ## Generating a logo from a CSS wordmark
 
@@ -1483,8 +2148,26 @@ the procedure itself. For the actual how-to:
 - `webpage-copywriter` — StoryBrand copywriting, word-count ranges,
   keyword usage rules (shared with the Wix pipeline — storage-agnostic).
 - `frontend-site-builder-supabase` — technical build: Supabase setup,
-  schema markup, page templates, image handling, deploy.
+  schema markup (`references/schema-markup.md`), page templates
+  (`references/page-templates.md`), image handling
+  (`references/supabase-technical-setup.md`), deploy.
 
 README.md covers one-time mechanical setup for a new client (repo
 creation, Supabase project, secrets, Pages config) — this file doesn't
 repeat that.
+
+**Standing habit, not a one-time cleanup**: whenever a template-level
+change lands here (a new page type, a new/changed component, a new
+`Hero`/`LeadGenerator` prop, a schema mapping change), update the
+relevant `frontend-site-builder-supabase` reference file(s) in the same
+pass, not just this file. CLAUDE.md answers "why" and "don't regress
+this" for changes already made on a specific client; `page-templates.md`
+and `schema-markup.md` are the actual build spec a *future* client site
+works from — they'd been allowed to drift for several real features
+(`Service Hub`, `Who We Serve`, `Service Areas Overview`, `Counselors
+Overview`, and the entire Counselor Profile header card had gone
+undocumented there before this note was added) before this was caught
+and fixed in one pass. Treat "did I update CLAUDE.md" and "did I update
+the relevant reference file(s)" as the same checklist item, not two
+separate, easily-forgotten ones — a change that only lands in CLAUDE.md
+is only half-documented.

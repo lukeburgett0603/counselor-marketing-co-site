@@ -70,14 +70,36 @@ const isOverlayHero = page.hero_style === 'overlay' && !!page.images.hero;
       />
     </Fragment>
   </Hero>
-  <Section>
-    <Fragment set:html={renderCopy(page.copy)} />
-  </Section>
+  {page.storybrand_problem && (
+    <Section>
+      <Fragment set:html={renderCopy(page.storybrand_problem)} />
+    </Section>
+  )}
+  {page.storybrand_guide_empathy && (
+    <Section>
+      <Fragment set:html={renderCopy(page.storybrand_guide_empathy)} />
+    </Section>
+  )}
   <FeatureGrid items={page.concerns} heading="Why families choose us" />
   {page.testimonial_quote && page.testimonial_author && (
     <Testimonial quote={page.testimonial_quote} author={page.testimonial_author} role={page.testimonial_role} />
   )}
   <PlanSteps steps={page.plan_steps} />
+  {page.storybrand_pitch && (
+    <Section>
+      <Fragment set:html={renderCopy(page.storybrand_pitch)} />
+    </Section>
+  )}
+  {page.storybrand_success && (
+    <Section>
+      <Fragment set:html={renderCopy(page.storybrand_success)} />
+    </Section>
+  )}
+  {page.storybrand_failure && (
+    <Section>
+      <Fragment set:html={renderCopy(page.storybrand_failure)} />
+    </Section>
+  )}
   <CTA heading={page.cta_heading ?? `Ready to work with ${business.display_name}?`} buttonText={page.cta_button_text ?? undefined} />
   <LeadMagnet pageId={page.id} />
   <LeadGenerator

@@ -33,10 +33,32 @@ const counselors = getCounselorOptions(allPages);
     imageFocalY={page.hero_image_focal_y}
     ctaText={page.cta_button_text ?? 'Get a Quote'}
   />
-  <Section>
-    <Fragment set:html={renderCopy(page.copy)} />
-  </Section>
+  {page.storybrand_problem && (
+    <Section>
+      <Fragment set:html={renderCopy(page.storybrand_problem)} />
+    </Section>
+  )}
+  {page.storybrand_guide_empathy && (
+    <Section>
+      <Fragment set:html={renderCopy(page.storybrand_guide_empathy)} />
+    </Section>
+  )}
   <PlanSteps steps={page.plan_steps} />
+  {page.storybrand_pitch && (
+    <Section>
+      <Fragment set:html={renderCopy(page.storybrand_pitch)} />
+    </Section>
+  )}
+  {page.storybrand_success && (
+    <Section>
+      <Fragment set:html={renderCopy(page.storybrand_success)} />
+    </Section>
+  )}
+  {page.storybrand_failure && (
+    <Section>
+      <Fragment set:html={renderCopy(page.storybrand_failure)} />
+    </Section>
+  )}
   <FAQ faqs={page.faqs} />
   <CTA heading={page.cta_heading ?? `Get started with ${page.title}`} buttonText={page.cta_button_text ?? undefined} />
   <LeadMagnet pageId={page.id} />

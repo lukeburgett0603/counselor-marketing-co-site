@@ -81,10 +81,32 @@ const counselors = getCounselorOptions(allPages);
   </section>
   <CounselorQuote quote={page.testimonial_quote} author={page.testimonial_author} />
   <Modalities modalities={page.modalities} />
-  <Section>
-    <Fragment set:html={renderCopy(page.copy)} />
-  </Section>
+  {page.storybrand_problem && (
+    <Section>
+      <Fragment set:html={renderCopy(page.storybrand_problem)} />
+    </Section>
+  )}
+  {page.storybrand_guide_empathy && (
+    <Section>
+      <Fragment set:html={renderCopy(page.storybrand_guide_empathy)} />
+    </Section>
+  )}
   <PlanSteps steps={page.plan_steps} heading="What to expect in your first session" />
+  {page.storybrand_pitch && (
+    <Section>
+      <Fragment set:html={renderCopy(page.storybrand_pitch)} />
+    </Section>
+  )}
+  {page.storybrand_success && (
+    <Section>
+      <Fragment set:html={renderCopy(page.storybrand_success)} />
+    </Section>
+  )}
+  {page.storybrand_failure && (
+    <Section>
+      <Fragment set:html={renderCopy(page.storybrand_failure)} />
+    </Section>
+  )}
   <FAQ faqs={page.faqs} />
   <CTA heading={page.cta_heading ?? `Book with ${page.title}`} buttonText={page.cta_button_text ?? undefined} />
   <LeadMagnet pageId={page.id} />

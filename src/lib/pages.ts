@@ -17,6 +17,18 @@ export type PageType =
   | 'Service Hub'
   | 'Counselors Overview';
 
+// The 3 page types short/compact enough that the whole page is basically
+// one pass through the StoryBrand arc, so they get the 5 storybrand_*
+// columns as separate admin fields instead of one flowing `copy` box.
+// Content Pillar and Service Hub are deliberately excluded — both are
+// long-form, TOC-organized informational content where forcing a rigid
+// 5-beat sales narrative risks reading as promotional rather than
+// helpful. Shared between the admin UI and any template logic that needs
+// to know this list, so it can't drift between the two. See
+// 0034_storybrand_sections.sql and CLAUDE.md's "StoryBrand
+// section-by-section copy editing" section.
+export const STORYBRAND_SPLIT_PAGE_TYPES: PageType[] = ['Homepage', 'Service Page', 'Counselor Profile'];
+
 export interface ImageSlot {
   url: string;
   alt: string;
@@ -43,6 +55,20 @@ export interface Page {
   meta_description: string | null;
   focus_keyword: string | null;
   copy: string | null;
+  // The 5 StoryBrand narrative beats that don't already have their own
+  // column (Plan has plan_steps, Guide's Authority has testimonial_quote/
+  // concerns, the Direct CTA has cta_heading/cta_button_text) — only
+  // meaningful on 'Homepage'/'Service Page'/'Counselor Profile', the 3
+  // page types short/compact enough that the whole page is basically one
+  // pass through the story arc. Null on every other page type, which
+  // keeps rendering `copy` as one flowing field exactly as before — see
+  // 0034_storybrand_sections.sql and CLAUDE.md's "StoryBrand
+  // section-by-section copy editing" section.
+  storybrand_problem: string | null;
+  storybrand_guide_empathy: string | null;
+  storybrand_pitch: string | null;
+  storybrand_success: string | null;
+  storybrand_failure: string | null;
   credentials: string | null;
   author_name: string | null;
   date_published: string | null;
