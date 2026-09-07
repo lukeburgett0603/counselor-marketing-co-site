@@ -1,0 +1,254 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Business info & testimonials | Admin" current="content-business-info">
+  <div class="max-w-2xl space-y-12">
+    <section>
+      <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold text-brand-ink">Business info</h2>
+      <p class="mb-4 text-sm text-slate-600">
+        Your contact details and address, shown across your site — safe to edit anytime.
+      </p>
+      <form id="business-form" class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="mb-1 block text-sm font-semibold text-slate-700">Phone</label>
+            <input id="biz-telephone" type="tel" class="w-full rounded-md border border-slate-300 px-4 py-2" />
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-semibold text-slate-700">Email</label>
+            <input id="biz-email" type="email" class="w-full rounded-md border border-slate-300 px-4 py-2" />
+          </div>
+        </div>
+        <div>
+          <label class="mb-1 block text-sm font-semibold text-slate-700">Street address</label>
+          <input id="biz-street" type="text" class="w-full rounded-md border border-slate-300 px-4 py-2" />
+        </div>
+        <div class="grid grid-cols-3 gap-4">
+          <div>
+            <label class="mb-1 block text-sm font-semibold text-slate-700">City</label>
+            <input id="biz-city" type="text" class="w-full rounded-md border border-slate-300 px-4 py-2" />
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-semibold text-slate-700">State</label>
+            <input id="biz-region" type="text" class="w-full rounded-md border border-slate-300 px-4 py-2" />
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-semibold text-slate-700">ZIP</label>
+            <input id="biz-postal" type="text" class="w-full rounded-md border border-slate-300 px-4 py-2" />
+          </div>
+        </div>
+        <div>
+          <label class="mb-1 block text-sm font-semibold text-slate-700">Client portal URL (optional)</label>
+          <input id="biz-portal" type="url" placeholder="https://..." class="w-full rounded-md border border-slate-300 px-4 py-2" />
+          <p class="mt-1 text-xs text-slate-500">
+            Shown as a "Client Portal" link in your site's footer, for existing clients to reach your EHR
+            (SimplePractice, TherapyNotes, etc.).
+          </p>
+        </div>
+        <button
+          id="business-save-button"
+          type="button"
+          class="rounded-md bg-brand-primary px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+        >
+          Save
+        </button>
+        <p id="business-status" class="text-sm" role="status"></p>
+      </form>
+    </section>
+
+    <section>
+      <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold text-brand-ink">Testimonials</h2>
+      <p class="mb-4 text-sm text-slate-600">A genuine quote from a client, shown on the page you choose — safe to edit anytime.</p>
+      <div class="space-y-4">
+        <div>
+          <label class="mb-1 block text-sm font-semibold text-slate-700">Page</label>
+          <select id="testimonial-page-select" class="w-full rounded-md border border-slate-300 px-4 py-2"></select>
+        </div>
+        <div>
+          <label class="mb-1 block text-sm font-semibold text-slate-700">Quote</label>
+          <textarea id="testimonial-quote" rows="3" class="w-full rounded-md border border-slate-300 px-4 py-2"></textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="mb-1 block text-sm font-semibold text-slate-700">Author</label>
+            <input id="testimonial-author" type="text" class="w-full rounded-md border border-slate-300 px-4 py-2" />
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-semibold text-slate-700">Role (optional)</label>
+            <input id="testimonial-role" type="text" placeholder="Client since 2024" class="w-full rounded-md border border-slate-300 px-4 py-2" />
+          </div>
+        </div>
+        <button
+          id="testimonial-save-button"
+          type="button"
+          class="rounded-md bg-brand-primary px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+        >
+          Save
+        </button>
+        <p id="testimonial-status" class="text-sm" role="status"></p>
+      </div>
+    </section>
+  </div>
+</AdminLayout>
+
+<script>
+  import { supabase, initAdminAuth } from '../../../lib/adminAuth';
+  import { triggerRebuild } from '../../../lib/publishFunction';
+
+  type PageOption = {
+    id: string;
+    title: string;
+    testimonial_quote: string | null;
+    testimonial_author: string | null;
+    testimonial_role: string | null;
+  };
+
+  type Business = {
+    id: string;
+    telephone: string | null;
+    email: string | null;
+    street_address: string | null;
+    address_locality: string | null;
+    address_region: string | null;
+    postal_code: string | null;
+    client_portal_url: string | null;
+  };
+
+  function escapeHtml(value: string): string {
+    const div = document.createElement('div');
+    div.textContent = value;
+    return div.innerHTML;
+  }
+
+  let business: Business | null = null;
+  let pages: PageOption[] = [];
+  let selectedTestimonialPage: PageOption | null = null;
+
+  // ---------------------------------------------------------------------
+  // Business info
+  // ---------------------------------------------------------------------
+  const businessSaveButton = document.getElementById('business-save-button')!;
+  const businessStatus = document.getElementById('business-status')!;
+  const bizTelephone = document.getElementById('biz-telephone') as HTMLInputElement;
+  const bizEmail = document.getElementById('biz-email') as HTMLInputElement;
+  const bizStreet = document.getElementById('biz-street') as HTMLInputElement;
+  const bizCity = document.getElementById('biz-city') as HTMLInputElement;
+  const bizRegion = document.getElementById('biz-region') as HTMLInputElement;
+  const bizPostal = document.getElementById('biz-postal') as HTMLInputElement;
+  const bizPortal = document.getElementById('biz-portal') as HTMLInputElement;
+
+  function loadBusinessForm() {
+    if (!business) return;
+    bizTelephone.value = business.telephone ?? '';
+    bizEmail.value = business.email ?? '';
+    bizStreet.value = business.street_address ?? '';
+    bizCity.value = business.address_locality ?? '';
+    bizRegion.value = business.address_region ?? '';
+    bizPostal.value = business.postal_code ?? '';
+    bizPortal.value = business.client_portal_url ?? '';
+  }
+
+  businessSaveButton.addEventListener('click', async () => {
+    if (!business) return;
+    businessStatus.textContent = 'Saving...';
+    businessStatus.className = 'text-sm text-slate-600';
+    const { error } = await supabase
+      .from('business')
+      .update({
+        telephone: bizTelephone.value.trim() || null,
+        email: bizEmail.value.trim() || null,
+        street_address: bizStreet.value.trim() || null,
+        address_locality: bizCity.value.trim() || null,
+        address_region: bizRegion.value.trim() || null,
+        postal_code: bizPostal.value.trim() || null,
+        client_portal_url: bizPortal.value.trim() || null,
+      })
+      .eq('id', business.id);
+    if (error) {
+      businessStatus.textContent = 'Could not save: ' + error.message;
+      businessStatus.className = 'text-sm text-red-600';
+      return;
+    }
+    businessStatus.textContent = 'Saving your site...';
+    const result = await triggerRebuild();
+    businessStatus.textContent = result.ok
+      ? 'Saved! Your site will update shortly.'
+      : 'Saved, but the update trigger failed — it will go live on the next rebuild.';
+    businessStatus.className = result.ok ? 'text-sm text-emerald-700' : 'text-sm text-amber-700';
+  });
+
+  // ---------------------------------------------------------------------
+  // Testimonials
+  // ---------------------------------------------------------------------
+  const testimonialPageSelect = document.getElementById('testimonial-page-select') as HTMLSelectElement;
+  const testimonialQuote = document.getElementById('testimonial-quote') as HTMLTextAreaElement;
+  const testimonialAuthor = document.getElementById('testimonial-author') as HTMLInputElement;
+  const testimonialRole = document.getElementById('testimonial-role') as HTMLInputElement;
+  const testimonialSaveButton = document.getElementById('testimonial-save-button')!;
+  const testimonialStatus = document.getElementById('testimonial-status')!;
+
+  function populatePagePicker(select: HTMLSelectElement) {
+    select.innerHTML = pages
+      .map((p) => `<option value="${p.id}">${escapeHtml(p.title)}</option>`)
+      .join('');
+  }
+
+  function loadTestimonialForm() {
+    selectedTestimonialPage = pages.find((p) => p.id === testimonialPageSelect.value) ?? null;
+    testimonialQuote.value = selectedTestimonialPage?.testimonial_quote ?? '';
+    testimonialAuthor.value = selectedTestimonialPage?.testimonial_author ?? '';
+    testimonialRole.value = selectedTestimonialPage?.testimonial_role ?? '';
+    testimonialStatus.textContent = '';
+  }
+
+  testimonialPageSelect.addEventListener('change', loadTestimonialForm);
+
+  testimonialSaveButton.addEventListener('click', async () => {
+    if (!selectedTestimonialPage) return;
+    testimonialStatus.textContent = 'Saving...';
+    testimonialStatus.className = 'text-sm text-slate-600';
+    const { error } = await supabase
+      .from('pages')
+      .update({
+        testimonial_quote: testimonialQuote.value.trim() || null,
+        testimonial_author: testimonialAuthor.value.trim() || null,
+        testimonial_role: testimonialRole.value.trim() || null,
+      })
+      .eq('id', selectedTestimonialPage.id);
+    if (error) {
+      testimonialStatus.textContent = 'Could not save: ' + error.message;
+      testimonialStatus.className = 'text-sm text-red-600';
+      return;
+    }
+    selectedTestimonialPage.testimonial_quote = testimonialQuote.value.trim() || null;
+    selectedTestimonialPage.testimonial_author = testimonialAuthor.value.trim() || null;
+    selectedTestimonialPage.testimonial_role = testimonialRole.value.trim() || null;
+    testimonialStatus.textContent = 'Saving your site...';
+    const result = await triggerRebuild();
+    testimonialStatus.textContent = result.ok
+      ? 'Saved! Your site will update shortly.'
+      : 'Saved, but the update trigger failed — it will go live on the next rebuild.';
+    testimonialStatus.className = result.ok ? 'text-sm text-emerald-700' : 'text-sm text-amber-700';
+  });
+
+  // ---------------------------------------------------------------------
+  async function onAuthed() {
+    const [{ data: businessData }, { data: pagesData }] = await Promise.all([
+      supabase.from('business').select('*').single(),
+      supabase
+        .from('pages')
+        .select('id, title, testimonial_quote, testimonial_author, testimonial_role')
+        .not('page_type', 'in', '("Blog Post","Blog Index")')
+        .order('title'),
+    ]);
+    business = businessData as Business;
+    pages = (pagesData ?? []) as PageOption[];
+
+    loadBusinessForm();
+    populatePagePicker(testimonialPageSelect);
+    loadTestimonialForm();
+  }
+
+  initAdminAuth(onAuthed, { allowedRoles: ['owner', 'agency'] });
+</script>

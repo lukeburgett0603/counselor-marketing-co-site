@@ -781,6 +781,34 @@ to `'full'` temporarily to test that path, then reverted — CMC's own site
 stays on the schema default (`'restricted'`) since it isn't a real tiered
 client of its own product.
 
+**Website content split into two admin pages + a collapsible nav group
+(2026-09-06).** The single `admin/content.astro` above (business info +
+testimonials + page copy stacked in one scroll) grew enough to split:
+`admin/content/business-info.astro` (business info + testimonials) and
+`admin/content/page-copy.astro` (page copy, including the reviewer
+byline sub-block and the "Your suggestions" history list — both stayed
+with page copy since that's what most suggestions are about).
+`admin/content.astro` itself is now just a 302 redirect to
+`business-info` so any old bookmark/link keeps working. `AdminLayout.astro`'s
+nav gained its first parent/child group for this — "Website content" is
+a `<button data-nav-toggle>` + nested `<ul data-nav-submenu>`, toggled by
+a small vanilla script at the bottom of that file (no persistence across
+page loads; defaults collapsed unless the current page is one of its
+children, which is computed server-side from the `current` prop so the
+group opens already-expanded on first paint, not via a client-side
+flash). Both child nav items carry `data-nav-key="content"` — the same
+single key the old flat item used — specifically so `adminAuth.ts`'s
+`applyNavAccess()`/`ROLE_NAV_ACCESS` didn't need to change at all; the
+two children still show/hide as one unit per role, exactly as before.
+The child's own distinct key (`content-business-info` /
+`content-page-copy`) is only used for current-route highlighting and the
+default-expanded check, never for role gating. If a future page ever
+needs the two children gated separately by role, `ROLE_NAV_ACCESS` and
+this shared-`navKey` trick both need revisiting together. **This repo's
+`admin/directory.astro` page keeps its own extra `'directory'` member on
+`AdminLayout.astro`'s `Props.current` union** — client-repo-only, not
+part of the template, restored after syncing this change in from there.
+
 **Multi-user roles (`admin_users`, built 2026-08-31) — two roles only,
 `owner` and `staff`.** Owner has full access; staff is scoped to blog
 posts only, and only their own (owner can edit/delete anyone's).

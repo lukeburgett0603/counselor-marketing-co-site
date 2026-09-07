@@ -3,8 +3,8 @@
 // `owner` login (h1, meta_description, focus_keyword) — but not for
 // `agency`, which is exempt from the lock entirely (see
 // enforce_content_permission in 0013_agency_role_and_suggestion_review.sql).
-// Renders both a read-only display and an editable input; admin/content.astro's
-// script toggles between them per-field via canEditField(), the same way
+// Renders both a read-only display and an editable input; admin/content/
+// page-copy.astro's script toggles between them per-field via canEditField(), the same way
 // it already does for the tier-gated hero_subhead/copy/images fields —
 // see `[data-field]`/`[data-locked-value]`/`.editable-view`/`.locked-view`.
 import SuggestEdit from './SuggestEdit.astro';
