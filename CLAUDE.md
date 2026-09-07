@@ -2107,11 +2107,70 @@ someone filling out a form, not a copywriter.
   (mostly empty, since nothing had ever populated them before this pass).
   `copy` was set to `null` on every migrated page once split, rather than
   left as stale, unread duplicate content.
-- **`webpage-copywriter`'s `storybrand-framework.md`/`page-types.md` and
-  `site-structure-planner-supabase`'s Content Sync step both need
-  updating so future pages get authored directly into these fields** —
-  flagged as the next piece of this work, not yet done as of this
-  section being written.
+- **`webpage-copywriter`'s `storybrand-framework.md`/`page-types.md`/
+  `SKILL.md` and `site-structure-planner-supabase`'s Content Sync step
+  were all updated in the same pass** so future pages get authored
+  directly into these 5 fields instead of one blob — `copy.md` for these
+  3 types now gets written as 5 clearly `##`-labeled sections in a fixed
+  order, and Content Sync splits them into the matching columns
+  (`storybrand_problem`/`storybrand_guide_empathy`/`storybrand_pitch`/
+  `storybrand_success`/`storybrand_failure`), leaving `copy` itself
+  `null` for these 3 types.
+
+**Backlogged, not yet decided (raised 2026-09-07, user wants to think it
+over before committing)**: a per-section **visual layout selector** —
+for each of the 5 StoryBrand fields (plus `hero_style`, retrofitted into
+the same picker UI instead of its current plain `<select>`), let the
+editor choose from a few named layout options, each shown as a small
+wireframe-style preview (not a real mockup) rather than a bare text
+label. Key decisions worked through in that conversation, to pick back
+up when this gets built:
+
+- **One small shared library of layout archetypes, not 6 independent
+  option sets per section.** Proposed starting set: "Plain" (today's
+  centered/left-aligned text — the default), "Split" (text beside a
+  supporting visual element), "Callout" (text inside a bordered/tinted
+  emphasis block), "Accent" (text beside an oversized pull-quote-style
+  element). Every section (Hero included) picks from this same set —
+  cheaper to build than bespoke options per section, and more
+  consistent with "visual rhyming" (`counseling-website-designer`'s own
+  core technique — see below) than 6 different vocabularies would be.
+- **Deliberately motif-agnostic wireframes, not accurate per-client
+  previews.** `counseling-website-designer` (the standalone design-brief
+  skill, `~/.claude/skills/counseling-website-designer/`) produces one
+  *bespoke* visual system per client — 4 curated systems, each with its
+  own signature motif (an arch, a rule+eyebrow, an organic blob, circular
+  frames) meant to recur in every hero/section-intro/card/divider on that
+  specific site. A wireframe preview that's fully accurate to a given
+  motif would need its own version per system (4x the build for every
+  layout option) — recommended instead: generic composition-only
+  wireframes (box/text arrangement, no arch shapes or blobs baked in),
+  letting each site's own CSS render the actual brand skin on top. Real
+  tradeoff (less preview fidelity) accepted deliberately for buildability
+  — revisit only if a client's actual motif turns out to matter enough
+  in practice that generic previews feel misleading.
+- **Recommended v1 stays photo-free.** None of the 5 StoryBrand fields
+  have an image slot today — a "Split" archetype needing a real photo
+  per section means 5 new image uploads per page on top of the hero
+  photo, which is a real burden to ask of an already-busy client. Treat
+  an image-inclusive variant as a later addition only if there's real
+  demand, not a v1 requirement.
+- **Per-page, not site-wide** — different pages' Problem sections
+  genuinely vary in length/shape even within one page type, and a rigid
+  sitewide layout can look awkward on an outlier page. Keep the option
+  set small (3-4, not 8) so any per-page combination still reads as one
+  family, protecting the "recurring pattern" that visual rhyming depends
+  on even with per-page variation allowed.
+- **Tier-gate it the same as the other copy fields** (agency always,
+  full-tier owner otherwise) rather than exposing it on every plan — a
+  restricted-tier client casually flipping layouts without design
+  judgment could hurt visual consistency more than a copy edit would.
+- **Content Pillar/Service Hub stay out of scope** — both have only one
+  flowing `copy` field, no discrete sections to attach a layout choice
+  to.
+- Still open when this gets picked back up: does the proposed 4-archetype
+  set actually hold up, and is tier-gating + per-page + photo-free all
+  still the right call once there's a concrete UI to react to.
 
 ## Generating a logo from a CSS wordmark
 
