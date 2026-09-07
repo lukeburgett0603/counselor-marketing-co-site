@@ -94,6 +94,8 @@ const updatedDate = page.date_modified
   <LeadMagnet pageId={page.id} />
   <LeadGenerator
     slug={page.slug}
+    heading={page.cta_button_text ?? undefined}
+    submitText={page.cta_button_text ?? undefined}
     collectWebsiteUrl={business.collect_website_in_leads}
     responseTimeNote={business.lead_response_time_note}
     collectCounselorPreference={business.collect_counselor_preference}

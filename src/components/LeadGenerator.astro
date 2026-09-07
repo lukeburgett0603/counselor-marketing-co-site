@@ -42,13 +42,21 @@ interface Props {
 
 const {
   slug,
-  heading = "Let's talk about your project",
+  // A generic-agency leftover ("Let's talk about your project"/"Send")
+  // sat here as the default for a long time — every template is supposed
+  // to pass the page's own real `cta_button_text` instead (see
+  // page-templates.md's "CTA heading/button text come from page data,
+  // never hardcoded" rule), but a template that forgets still needs a
+  // default that doesn't read as obviously wrong for any client this
+  // template serves. 'Get Started' is genuinely generic in a way the old
+  // default wasn't.
+  heading = 'Get Started',
   collectWebsiteUrl = false,
   responseTimeNote,
   embedded = false,
   compact = embedded,
   frosted = false,
-  submitText = 'Send',
+  submitText = 'Get Started',
   collectCounselorPreference = false,
   counselors = [],
   defaultCounselorId,
