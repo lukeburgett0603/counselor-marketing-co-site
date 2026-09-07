@@ -14,7 +14,14 @@ interface Item {
 
 interface Props {
   items: Item[];
-  heading: string;
+  // Optional: a card grid embedded right after its own section heading in
+  // flowing prose (see lib/markdown.ts's extractShortBenefitList(), used
+  // for a StoryBrand field's inline benefit list) already has a heading
+  // immediately above it in that prose — rendering a second one here would
+  // duplicate it. Omit `heading` for that case; every standalone call site
+  // (Service Hub's "what this can help with," Homepage's "Why families
+  // choose us") still passes a real one.
+  heading?: string;
   // Alternating-band rhythm is a per-page-layout decision, not something
   // this component can assume — e.g. Homepage already has a Testimonial
   // band using brand-tint right after this one, so a second consecutive
@@ -31,9 +38,11 @@ const { items, heading, tint = false } = Astro.props;
 {items.length > 0 && (
   <section class:list={['py-14', tint && 'bg-brand-tint']}>
     <div class="mx-auto max-w-5xl px-6">
-      <h2 class="mb-8 text-center font-[family-name:var(--font-heading)] text-2xl font-extrabold tracking-tight text-brand-ink">
-        {heading}
-      </h2>
+      {heading && (
+        <h2 class="mb-8 text-center font-[family-name:var(--font-heading)] text-2xl font-extrabold tracking-tight text-brand-ink">
+          {heading}
+        </h2>
+      )}
       <div class="grid gap-6 md:grid-cols-2">
         {items.map((item) => (
           <div class="rounded-lg border border-black/5 bg-white p-6 shadow-md transition duration-200 hover:-translate-y-1 hover:shadow-xl">

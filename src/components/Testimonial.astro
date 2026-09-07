@@ -13,12 +13,23 @@ interface Props {
 const { quote, author, role } = Astro.props;
 ---
 
-<section class="bg-brand-tint py-14">
-  <blockquote class="mx-auto max-w-2xl px-6 text-center">
-    <span class="font-[family-name:var(--font-heading)] text-5xl font-extrabold leading-none text-brand-accent" aria-hidden="true">&ldquo;</span>
-    <p class="mt-2 font-[family-name:var(--font-heading)] text-xl font-medium text-brand-ink">{quote}</p>
-    <footer class="mt-4 text-sm font-semibold text-brand-primary">
-      {author}{role && <span class="font-normal text-slate-600">, {role}</span>}
-    </footer>
-  </blockquote>
+{/*
+  Used to be a full-bleed bg-brand-tint band — on a page that already has
+  a CTA band and a lead-magnet band, a third full-saturation section this
+  close together over-allocates the palette's 30/10% roles in a short
+  stretch of page (see the Visual Design Brief's band-rhythm finding). An
+  inset card carries the same tint color as a quiet accent instead of a
+  section-wide background, freeing genuine full-bleed treatment for the
+  one or two moments per page that should actually carry that weight.
+*/}
+<section class="py-14">
+  <div class="mx-auto max-w-2xl px-6">
+    <blockquote class="rounded-lg border border-black/5 bg-brand-tint/40 p-8 text-center shadow-sm sm:p-10">
+      <span class="font-[family-name:var(--font-heading)] text-5xl font-extrabold leading-none text-brand-accent" aria-hidden="true">&ldquo;</span>
+      <p class="mt-2 font-[family-name:var(--font-heading)] text-xl font-medium text-brand-ink">{quote}</p>
+      <footer class="mt-4 text-sm font-semibold text-brand-primary">
+        {author}{role && <span class="font-normal text-slate-600">, {role}</span>}
+      </footer>
+    </blockquote>
+  </div>
 </section>

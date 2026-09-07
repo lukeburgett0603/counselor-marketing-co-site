@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Section from '../components/Section.astro';
+import StoryBrandSection from '../components/StoryBrandSection.astro';
 import StatusPill from '../components/StatusPill.astro';
 import SpecialtyPills from '../components/SpecialtyPills.astro';
 import CounselorQuote from '../components/CounselorQuote.astro';
@@ -92,16 +93,8 @@ const counselors = getCounselorOptions(allPages);
     </Section>
   )}
   <PlanSteps steps={page.plan_steps} heading="What to expect in your first session" />
-  {page.storybrand_pitch && (
-    <Section>
-      <Fragment set:html={renderCopy(page.storybrand_pitch)} />
-    </Section>
-  )}
-  {page.storybrand_success && (
-    <Section>
-      <Fragment set:html={renderCopy(page.storybrand_success)} />
-    </Section>
-  )}
+  <StoryBrandSection markdown={page.storybrand_pitch} />
+  <StoryBrandSection markdown={page.storybrand_success} />
   {page.storybrand_failure && (
     <Section>
       <Fragment set:html={renderCopy(page.storybrand_failure)} />

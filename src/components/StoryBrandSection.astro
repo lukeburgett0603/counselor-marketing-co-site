@@ -1,0 +1,39 @@
+---
+// Wraps a single StoryBrand copy field (storybrand_success/storybrand_pitch,
+// etc.) so a short 3-4 item benefit list embedded inline (e.g. Homepage's
+// "Find Peace / Gain Clarity / Move Toward Hope" beat) gets FeatureGrid's
+// card treatment instead of rendering as three consecutive one-line H3s in
+// flowing prose — see lib/markdown.ts's extractShortBenefitList() for the
+// detection logic and why that pattern reads as redundant rather than as
+// three real section openings. Falls back to the exact same single-Section
+// prose rendering every StoryBrand field already used whenever the field
+// doesn't contain that shape (the overwhelmingly common case), so this is
+// a safe drop-in replacement for the old `<Section><Fragment set:html=.../>
+// </Section>` pattern anywhere a StoryBrand field is rendered.
+import Section from './Section.astro';
+import FeatureGrid from './FeatureGrid.astro';
+import { extractShortBenefitList } from '../lib/markdown';
+
+interface Props {
+  markdown: string | null;
+}
+
+const { markdown } = Astro.props;
+const { beforeHtml, benefits, afterHtml } = extractShortBenefitList(markdown);
+---
+
+{markdown && (
+  <>
+    {beforeHtml && (
+      <Section>
+        <Fragment set:html={beforeHtml} />
+      </Section>
+    )}
+    {benefits.length > 0 && <FeatureGrid items={benefits} />}
+    {afterHtml && (
+      <Section>
+        <Fragment set:html={afterHtml} />
+      </Section>
+    )}
+  </>
+)}

@@ -2,6 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import Section from '../components/Section.astro';
+import StoryBrandSection from '../components/StoryBrandSection.astro';
 import CTA from '../components/CTA.astro';
 import Testimonial from '../components/Testimonial.astro';
 import FeatureGrid from '../components/FeatureGrid.astro';
@@ -85,16 +86,8 @@ const isOverlayHero = page.hero_style === 'overlay' && !!page.images.hero;
     <Testimonial quote={page.testimonial_quote} author={page.testimonial_author} role={page.testimonial_role} />
   )}
   <PlanSteps steps={page.plan_steps} />
-  {page.storybrand_pitch && (
-    <Section>
-      <Fragment set:html={renderCopy(page.storybrand_pitch)} />
-    </Section>
-  )}
-  {page.storybrand_success && (
-    <Section>
-      <Fragment set:html={renderCopy(page.storybrand_success)} />
-    </Section>
-  )}
+  <StoryBrandSection markdown={page.storybrand_pitch} />
+  <StoryBrandSection markdown={page.storybrand_success} />
   {page.storybrand_failure && (
     <Section>
       <Fragment set:html={renderCopy(page.storybrand_failure)} />
