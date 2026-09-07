@@ -27,6 +27,34 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     </div>
   </div>
 
+  <!--
+    Deliberately separate from the "Total leads" stats above, not a 4th
+    column in that grid — someone downloading a free guide is a much
+    earlier-funnel signal than someone asking to be matched with a
+    counselor, and folding it into "leads" would quietly inflate that
+    number past what it's supposed to prove. Muted/dashed styling and its
+    own heading are the visual cue that this is supplementary context,
+    not part of the main lead count this page exists to protect. See
+    CLAUDE.md's "Contacts vs. leads" section.
+  -->
+  <div id="contacts-widget" class="mb-8 hidden rounded-lg border border-dashed border-slate-300 bg-slate-50 p-5">
+    <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Guide downloads (not counted as leads above)</p>
+    <div class="grid gap-4 sm:grid-cols-3">
+      <div>
+        <p class="text-[11px] uppercase tracking-wide text-slate-400">This month</p>
+        <p id="contacts-this-month" class="mt-0.5 font-[family-name:var(--font-heading)] text-2xl font-bold text-slate-700">—</p>
+      </div>
+      <div>
+        <p class="text-[11px] uppercase tracking-wide text-slate-400">Last month</p>
+        <p id="contacts-last-month" class="mt-0.5 font-[family-name:var(--font-heading)] text-2xl font-bold text-slate-700">—</p>
+      </div>
+      <div>
+        <p class="text-[11px] uppercase tracking-wide text-slate-400">All-time conversion</p>
+        <p id="contacts-conversion" class="mt-0.5 text-sm text-slate-600">—</p>
+      </div>
+    </div>
+  </div>
+
   <div class="mb-8 rounded-lg border border-black/5 bg-white p-5 shadow-sm">
     <p class="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Leads per week (last 10 weeks)</p>
     <div id="weekly-chart" class="flex h-32 gap-2"></div>
@@ -84,6 +112,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     source_page: string | null;
     status: string | null;
     preferred_counselor_page_id: string | null;
+    lead_magnet_id: string | null;
   };
 
   // Populated in loadLeads() from a live query, not hardcoded — a
@@ -184,6 +213,52 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     }
   }
 
+  // Guide downloads (lead_magnet_id set) get their own widget, entirely
+  // separate from renderDashboard() above — kept as raw submission counts
+  // for the month-over-month numbers (consistent with how the main lead
+  // stats count every submission, not distinct people), but the all-time
+  // conversion stat below deliberately dedupes by email, since "did this
+  // person convert" only makes sense once per person, not once per
+  // download.
+  function renderContactsWidget(contacts: Lead[], realLeads: Lead[]) {
+    const widget = document.getElementById('contacts-widget')!;
+    if (contacts.length === 0) {
+      widget.classList.add('hidden');
+      return;
+    }
+    widget.classList.remove('hidden');
+
+    const now = new Date();
+    const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const thisMonthCount = contacts.filter((c) => new Date(c.created_at) >= startOfThisMonth).length;
+    const lastMonthCount = contacts.filter((c) => {
+      const d = new Date(c.created_at);
+      return d >= startOfLastMonth && d < startOfThisMonth;
+    }).length;
+    document.getElementById('contacts-this-month')!.textContent = String(thisMonthCount);
+    document.getElementById('contacts-last-month')!.textContent = String(lastMonthCount);
+
+    // "Did this contact ever also become a real lead" — matched by email,
+    // deduplicated on both sides so someone who downloaded two different
+    // guides (two contact rows) or submitted the appointment form twice
+    // isn't double-counted in either direction.
+    const norm = (email: string | null) => (email ?? '').trim().toLowerCase();
+    const leadEmails = new Set(realLeads.map((l) => norm(l.email)).filter(Boolean));
+    const contactEmails = new Set(contacts.map((c) => norm(c.email)).filter(Boolean));
+    let converted = 0;
+    for (const email of contactEmails) {
+      if (leadEmails.has(email)) converted++;
+    }
+    const conversionEl = document.getElementById('contacts-conversion')!;
+    if (contactEmails.size === 0) {
+      conversionEl.textContent = '—';
+    } else {
+      const pct = Math.round((converted / contactEmails.size) * 100);
+      conversionEl.textContent = `${contactEmails.size} download${contactEmails.size === 1 ? '' : 's'} → ${converted} became lead${converted === 1 ? '' : 's'} (${pct}%)`;
+    }
+  }
+
   // Event delegation on the table body, not a per-row listener — rows are
   // re-rendered wholesale on every loadLeads(), so a listener attached to
   // individual <select> elements would need re-binding every time anyway.
@@ -203,10 +278,19 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       .eq('page_type', 'Counselor Profile');
     counselorNames = new Map((counselorPages ?? []).map((p) => [p.id, p.title]));
 
-    renderDashboard(data);
+    // A guide download (lead_magnet_id set) is a much earlier-funnel
+    // signal than someone asking to be matched with a counselor — kept
+    // out of every stat/chart/table on this page so "leads" here always
+    // means real appointment-request intent, not inflated by downloads.
+    // See admin/crm.astro for where those live day-to-day.
+    const realLeads = (data as Lead[]).filter((l) => !l.lead_magnet_id);
+    const contacts = (data as Lead[]).filter((l) => l.lead_magnet_id);
 
-    leadsCount.textContent = `${data.length} lead${data.length === 1 ? '' : 's'}`;
-    tableBody.innerHTML = data
+    renderDashboard(realLeads);
+    renderContactsWidget(contacts, realLeads);
+
+    leadsCount.textContent = `${realLeads.length} lead${realLeads.length === 1 ? '' : 's'}`;
+    tableBody.innerHTML = realLeads
       .map(
         (lead) => `
       <tr class="border-b border-slate-100 last:border-0">
