@@ -30,12 +30,20 @@ const counselors = getCounselorOptions(allPages);
 <BaseLayout page={page} allPages={allPages} business={business}>
   <section class="mx-auto max-w-5xl px-6 py-14">
     <div class="flex flex-col items-center gap-8 rounded-lg border border-black/5 bg-white p-8 text-center shadow-sm sm:flex-row sm:items-start sm:p-10 sm:text-left">
+      {/*
+        `avatar-crop` is a plain hook class with no default rule here —
+        `rounded-full` covers the shape for every client with no per-client
+        motif. A client whose real brand supports a distinct photo-crop
+        motif (an arch, say) defines `.avatar-crop` in their own
+        global.css to override it there instead of here, the same way
+        global.css's color/font tokens already diverge per client.
+      */}
       {headshot && (
         <div class="relative shrink-0">
           <OptimizedImage
             src={headshot.url}
             alt={headshot.alt}
-            class="h-56 w-56 rounded-full object-cover"
+            class="avatar-crop h-56 w-56 rounded-full object-cover"
             loading="eager"
             widths={[224, 448]}
             sizes="224px"

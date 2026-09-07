@@ -132,12 +132,20 @@ const showAside = isOverlay ? Astro.slots.has('aside') : !imageUrl && Astro.slot
         )}
         <slot />
       </div>
+      {/*
+        `hero-photo-crop` is a plain hook class with no default rule here —
+        `rounded-xl` covers the shape for every client with no per-client
+        motif. A client whose real brand supports a distinct photo-crop
+        motif (an arch, say) defines `.hero-photo-crop` in their own
+        global.css to override it there instead of here, the same way
+        global.css's color/font tokens already diverge per client.
+      */}
       {imageUrl ? (
         <div class="flex-1">
           <OptimizedImage
             src={imageUrl}
             alt={imageAlt ?? ''}
-            class:list={['w-full rounded-xl object-cover', focalYClass]}
+            class:list={['hero-photo-crop w-full rounded-xl object-cover', focalYClass]}
             loading="eager"
             widths={[400, 800, 1200]}
             sizes="(min-width: 768px) 50vw, 100vw"
