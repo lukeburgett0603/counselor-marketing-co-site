@@ -43,7 +43,7 @@ const { src, alt, class: className, loading = 'lazy', widths, sizes, creditName,
 const unsplashAppName = import.meta.env.PUBLIC_UNSPLASH_APP_NAME || 'local-business-site-template';
 ---
 
-<div class="relative">
+<div class="relative h-full w-full">
   <Image src={src} alt={alt} inferSize class={className} loading={loading} widths={widths} sizes={sizes} />
   {showCredit && creditName && creditUrl && (
     <a

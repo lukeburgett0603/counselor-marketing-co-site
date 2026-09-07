@@ -1,0 +1,18 @@
+-- BaseLayout.astro previously had no webfont loading at all — every real
+-- client site so far has independently hand-written its own <link
+-- rel="preconnect">/<link rel="stylesheet"> pair into its own copy of
+-- BaseLayout.astro to load its real brand fonts (Google Fonts) instead of
+-- relying on the OS system-font fallback. That's the same few lines
+-- reinvented per client, and BaseLayout.astro is otherwise meant to be
+-- identical across every site — see CLAUDE.md's font-loading note.
+--
+-- Storing the exact Google Fonts CSS2 URL (rather than trying to derive
+-- one from brand_fonts' font names) sidesteps having to encode which
+-- weights/optical sizes each client's chosen font(s) actually need —
+-- that's exactly what varies client to client (e.g. Inter alone vs.
+-- Fraunces+Inter with different weight lists). frontend-site-builder-
+-- supabase sets this once during the design-direction phase, alongside
+-- brand_colors/brand_fonts. Null means "no webfont, use the OS fallback" —
+-- BaseLayout.astro renders nothing when it's unset, same as any other
+-- optional per-client field.
+alter table business add column google_fonts_url text;

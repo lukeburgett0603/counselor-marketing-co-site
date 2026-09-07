@@ -1415,6 +1415,39 @@ services (Website Design, SEO) are.
   explicitly per client at Phase 1 (site-structure-planner-supabase),
   not by default.
 
+## Real webfont loading is data-driven, not a per-client file edit (`business.google_fonts_url`, synced from the template 2026-09-07)
+
+`BaseLayout.astro` used to have no webfont loading at all in the shared
+template — CMC's own repo (and, independently, Freedom Counseling's) had
+each hand-written the same `<link rel="preconnect">`/font `<link>` pair
+straight into its own copy of `BaseLayout.astro` to load its real Inter
+font, on a file that's otherwise meant to be identical across every site.
+
+- **`business.google_fonts_url`** (nullable `text`,
+  `0033_google_fonts_url.sql`) now holds the exact Google Fonts CSS2 URL
+  — set on CMC's row to
+  `https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap`,
+  the same URL this repo's `BaseLayout.astro` used to hardcode.
+  `BaseLayout.astro` itself was replaced with the template's version
+  (verified byte-identical via `diff`) — it now renders the font tags
+  itself whenever this column is set, so this file needs zero per-client
+  changes and can't drift on this axis again.
+- **A same-pass audit also found this repo was still running a pre-fix,
+  buggy `OptimizedImage.astro`** (its wrapper `<div>` had no `h-full
+  w-full`, so percentage-based image cropping silently never worked —
+  see the template CLAUDE.md's real-bugs list for the original bug) —
+  the template fix had landed months ago but never got manually synced
+  into this specific repo. Fixed by copying the template's current
+  `OptimizedImage.astro` in directly (confirmed identical via `diff`).
+  Two CSS rules I initially also suspected were missing from this repo's
+  `global.css` (accent numbered-list markers, heavier heading weight)
+  turned out to already be present and correct on closer inspection —
+  only the explanatory comments above them differed, which is harmless.
+  Worth an occasional `diff -rq` of this repo's `src/` against the
+  template's to catch this class of drift before it's noticed live,
+  rather than assuming every apparent gap is real without checking the
+  actual rendered rule/file, not just a comment or a doc mention.
+
 ## Generating a logo from a CSS wordmark
 
 If a client's brand is wordmark-only (explicitly no pictorial icon mark)

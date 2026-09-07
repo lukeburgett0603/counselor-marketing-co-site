@@ -47,16 +47,19 @@ const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbChain, siteUrl);
     <meta name="description" content={description} />
     <link rel="canonical" href={canonicalUrl} />
 
-    <!-- Real Inter, loaded deliberately (design direction approved
-         2026-08-27) for consistent branding across every visitor's device,
-         rather than relying on the OS system-font fallback. Preconnect lets
-         the browser start this before it's even parsed global.css. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
-      rel="stylesheet"
-    />
+    {business.google_fonts_url && (
+      <>
+        {/* Real brand webfont(s), set per client via business.google_fonts_url
+            (the design-direction phase, alongside brand_colors/brand_fonts) —
+            no hardcoded font here, so this stays identical across every
+            client site. Preconnect lets the browser start this fetch before
+            it's even parsed global.css. Null (never set) falls back to the
+            OS system font, same as any other unset per-client field. */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href={business.google_fonts_url} rel="stylesheet" />
+      </>
+    )}
 
     <meta property="og:type" content={page.page_type === 'Content Pillar' || page.page_type === 'Service Hub' || page.page_type === 'Blog Post' ? 'article' : 'website'} />
     <meta property="og:title" content={title} />

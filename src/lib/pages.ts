@@ -139,6 +139,11 @@ export interface Business {
   logo_in_header: boolean;
   brand_colors: string[];
   brand_fonts: string[];
+  // The exact Google Fonts CSS2 URL for this client's real brand font(s)
+  // (weights/optical sizes included) — BaseLayout.astro loads it via
+  // <link rel="stylesheet"> when set, null falls back to the OS system
+  // font. See 0033_google_fonts_url.sql.
+  google_fonts_url: string | null;
   design_inspiration_urls: string[];
   brand_assets_status: 'provided' | 'not-provided';
   founding_year: number | null;
