@@ -283,6 +283,13 @@ before touching the related code on a future client site.
   `hidden` class). Any element that needs both a JS-controlled show/hide
   *and* a responsive display value needs this pattern, not `classList` +
   a `hidden` utility.
+- **`AdminLayout.astro`'s `<main class="flex-1 p-6">` was missing
+  `min-w-0`, so a wide table anywhere on an admin page could silently
+  blow out the whole page's width instead of scrolling in its own
+  `overflow-x-auto` wrapper** — found on Freedom Counseling Services
+  (2026-09-11), fixed there and synced here the same day since every
+  client repo shares this one layout file. See the template's CLAUDE.md
+  for the full technical writeup.
 - **A form field existing in the admin UI doesn't mean the public template
   renders it.** The blog post form (`admin/blog.astro`) collects
   `author_name`/`credentials` — both real, already-existing `pages`
