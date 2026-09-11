@@ -331,6 +331,29 @@ before touching the related code on a future client site.
   login form itself (previously the agency had to manually trigger a
   reset via script) — same `redirectTo` pattern, so it was the natural
   place to fix this properly rather than as a one-off patch.
+- **This project's Supabase Auth "Redirect URLs" allow list
+  (`uri_allow_list`) still had the pre-restructure `/leads` path baked
+  in, not `/admin/leads`** — found 2026-09-11 while checking this
+  project after the identical class of bug surfaced (and was fixed) on
+  Freedom Counseling Services. Any `redirectTo` this app sends (see the
+  fix directly above) was being silently rejected by Supabase and
+  falling back to `site_url` — which, purely by luck, had already been
+  kept in sync at `https://lukeburgett0603.github.io/counselor
+  -marketing-co-site/admin/leads`, so invite links happened to still
+  land correctly. That's a coincidence, not a working safeguard — the
+  explicit-`redirectTo` protection this file documents above wasn't
+  actually in effect. Fixed via the Management API: `PATCH /v1/projects
+  /{ref}/config/auth {"uri_allow_list": "https://lukeburgett0603
+  .github.io/counselor-marketing-co-site/**"}` (a wildcard, so it
+  survives any future route change without needing another config
+  edit). Verified with a real generated invite link (`POST /auth/v1
+  /admin/generate_link`, `redirect_to` as a top-level field), `curl`'d
+  directly, confirmed the `Location` header landed on `/admin/leads`
+  with a working `access_token` fragment — then deleted the throwaway
+  test user. See `frontend-site-builder-supabase`'s
+  `supabase-technical-setup.md` for the generalized version of this
+  fix — check `uri_allow_list` on every client project, not just the
+  one that happens to report a symptom.
 - **`ContentPillar.astro` never rendered the `FAQ` component**, even
   though `schema.ts` appends `FAQPage` JSON-LD schema for *any* page with
   a non-empty `faqs` array, independent of `page_type` (`if
