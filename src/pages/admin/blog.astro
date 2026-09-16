@@ -212,7 +212,12 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
   });
 
   async function loadCategories() {
-    const { data, error } = await supabase.from('pages').select('category').eq('page_type', 'Content Pillar');
+    // Both 'Content Pillar' and 'Service Hub' can own a category (see
+    // BlogPost.astro's identical hub lookup) — a client whose service
+    // pages are all Service Hub (Freedom Counseling Services) had zero
+    // Content Pillar rows, so this query returned nothing and the
+    // dropdown rendered empty.
+    const { data, error } = await supabase.from('pages').select('category').in('page_type', ['Content Pillar', 'Service Hub']);
     const categories = error
       ? []
       : [...new Set((data ?? []).map((r) => r.category).filter((c): c is string => !!c))].sort();
