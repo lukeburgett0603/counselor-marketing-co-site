@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
+import KeyTakeaways from '../components/KeyTakeaways.astro';
 import CTA from '../components/CTA.astro';
 import LeadGenerator from '../components/LeadGenerator.astro';
 import LeadMagnet from '../components/LeadMagnet.astro';
@@ -57,6 +58,9 @@ const publishedDate = page.date_published
       <a href={withBase(`/${hubPage.slug}`)} class="text-brand-primary hover:underline">{page.category}</a>
     )}
     {page.category && !hubPage && <span>{page.category}</span>}
+  </div>
+  <div class="mx-auto max-w-3xl px-6 pt-6">
+    <KeyTakeaways items={page.key_takeaways} />
   </div>
   <article class="prose prose-lg mx-auto max-w-3xl px-6 pb-10 pt-4">
     <Fragment set:html={renderCopy(page.copy)} />
