@@ -303,6 +303,11 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
     uploadedImageCreditName = post.images?.hero?.creditName ?? null;
     uploadedImageCreditUrl = post.images?.hero?.creditUrl ?? null;
     titleField.value = post.title;
+    // The strip is a defensive leftover from when savePost() used to
+    // force-prepend 'blog/' to every slug (now removed) — kept here so
+    // editing any post whose slug still carries a stray prefix from
+    // that bug displays and re-saves clean instead of needing a manual
+    // DB fix every time.
     slugField.value = post.slug.replace(/^blog\//, '');
     categoryField.value = post.category ?? '';
     imageAltField.value = post.images?.hero?.alt ?? '';
@@ -406,7 +411,15 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
 
     const payload = {
       title: titleField.value.trim(),
-      slug: `blog/${slugify(slugField.value)}`,
+      // No 'blog/' prefix — every blog post lives at a bare root-level
+      // URL, matching every other page type (see CLAUDE.md's "Blog
+      // post slug typo" real-bugs entry: a stray `blog/${...}` prefix
+      // here once forced every save, create or edit, to write a
+      // prefixed slug that doesn't match how BlogPostCard.astro/the
+      // sitemap actually route — silently re-breaking a post's real
+      // URL on its next edit even after the slug had been fixed
+      // directly in the DB).
+      slug: slugify(slugField.value),
       page_type: 'Blog Post',
       h1: titleField.value.trim(),
       meta_title: `${titleField.value.trim()} | Blog`,
