@@ -16,12 +16,64 @@ const { telephone, ctaText = 'Get a Quote', ctaHref = '#lead-generator' } = Astr
   <div class="fixed inset-x-0 bottom-0 z-50 flex border-t border-slate-200 bg-white shadow-[0_-2px_8px_rgba(0,0,0,0.08)] md:hidden">
     <a
       href={`tel:${telephone.replace(/[^0-9+]/g, '')}`}
-      class="flex-1 border-r border-slate-200 py-3 text-center font-semibold text-brand-ink"
+      class="mobile-cta-bar-call flex-1 border-r border-slate-200 py-3 text-center font-semibold text-brand-ink"
     >
       Call Now
     </a>
-    <a href={ctaHref} class="flex-1 bg-brand-accent py-3 text-center font-semibold text-white">
+    <a href={ctaHref} class="mobile-cta-bar-link flex-1 bg-brand-accent py-3 text-center font-semibold text-white">
       {ctaText}
     </a>
   </div>
 )}
+
+<script>
+  // ctaHref defaults to '#lead-generator', an id only the bottom,
+  // non-embedded LeadGenerator carries — on a page whose Hero also
+  // embeds its own compact form (the overlay Hero style's frosted
+  // card), tapping this while that form is already on-screen used to
+  // teleport the visitor past it to a second, near-identical form far
+  // below. Instead: when more than one .lead-form exists on the page,
+  // scroll to whichever one is nearest the current viewport rather than
+  // always jumping to the anchor target. A page with only one form (the
+  // common case) falls through to normal anchor behavior unchanged.
+  document.querySelectorAll<HTMLAnchorElement>('.mobile-cta-bar-link').forEach((link) => {
+    link.addEventListener('click', (event) => {
+      const forms = Array.from(document.querySelectorAll<HTMLElement>('.lead-form'));
+      if (forms.length <= 1) return;
+
+      const nearest = forms.reduce((closest, form) =>
+        Math.abs(form.getBoundingClientRect().top) < Math.abs(closest.getBoundingClientRect().top) ? form : closest
+      );
+      event.preventDefault();
+      nearest.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  });
+
+  // Suppress this bar's own CTA half whenever a real lead form's submit
+  // button is already on screen — otherwise "Start Counseling" (or
+  // whatever ctaText is) briefly shows twice at once, directly under
+  // itself: the form's real submit button, plus this bar's identical-
+  // looking shortcut. Same "a visible form suppresses its own section's
+  // standalone CTA" rule Hero.astro's showAside already enforces
+  // elsewhere, just needed here too since this bar is a persistent,
+  // page-wide element with no built-in awareness of what's in view.
+  // "Call Now" is a distinct action, not a duplicate, so it stays
+  // available (and expands to fill the bar) even while a form is
+  // visible.
+  const barCta = document.querySelector<HTMLElement>('.mobile-cta-bar-link');
+  const barCall = document.querySelector<HTMLElement>('.mobile-cta-bar-call');
+  const submitButtons = document.querySelectorAll<HTMLElement>('.lead-form button[type="submit"]');
+  if (barCta && submitButtons.length > 0) {
+    const visible = new Set<Element>();
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) visible.add(entry.target);
+        else visible.delete(entry.target);
+      });
+      const hide = visible.size > 0;
+      barCta.classList.toggle('hidden', hide);
+      barCall?.classList.toggle('border-r', !hide);
+    });
+    submitButtons.forEach((button) => observer.observe(button));
+  }
+</script>
