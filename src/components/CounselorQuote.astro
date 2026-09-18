@@ -28,7 +28,7 @@ const { quote, author } = Astro.props;
         &ldquo;
       </span>
       <p class="mt-2 font-[family-name:var(--font-heading)] text-xl font-medium italic text-brand-ink">{quote}</p>
-      {author && <footer class="mt-4 text-sm font-semibold text-brand-primary">&mdash; {author}</footer>}
+      {author && <footer class="mt-4 text-sm font-semibold text-brand-primary">- {author}</footer>}
     </blockquote>
   </section>
 )}
