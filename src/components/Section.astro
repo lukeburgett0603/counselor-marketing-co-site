@@ -7,7 +7,21 @@ interface Props {
 const { heading, tight = false } = Astro.props;
 ---
 
-<section class:list={['mx-auto max-w-4xl px-6', tight ? 'py-8' : 'py-14']}>
+{/*
+  Canonical "prose section" convention (2026-09-18): a plain markdown/
+  text block, no card grid, gets max-w-3xl and left-aligned text — the
+  same width Guide.astro/ExplanatoryBrandscript.astro/FAQ.astro already
+  use for their own prose. A card-grid section (PlanSteps.astro, the
+  benefit-card path in ValueProposition.astro) is the other half of this
+  convention: max-w-5xl, a heading centered via a class on the heading
+  element itself (never on a wrapping ancestor — that's what let Guide/
+  ValueProposition/ExplanatoryBrandscript drift into forcing everything
+  downstream, including bullet lists and CTAs, to inherit centering they
+  didn't want), left-aligned card content, and a CTA explicitly wrapped
+  in its own text-center div so it stays a deliberate centered focal
+  point regardless of the prose alignment around it.
+*/}
+<section class:list={['mx-auto max-w-3xl px-6', tight ? 'py-8' : 'py-14']}>
   {heading && (
     <h2 class="mb-6 font-[family-name:var(--font-heading)] text-2xl font-extrabold tracking-tight text-brand-ink">{heading}</h2>
   )}
