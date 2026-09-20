@@ -83,17 +83,21 @@ const showAside = isOverlay ? Astro.slots.has('aside') : !imageUrl && Astro.slot
     <div class="absolute inset-0" style={`background-color: ${safeOverlayColor}; opacity: ${safeOverlayOpacity};`}></div>
     <div class="relative mx-auto flex max-w-6xl flex-col items-start gap-10 px-6 md:flex-row">
       <div class="flex-1">
-        <h1 class:list={['font-[family-name:var(--font-heading)] font-extrabold tracking-tight text-white', compact ? 'text-3xl' : 'text-4xl md:text-5xl']}>
+        <h1 class:list={['font-[family-name:var(--font-heading)] font-extrabold leading-[1.05] tracking-tight text-white', compact ? 'text-3xl' : 'text-4xl md:text-5xl lg:text-6xl']}>
           {h1}
         </h1>
-        {subhead && <p class="mt-4 text-lg text-white/90">{subhead}</p>}
+        {subhead && (
+          <p class="mt-5 max-w-xl text-lg text-white/90">
+            {subhead}
+          </p>
+        )}
         {/* No CTA button here when a form is already visible beside it —
             same "don't compete with the visible form" rule as the
             default layout below; the form itself is the CTA. */}
         {ctaText && !showAside && (
           <a
             href={ctaHref}
-            class="mt-6 inline-block rounded-md bg-brand-accent px-6 py-3 font-semibold text-white transition hover:opacity-90 hover:shadow-md"
+            class="btn mt-7 inline-block rounded-lg bg-brand-accent px-7 py-3.5 font-semibold text-white shadow-sm hover:opacity-90 hover:shadow-lg"
           >
             {ctaText}
           </a>
@@ -108,13 +112,17 @@ const showAside = isOverlay ? Astro.slots.has('aside') : !imageUrl && Astro.slot
     </div>
   </section>
 ) : (
-  <section class:list={['bg-brand-neutral', compact ? 'py-10' : 'py-20']}>
+  <section class:list={['bg-brand-neutral', compact ? 'py-10' : 'py-20 md:py-28']}>
     <div class="mx-auto flex max-w-6xl flex-col items-center gap-10 px-6 md:flex-row">
       <div class="flex-1">
-        <h1 class:list={['font-[family-name:var(--font-heading)] font-extrabold tracking-tight text-brand-ink', compact ? 'text-3xl' : 'text-4xl md:text-5xl']}>
+        <h1 class:list={['font-[family-name:var(--font-heading)] font-extrabold leading-[1.05] tracking-tight text-brand-ink', compact ? 'text-3xl' : 'text-4xl md:text-5xl lg:text-6xl']}>
           {h1}
         </h1>
-        {subhead && <p class="mt-4 text-lg text-slate-600">{subhead}</p>}
+        {subhead && (
+          <p class="mt-5 max-w-xl text-lg text-slate-600">
+            {subhead}
+          </p>
+        )}
         {/*
           A visible CTA above the fold, not just at the bottom of the page —
           visitors deciding quickly (especially on mobile, especially local
@@ -125,7 +133,7 @@ const showAside = isOverlay ? Astro.slots.has('aside') : !imageUrl && Astro.slot
         {ctaText && !showAside && (
           <a
             href={ctaHref}
-            class="mt-6 inline-block rounded-md bg-brand-accent px-6 py-3 font-semibold text-white transition hover:opacity-90 hover:shadow-md"
+            class="btn mt-7 inline-block rounded-lg bg-brand-accent px-7 py-3.5 font-semibold text-white shadow-sm hover:opacity-90 hover:shadow-lg"
           >
             {ctaText}
           </a>
@@ -145,7 +153,7 @@ const showAside = isOverlay ? Astro.slots.has('aside') : !imageUrl && Astro.slot
           <OptimizedImage
             src={imageUrl}
             alt={imageAlt ?? ''}
-            class:list={['hero-photo-crop w-full rounded-xl object-cover', focalYClass]}
+            class:list={['hero-photo-crop w-full rounded-xl object-cover shadow-xl', focalYClass]}
             loading="eager"
             widths={[400, 800, 1200]}
             sizes="(min-width: 768px) 50vw, 100vw"

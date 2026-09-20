@@ -47,6 +47,25 @@ const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbChain, siteUrl);
     <meta name="description" content={description} />
     <link rel="canonical" href={canonicalUrl} />
 
+    {/*
+      Safety net for global.css's `.reveal` rule — see that rule's own
+      comment for why this exists as `html.js .reveal` rather than a bare
+      `.reveal` there: this tiny synchronous script is the only thing that
+      ever adds the `js` class, so `.reveal` only hides content when JS is
+      actually confirmed running. If JS is disabled, blocked, or errors out
+      anywhere else on the page, every `.reveal` element just renders in
+      its normal (visible) state — no `<noscript>` needed (a `<noscript>`
+      containing a `<style>` was tried here first and rejected: browsers
+      parse `<noscript>`'s content as raw text whenever scripting is
+      actually enabled, which corrupted this document's own `<head>`
+      parsing and leaked a later `{ogImage && ...}` expression as visible
+      body text — caught live in the browser, not by reading the code).
+      Deliberately not `is:inline` via a .astro directive — a plain inline
+      <script> here is already synchronous and render-blocking by default,
+      which is exactly what's needed before first paint.
+    */}
+    <script>document.documentElement.classList.add('js');</script>
+
     {business.google_fonts_url && (
       <>
         {/* Real brand webfont(s), set per client via business.google_fonts_url
@@ -87,5 +106,29 @@ const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbChain, siteUrl);
     </main>
     <Footer navPages={allPages} business={business} />
     <MobileCTABar telephone={business.telephone} ctaText={page.cta_button_text ?? undefined} />
+    <script>
+      // Shared reveal-on-scroll — see global.css's `.reveal`/`.is-visible`
+      // rules. One observer for the whole page rather than one per
+      // component; `unobserve` once revealed since this never needs to
+      // reverse. No-op (and no import cost) when the browser doesn't
+      // support IntersectionObserver — elements just stay in their
+      // default (visible) state.
+      if ('IntersectionObserver' in window) {
+        const revealObserver = new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              if (entry.isIntersecting) {
+                entry.target.classList.add('is-visible');
+                revealObserver.unobserve(entry.target);
+              }
+            }
+          },
+          { threshold: 0.15, rootMargin: '0px 0px -8% 0px' }
+        );
+        document.querySelectorAll('.reveal').forEach((el) => revealObserver.observe(el));
+      } else {
+        document.querySelectorAll('.reveal').forEach((el) => el.classList.add('is-visible'));
+      }
+    </script>
   </body>
 </html>

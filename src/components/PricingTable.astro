@@ -28,13 +28,26 @@ const gridColsClass = tiers.length === 2 ? 'md:grid-cols-2' : 'lg:grid-cols-3';
 ---
 
 {tiers.length > 0 && (
-  <div class:list={['mx-auto grid max-w-5xl gap-6 px-6', gridColsClass]}>
-    {tiers.map((tier) => (
+  // `not-prose` (Tailwind Typography's own escape hatch): this component is
+  // a card grid, not prose content, but Pricing.astro renders it inside
+  // <Section tight> for the shared max-width/padding — and Section.astro
+  // wraps its slot in a `.prose` div, which the Typography plugin styles
+  // with (among other things) `text-decoration: underline` on every link by
+  // default. Caught live in the browser, not by reading the code: the tier
+  // CTA buttons below were rendering with a real underline despite no
+  // underline class anywhere in this file. Section.astro's own comment
+  // documents its slot as "always plain markdown-rendered prose, never a
+  // card grid, checked every call site" — this is the one call site that
+  // violated that invariant; `not-prose` is the minimal fix rather than
+  // restructuring Pricing.astro to give this its own section wrapper.
+  <div class:list={['not-prose mx-auto grid max-w-5xl gap-6 px-6', gridColsClass]}>
+    {tiers.map((tier, index) => (
       <div
         class:list={[
-          'flex flex-col rounded-lg border bg-white p-6 shadow-sm',
+          'reveal flex flex-col rounded-lg border bg-white p-6 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg',
           tier.highlighted ? 'border-brand-accent shadow-md ring-1 ring-brand-accent' : 'border-black/5',
         ]}
+        style={`animation-delay: ${index * 0.08}s;`}
       >
         <h3 class="font-[family-name:var(--font-heading)] text-lg font-bold text-brand-ink">{tier.name}</h3>
         <p class="mt-1 text-xs uppercase tracking-wide text-slate-500">Best for: {tier.best_for}</p>
@@ -55,9 +68,9 @@ const gridColsClass = tiers.length === 2 ? 'md:grid-cols-2' : 'lg:grid-cols-3';
         <a
           href="#lead-generator"
           class:list={[
-            'mt-6 block rounded-md px-4 py-2.5 text-center text-sm font-semibold transition',
+            'btn mt-6 block rounded-lg px-4 py-2.5 text-center text-sm font-semibold no-underline',
             tier.highlighted
-              ? 'bg-brand-accent text-white hover:opacity-90'
+              ? 'bg-brand-accent text-white shadow-sm hover:opacity-90 hover:shadow-md'
               : 'bg-brand-neutral text-brand-ink hover:bg-brand-tint/40',
           ]}
         >

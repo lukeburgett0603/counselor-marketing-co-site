@@ -95,21 +95,21 @@ const Wrapper = embedded ? 'div' : 'section';
         type="text"
         placeholder="Name"
         required
-        class="w-full rounded-md border border-slate-300 px-4 py-2"
+        class="w-full rounded-lg border border-slate-300 px-4 py-2 transition focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
       />
       <input
         name="email"
         type="email"
         placeholder="Email"
         required
-        class="w-full rounded-md border border-slate-300 px-4 py-2"
+        class="w-full rounded-lg border border-slate-300 px-4 py-2 transition focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
       />
       {!compact && (
         <input
           name="phone"
           type="tel"
           placeholder="Phone (optional)"
-          class="w-full rounded-md border border-slate-300 px-4 py-2"
+          class="w-full rounded-lg border border-slate-300 px-4 py-2 transition focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
         />
       )}
       {collectWebsiteUrl && (
@@ -117,14 +117,14 @@ const Wrapper = embedded ? 'div' : 'section';
           name="existing_website_url"
           type="url"
           placeholder="Current website (optional — skip if you don't have one yet)"
-          class="w-full rounded-md border border-slate-300 px-4 py-2"
+          class="w-full rounded-lg border border-slate-300 px-4 py-2 transition focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
         />
       )}
       {collectCounselorPreference && counselors.length > 0 && (
         <select
           name="preferred_counselor_page_id"
           aria-label="Select a Counselor"
-          class="w-full rounded-md border border-slate-300 px-4 py-2 text-slate-700"
+          class="w-full rounded-lg border border-slate-300 px-4 py-2 transition focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/30 text-slate-700"
         >
           <option value="" selected={!defaultCounselorId}>Help me choose</option>
           {counselors.map((counselor) => (
@@ -139,11 +139,11 @@ const Wrapper = embedded ? 'div' : 'section';
           name="message"
           placeholder="How can we help?"
           rows="4"
-          class="w-full rounded-md border border-slate-300 px-4 py-2"></textarea>
+          class="w-full rounded-lg border border-slate-300 px-4 py-2 transition focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/30"></textarea>
       )}
       <button
         type="submit"
-        class="w-full rounded-md bg-brand-accent px-6 py-3 font-semibold text-white transition hover:opacity-90 hover:shadow-md"
+        class="btn w-full rounded-lg bg-brand-accent px-6 py-3 font-semibold text-white shadow-sm hover:opacity-90 hover:shadow-lg"
       >
         {submitText}
       </button>

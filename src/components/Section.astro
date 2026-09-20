@@ -30,9 +30,9 @@ const { heading, tight = false, tint = false } = Astro.props;
   point regardless of the prose alignment around it.
 */}
 <section class:list={[tint && 'bg-brand-tint/10']}>
-  <div class:list={['mx-auto max-w-3xl px-6', tight ? 'py-8' : 'py-14']}>
+  <div class:list={['mx-auto max-w-3xl px-6', tight ? 'py-8' : 'py-14 md:py-20']}>
     {heading && (
-      <h2 class="mb-6 font-[family-name:var(--font-heading)] text-2xl font-extrabold tracking-tight text-brand-ink">{heading}</h2>
+      <h2 class="reveal mb-6 font-[family-name:var(--font-heading)] text-2xl font-extrabold tracking-tight text-brand-ink md:text-3xl">{heading}</h2>
     )}
     {/*
       No max-w-none here on purpose — Tailwind Typography's own default
@@ -46,7 +46,7 @@ const { heading, tight = false, tint = false } = Astro.props;
       before making this change), so constraining it here is safe
       everywhere it's used.
     */}
-    <div class="prose">
+    <div class:list={['prose', heading && 'reveal']} style={heading ? 'animation-delay: 0.06s;' : undefined}>
       <slot />
     </div>
   </div>

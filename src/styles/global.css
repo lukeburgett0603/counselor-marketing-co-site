@@ -42,6 +42,75 @@ body {
   font-family: var(--font-body);
 }
 
+/*
+ * Visual redesign pass (2026-09-20). Brand colors/font are deliberate,
+ * already-approved decisions (see the note above) and stay untouched —
+ * this pass is about layout craft, type confidence, and motion, not a new
+ * palette. See Site Structure.md's "Design authority" note for what a
+ * design pass is and isn't allowed to touch.
+ *
+ * Reveal-on-scroll: one small, dependency-free utility (IntersectionObserver
+ * in BaseLayout.astro, toggling `.is-visible` on `.reveal` elements) instead
+ * of a motion library — this is a static Astro site with no React runtime,
+ * so Motion/GSAP don't fit the stack. Motivated by storytelling: content
+ * arriving as the visitor scrolls through a StoryBrand arc mirrors reading
+ * order, not decoration. Fully inert under prefers-reduced-motion (the
+ * element just renders in its final state with no observer attached).
+ *
+ * Scoped to `html.js .reveal`, never a bare `.reveal` — `js` is added to
+ * <html> by a tiny synchronous script at the very top of BaseLayout.astro's
+ * <head>, before first paint. If JS is disabled, blocked, or errors out
+ * anywhere on the page, that class never lands, so `.reveal` content just
+ * renders in its normal visible state instead of staying hidden forever —
+ * cheaper and more robust than a `<noscript>` override (tried first, see
+ * BaseLayout.astro's own note on why that broke this document's <head>
+ * parsing). Never apply `.reveal` to anything above the fold (a page's
+ * Hero) — it's already visible on load, so "revealing" it only adds a
+ * flash of invisible text before the observer fires on first paint.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  /* `animation`, not `transition`, and on purpose: a `.reveal` element is
+     frequently also a card with its own hover `transition` (PlanSteps'/
+     PricingTable's shadow-lift, FAQ's hover:shadow-md) — `transition` is a
+     single shorthand per element, so a bare `.reveal { transition: opacity
+     .6s, transform .6s }` would silently replace that element's *entire*
+     transition-property list wherever both classes land on it (same
+     specificity, later in cascade wins), making the existing hover lift
+     jump instantly instead of animating. `animation` is a fully separate
+     CSS mechanism from `transition` — it can never collide with a card's
+     own hover transition, and its per-element stagger (`animation-delay`,
+     set inline per element in PlanSteps.astro/FAQ.astro/PricingTable.astro)
+     only ever affects this one-shot entrance, never a later hover state. */
+  @keyframes reveal-in {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  html.js .reveal {
+    opacity: 0;
+  }
+  html.js .reveal.is-visible {
+    animation: reveal-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+/* Tactile press feedback on every real click target — a physical "push"
+   instead of a flat color swap, applied once here rather than per
+   component so it can never drift between buttons. */
+a.btn,
+button.btn {
+  transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease, background-color 0.2s ease;
+}
+a.btn:active,
+button.btn:active {
+  transform: scale(0.98);
+}
+
 .prose ol > li::marker {
   color: var(--color-brand-accent);
   font-weight: 700;
