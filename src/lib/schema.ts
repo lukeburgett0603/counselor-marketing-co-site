@@ -223,6 +223,7 @@ export function buildPageSchemas(
       case 'Services Overview':
       case 'Blog Index':
       case 'Other':
+      case 'Pricing':
       default:
         return [buildWebPageSchema(page, siteUrl)];
     }

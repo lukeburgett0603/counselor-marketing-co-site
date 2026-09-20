@@ -1,0 +1,69 @@
+---
+// Real, transparent tier comparison — deliberately no crossed-out "was $X"
+// anchoring, no countdown/scarcity language, and no forced "MOST POPULAR"
+// badge. The objection-handling happens through clarity, not pressure: a
+// plain "Best for" line on each tier lets a visitor self-select instead of
+// feeling upsold, and a full itemized feature checklist makes the value
+// concrete instead of abstract. See brandscript-master.md and Site
+// Structure.md's 2026-09-20 revision for the reasoning behind this page
+// existing at all. Only renders when real tier data exists; never invents
+// pricing.
+interface Tier {
+  name: string;
+  price: string;
+  price_note: string | null;
+  best_for: string;
+  features: string[];
+  cta_text: string;
+  highlighted: boolean;
+}
+
+interface Props {
+  tiers: Tier[];
+}
+
+const { tiers } = Astro.props;
+
+const gridColsClass = tiers.length === 2 ? 'md:grid-cols-2' : 'lg:grid-cols-3';
+---
+
+{tiers.length > 0 && (
+  <div class:list={['mx-auto grid max-w-5xl gap-6 px-6', gridColsClass]}>
+    {tiers.map((tier) => (
+      <div
+        class:list={[
+          'flex flex-col rounded-lg border bg-white p-6 shadow-sm',
+          tier.highlighted ? 'border-brand-accent shadow-md ring-1 ring-brand-accent' : 'border-black/5',
+        ]}
+      >
+        <h3 class="font-[family-name:var(--font-heading)] text-lg font-bold text-brand-ink">{tier.name}</h3>
+        <p class="mt-1 text-xs uppercase tracking-wide text-slate-500">Best for: {tier.best_for}</p>
+        <div class="mt-4 flex items-baseline gap-1">
+          <span class="font-[family-name:var(--font-heading)] text-3xl font-extrabold text-brand-ink">{tier.price}</span>
+          {tier.price_note && <span class="text-sm text-slate-500">{tier.price_note}</span>}
+        </div>
+        <ul class="mt-6 flex-1 space-y-2.5 text-sm text-slate-600">
+          {tier.features.map((feature) => (
+            <li class="flex items-start gap-2">
+              <span class="mt-0.5 shrink-0 text-brand-accent" aria-hidden="true">
+                &#10003;
+              </span>
+              <span>{feature}</span>
+            </li>
+          ))}
+        </ul>
+        <a
+          href="#lead-generator"
+          class:list={[
+            'mt-6 block rounded-md px-4 py-2.5 text-center text-sm font-semibold transition',
+            tier.highlighted
+              ? 'bg-brand-accent text-white hover:opacity-90'
+              : 'bg-brand-neutral text-brand-ink hover:bg-brand-tint/40',
+          ]}
+        >
+          {tier.cta_text}
+        </a>
+      </div>
+    ))}
+  </div>
+)}

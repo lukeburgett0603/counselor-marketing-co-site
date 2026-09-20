@@ -1,0 +1,65 @@
+---
+// Real, transparent tier comparison — the 2026-09-20 repositioning's
+// pricing page. See PricingTable.astro's own header comment for the
+// objection-handling design reasoning. `key_takeaways` is reused here as
+// the risk-reducer strip (no long-term contracts, month-to-month,
+// buyout/export clause) rather than a new column, same reuse discipline
+// as the rest of this codebase.
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/Hero.astro';
+import Section from '../components/Section.astro';
+import PricingTable from '../components/PricingTable.astro';
+import KeyTakeaways from '../components/KeyTakeaways.astro';
+import FAQ from '../components/FAQ.astro';
+import CTA from '../components/CTA.astro';
+import LeadGenerator from '../components/LeadGenerator.astro';
+import { renderCopy } from '../lib/markdown';
+import { getCounselorOptions } from '../lib/pages';
+import type { Page, Business } from '../lib/pages';
+
+interface Props {
+  page: Page;
+  allPages: Page[];
+  business: Business;
+}
+
+const { page, allPages, business } = Astro.props;
+const heroImage = page.images.hero;
+const counselors = getCounselorOptions(allPages);
+---
+
+<BaseLayout page={page} allPages={allPages} business={business}>
+  <Hero
+    h1={page.h1 ?? page.title}
+    subhead={page.hero_subhead ?? undefined}
+    imageUrl={heroImage?.url}
+    imageAlt={heroImage?.alt}
+    imageCreditName={heroImage?.creditName}
+    imageCreditUrl={heroImage?.creditUrl}
+    imageFocalY={page.hero_image_focal_y}
+  />
+  {page.copy && (
+    <Section tight>
+      <div class="mx-auto max-w-3xl text-center">
+        <Fragment set:html={renderCopy(page.copy)} />
+      </div>
+    </Section>
+  )}
+  <Section tight>
+    <PricingTable tiers={page.pricing_tiers} />
+  </Section>
+  <Section tight>
+    <KeyTakeaways items={page.key_takeaways} heading="The fine print, up front" />
+  </Section>
+  <FAQ faqs={page.faqs} heading="Questions you're probably asking yourself right now" />
+  <CTA heading={page.cta_heading ?? 'Still deciding which tier fits?'} buttonText={page.cta_button_text ?? undefined} />
+  <LeadGenerator
+    slug={page.slug}
+    heading={page.cta_button_text ?? undefined}
+    submitText={page.cta_button_text ?? undefined}
+    collectWebsiteUrl={business.collect_website_in_leads}
+    responseTimeNote={business.lead_response_time_note}
+    collectCounselorPreference={business.collect_counselor_preference}
+    counselors={counselors}
+  />
+</BaseLayout>

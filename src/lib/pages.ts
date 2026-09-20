@@ -15,7 +15,8 @@ export type PageType =
   | 'Who We Serve'
   | 'Service Areas Overview'
   | 'Service Hub'
-  | 'Counselors Overview';
+  | 'Counselors Overview'
+  | 'Pricing';
 
 // The 3 page types short/compact enough that the whole page is basically
 // one pass through the StoryBrand arc, so they get the 5 storybrand_*
@@ -87,6 +88,17 @@ export interface Page {
   // FeatureGrid.astro without PlanSteps.astro's numbered badge, which
   // would misleadingly imply a sequence. See 0027_concerns.sql.
   concerns: { title: string; description: string }[];
+  // Only meaningful on page_type = 'Pricing'. Rendered by
+  // PricingTable.astro. See 0035_pricing_page_type.sql.
+  pricing_tiers: {
+    name: string;
+    price: string;
+    price_note: string | null;
+    best_for: string;
+    features: string[];
+    cta_text: string;
+    highlighted: boolean;
+  }[];
   // Free-text taxonomy — a 'Blog Post' row's own topic, or (on a 'Content
   // Pillar' hub row) which category feeds its embedded spoke-post section.
   // Independent of the service list on purpose — see 0007_blog.sql.
