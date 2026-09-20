@@ -81,7 +81,7 @@ const isOverlayHero = page.hero_style === 'overlay' && !!page.images.hero;
       <Fragment set:html={renderCopy(page.storybrand_guide_empathy)} />
     </Section>
   )}
-  <FeatureGrid items={page.concerns} heading="Why families choose us" />
+  <FeatureGrid items={page.concerns} heading="What you get" />
   {page.testimonial_quote && page.testimonial_author && (
     <Testimonial quote={page.testimonial_quote} author={page.testimonial_author} role={page.testimonial_role} />
   )}
