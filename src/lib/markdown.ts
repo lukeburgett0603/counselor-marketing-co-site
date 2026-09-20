@@ -65,6 +65,54 @@ export function extractTableOfContents(markdown: string | null): { text: string;
     .map((t) => ({ text: t.text, id: slugify(t.text) }));
 }
 
+export interface MarkdownH3Section {
+  title: string;
+  bodyHtml: string;
+}
+
+// Splits a StoryBrand field's markdown into one {title, bodyHtml} entry per
+// `### ` heading, for a caller that wants to give each real subsection its
+// own distinct visual treatment (a numbered stack, a card, etc.) instead of
+// one flowing `renderCopy()` block — the 2026-09-20 Homepage redesign's
+// pitch section is the first real use. Same lexer-based approach as
+// extractShortBenefitList() above (strip the interleaved 'space' tokens
+// first so heading/body pairs are adjacent by index, re-parse each group's
+// own token slice back to HTML rather than re-rendering the whole field and
+// slicing strings). Any content before the first H3 is dropped silently —
+// this is only meant for fields that are genuinely "## hook, then all ###
+// sections," which is this codebase's own established copy convention (see
+// this file's header comment on renderCopy's heading renderer). Returns an
+// empty array for a field with no H3s at all, so a caller can fall back to
+// plain renderCopy() in that case.
+export function splitByH3Sections(markdown: string | null): MarkdownH3Section[] {
+  if (!markdown) return [];
+  const lexed = marked.lexer(markdown);
+  const tokens = lexed.filter((t) => t.type !== 'space');
+
+  const sections: MarkdownH3Section[] = [];
+  let current: { title: string; tokens: typeof tokens } | null = null;
+
+  for (const token of tokens) {
+    if (token.type === 'heading' && (token as Tokens.Heading).depth === 3) {
+      if (current) {
+        const bodyTokens = current.tokens as ReturnType<typeof marked.lexer>;
+        bodyTokens.links = lexed.links;
+        sections.push({ title: current.title, bodyHtml: marked.parser(bodyTokens, { renderer }) as string });
+      }
+      current = { title: (token as Tokens.Heading).text, tokens: [] };
+    } else if (current) {
+      current.tokens.push(token);
+    }
+  }
+  if (current) {
+    const bodyTokens = current.tokens as ReturnType<typeof marked.lexer>;
+    bodyTokens.links = lexed.links;
+    sections.push({ title: current.title, bodyHtml: marked.parser(bodyTokens, { renderer }) as string });
+  }
+
+  return sections;
+}
+
 const SHORT_LIST_MAX_ITEMS_LENGTH = 220;
 const SHORT_LIST_MIN_ITEMS = 3;
 const SHORT_LIST_MAX_ITEMS = 4;

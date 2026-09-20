@@ -34,6 +34,17 @@
 
   --font-heading: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+  /* Homepage-redesign-only (2026-09-20) — a genuine display face for the
+     hero/major-moment headings on Home specifically, not a sitewide brand
+     change: `business.brand_fonts`/`google_fonts_url` (Inter) still governs
+     every other page and every shared component (Header, Footer, every
+     other template). Loaded via its own <link> in BaseLayout.astro
+     (separate from the data-driven brand font, on purpose) and only ever
+     referenced through `font-[family-name:var(--font-display)]`, which
+     nothing outside Homepage.astro currently uses. Outfit, not Inter again
+     or a serif — geometric, confident, still fully sans, explicitly in the
+     design-taste skill's own suggested pairing pool. */
+  --font-display: "Outfit", "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
 body {

@@ -80,6 +80,19 @@ const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbChain, siteUrl);
       </>
     )}
 
+    {/*
+      Outfit (--font-display, global.css) — Homepage-redesign-only, loaded
+      only on that one page_type rather than sitewide, since nothing else
+      references the token yet. Not routed through business.google_fonts_url
+      on purpose: that field is the client's actual brand font (Inter) and
+      governs every other page; this is a page-scoped addition, not a brand
+      change. If a future page adopts --font-display too, move this to an
+      unconditional load instead of copying the gate.
+    */}
+    {page.page_type === 'Homepage' && (
+      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
+    )}
+
     <meta property="og:type" content={page.page_type === 'Content Pillar' || page.page_type === 'Service Hub' || page.page_type === 'Blog Post' ? 'article' : 'website'} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
