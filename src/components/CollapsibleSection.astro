@@ -1,0 +1,48 @@
+---
+// A collapsed-by-default disclosure for a StoryBrand copy field that
+// doesn't need to be read by every visitor up front — e.g. the Pitch
+// beat's deeper "how this actually works" explanation. Same native,
+// zero-JS <details>/<summary> accordion pattern FAQ.astro already uses
+// (the `group`/`group-open:` Tailwind utilities drive the chevron
+// rotation), not a new interaction model — and, like FAQ.astro, styled
+// entirely from this project's own brand tokens (font-heading, brand
+// tokens) rather than hardcoded colors, so it reads correctly on any
+// client site's palette without per-client changes. Renders nothing when
+// markdown is empty, same never-show-an-empty-shell discipline as every
+// other optional StoryBrand section.
+//
+// The trigger is a real <h2>, not just styled to look like one — before
+// this, the section had no heading at all, so a screen-reader user
+// navigating by headings (or a search engine reading the outline) would
+// skip it entirely even though every other section on the page has a
+// real heading. Nesting an <h2> inside <summary> is valid HTML and a
+// well-established accessible pattern for a disclosure that's also a
+// real page section: the heading gives it an outline entry, the
+// <summary> gives it the click/keyboard interaction, and both are
+// announced together by assistive tech.
+import { renderCopy } from '../lib/markdown';
+
+interface Props {
+  markdown: string | null;
+  triggerText?: string | null;
+}
+
+const { markdown, triggerText } = Astro.props;
+const label = triggerText || 'Learn more about our approach';
+---
+
+{markdown && (
+  <section class="py-8">
+    <div class="mx-auto max-w-3xl px-6">
+      <details class="group">
+        <summary class="cursor-pointer list-none marker:content-none hover:opacity-80">
+          <h2 class="flex items-center justify-center gap-2 text-center font-[family-name:var(--font-heading)] text-2xl font-extrabold tracking-tight text-brand-ink">
+            {label}
+            <span aria-hidden="true" class="shrink-0 text-lg leading-none text-brand-accent transition-transform duration-200 group-open:rotate-180">&darr;</span>
+          </h2>
+        </summary>
+        <div class="prose mx-auto mt-6" set:html={renderCopy(markdown)} />
+      </details>
+    </div>
+  </section>
+)}
