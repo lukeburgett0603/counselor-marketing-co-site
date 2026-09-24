@@ -1,0 +1,11 @@
+-- A suite/unit number is a distinct part of an address, not something
+-- that should be typed into the same field as the street address —
+-- found live on Freedom Counseling Services: the admin's single
+-- "Street address" field held "800 Lily Creek Rd #202", forcing the
+-- suite into a free-text suffix with no consistent format guarantee.
+-- schema.org's PostalAddress type has no separate unit/suite property
+-- of its own (only streetAddress/addressLocality/addressRegion/
+-- postalCode/postOfficeBoxNumber/addressCountry), so this still gets
+-- concatenated into `streetAddress` for JSON-LD — the split is purely
+-- for clean data entry and independent editing, not a new schema shape.
+alter table business add column street_address_2 text;

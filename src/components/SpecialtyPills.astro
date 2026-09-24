@@ -8,15 +8,28 @@ import { withBase } from '../lib/url';
 
 interface Props {
   specialties: { label: string; page_slug: string | null }[];
+  // CounselorsOverview.astro's grid wraps each whole card in its own
+  // <a> to the counselor's profile page — rendering a clickable pill's
+  // <a> in there too would nest anchors, invalid HTML with unpredictable
+  // click behavior across browsers (the same class of bug OptimizedImage.
+  // astro's showCredit prop exists to prevent for BlogPostCard.astro).
+  // linkable={false} forces every pill to the plain, non-interactive
+  // <span> treatment regardless of page_slug.
+  linkable?: boolean;
+  // The header card (CounselorProfile.astro) left-aligns everything at
+  // sm+ widths. A grid card (CounselorsOverview.astro) stays centered at
+  // every width instead — pass centered to match that context, same
+  // prop Modalities.astro already uses for the identical reason.
+  centered?: boolean;
 }
 
-const { specialties } = Astro.props;
+const { specialties, linkable = true, centered = false } = Astro.props;
 ---
 
 {specialties.length > 0 && (
-  <div class="flex flex-wrap justify-center gap-2 sm:justify-start">
+  <div class:list={['flex flex-wrap justify-center gap-2', !centered && 'sm:justify-start']}>
     {specialties.map((s) =>
-      s.page_slug ? (
+      s.page_slug && linkable ? (
         <a
           href={withBase(`/${s.page_slug}`)}
           class="rounded-full border border-brand-primary/30 bg-brand-neutral px-4 py-1.5 text-sm font-semibold text-brand-primary transition duration-150 hover:-translate-y-0.5 hover:border-brand-primary hover:bg-brand-primary hover:text-white hover:shadow-sm"

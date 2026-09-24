@@ -28,5 +28,22 @@
     </div>
     <p id="unsplash-status" class="mb-2 text-sm text-slate-500"></p>
     <div id="unsplash-results" class="grid grid-cols-3 gap-2 sm:grid-cols-4"></div>
+    <div id="unsplash-pagination" class="mt-4 hidden items-center justify-center gap-4">
+      <button
+        id="unsplash-prev-button"
+        type="button"
+        class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        &larr; Previous
+      </button>
+      <span id="unsplash-page-indicator" class="text-sm text-slate-500"></span>
+      <button
+        id="unsplash-next-button"
+        type="button"
+        class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        Next &rarr;
+      </button>
+    </div>
   </div>
 </div>

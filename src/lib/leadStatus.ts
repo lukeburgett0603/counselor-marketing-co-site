@@ -7,12 +7,22 @@ import { supabase } from './supabase';
 // discipline on pulling a pattern into a shared module the second time it's
 // needed, rather than copy-pasting it again.
 
-export const LEAD_STATUSES = ['new', 'contacted', 'closed'] as const;
+export const LEAD_STATUSES = ['new', 'contacted', 'scheduled', 'referred', 'withdrawn'] as const;
+
+// The two outcomes that mean "this lead is still active and needs
+// attention" are everything NOT in this set — kept as an explicit
+// terminal list (not the inverse) so a future 6th status defaults to
+// "still active" unless someone deliberately adds it here, matching
+// this project's own "robust against future columns" pattern elsewhere
+// (see enforce_content_permission's subtracted-key checks in CLAUDE.md).
+export const TERMINAL_LEAD_STATUSES: readonly string[] = ['scheduled', 'referred', 'withdrawn'];
 
 export const STATUS_SELECT_CLASS: Record<string, string> = {
   new: 'border-slate-300 bg-white text-slate-700',
   contacted: 'border-amber-300 bg-amber-50 text-amber-800',
-  closed: 'border-emerald-300 bg-emerald-50 text-emerald-800',
+  scheduled: 'border-emerald-300 bg-emerald-50 text-emerald-800',
+  referred: 'border-sky-300 bg-sky-50 text-sky-800',
+  withdrawn: 'border-rose-300 bg-rose-50 text-rose-700',
 };
 
 export function renderStatusSelect(leadId: string, status: string | null): string {

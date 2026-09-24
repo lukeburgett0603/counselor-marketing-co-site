@@ -20,9 +20,15 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
             <input id="biz-email" type="email" class="w-full rounded-md border border-slate-300 px-4 py-2" />
           </div>
         </div>
-        <div>
-          <label class="mb-1 block text-sm font-semibold text-slate-700">Street address</label>
-          <input id="biz-street" type="text" class="w-full rounded-md border border-slate-300 px-4 py-2" />
+        <div class="grid grid-cols-3 gap-4">
+          <div class="col-span-2">
+            <label class="mb-1 block text-sm font-semibold text-slate-700">Street address</label>
+            <input id="biz-street" type="text" class="w-full rounded-md border border-slate-300 px-4 py-2" />
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-semibold text-slate-700">Suite/unit (optional)</label>
+            <input id="biz-street-2" type="text" placeholder="Suite 202" class="w-full rounded-md border border-slate-300 px-4 py-2" />
+          </div>
         </div>
         <div class="grid grid-cols-3 gap-4">
           <div>
@@ -44,6 +50,20 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
           <p class="mt-1 text-xs text-slate-500">
             Shown as a "Client Portal" link in your site's footer, for existing clients to reach your EHR
             (SimplePractice, TherapyNotes, etc.).
+          </p>
+        </div>
+        <div>
+          <label class="mb-1 block text-sm font-semibold text-slate-700">Lead notification email(s) (optional)</label>
+          <input
+            id="biz-lead-notification-email"
+            type="text"
+            placeholder="you@example.com, teammate@example.com"
+            class="w-full rounded-md border border-slate-300 px-4 py-2"
+          />
+          <p class="mt-1 text-xs text-slate-500">
+            Who gets emailed the moment someone submits your contact form. Separate multiple
+            addresses with commas. Replying to that email goes straight back to the person who
+            submitted it. Leave blank to turn off notification emails.
           </p>
         </div>
         <button
@@ -109,10 +129,12 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
     telephone: string | null;
     email: string | null;
     street_address: string | null;
+    street_address_2: string | null;
     address_locality: string | null;
     address_region: string | null;
     postal_code: string | null;
     client_portal_url: string | null;
+    lead_notification_email: string | null;
   };
 
   function escapeHtml(value: string): string {
@@ -133,20 +155,37 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
   const bizTelephone = document.getElementById('biz-telephone') as HTMLInputElement;
   const bizEmail = document.getElementById('biz-email') as HTMLInputElement;
   const bizStreet = document.getElementById('biz-street') as HTMLInputElement;
+  const bizStreet2 = document.getElementById('biz-street-2') as HTMLInputElement;
   const bizCity = document.getElementById('biz-city') as HTMLInputElement;
   const bizRegion = document.getElementById('biz-region') as HTMLInputElement;
   const bizPostal = document.getElementById('biz-postal') as HTMLInputElement;
   const bizPortal = document.getElementById('biz-portal') as HTMLInputElement;
+  const bizLeadNotificationEmail = document.getElementById('biz-lead-notification-email') as HTMLInputElement;
 
   function loadBusinessForm() {
     if (!business) return;
     bizTelephone.value = business.telephone ?? '';
     bizEmail.value = business.email ?? '';
     bizStreet.value = business.street_address ?? '';
+    bizStreet2.value = business.street_address_2 ?? '';
     bizCity.value = business.address_locality ?? '';
     bizRegion.value = business.address_region ?? '';
     bizPostal.value = business.postal_code ?? '';
     bizPortal.value = business.client_portal_url ?? '';
+    bizLeadNotificationEmail.value = business.lead_notification_email ?? '';
+  }
+
+  // Normalizes a comma-separated textbox value into a clean comma-separated
+  // string before saving — trims each address and drops empty entries, so
+  // "a@x.com, , b@x.com," doesn't round-trip as literal empty segments the
+  // Edge Function would otherwise try to email.
+  function normalizeEmailList(value: string): string | null {
+    const cleaned = value
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .join(', ');
+    return cleaned || null;
   }
 
   businessSaveButton.addEventListener('click', async () => {
@@ -159,10 +198,12 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         telephone: bizTelephone.value.trim() || null,
         email: bizEmail.value.trim() || null,
         street_address: bizStreet.value.trim() || null,
+        street_address_2: bizStreet2.value.trim() || null,
         address_locality: bizCity.value.trim() || null,
         address_region: bizRegion.value.trim() || null,
         postal_code: bizPostal.value.trim() || null,
         client_portal_url: bizPortal.value.trim() || null,
+        lead_notification_email: normalizeEmailList(bizLeadNotificationEmail.value),
       })
       .eq('id', business.id);
     if (error) {

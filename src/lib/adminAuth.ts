@@ -29,9 +29,34 @@ export interface AdminUser {
 }
 
 const ROLE_NAV_ACCESS: Record<AdminUser['role'], string[]> = {
-  owner: ['leads', 'crm', 'blog', 'content', 'lead-magnets', 'team', 'counselor-settings'],
-  staff: ['blog'],
-  agency: ['leads', 'crm', 'blog', 'content', 'lead-magnets', 'suggestions', 'team', 'counselor-settings'],
+  owner: [
+    'leads',
+    'crm',
+    'seo-insights',
+    'content-plan',
+    'blog',
+    'content',
+    'content-business-info',
+    'content-page-copy',
+    'lead-magnets',
+    'team',
+    'counselor-settings',
+  ],
+  staff: ['blog', 'content-plan'],
+  agency: [
+    'leads',
+    'crm',
+    'seo-insights',
+    'content-plan',
+    'blog',
+    'content',
+    'content-business-info',
+    'content-page-copy',
+    'lead-magnets',
+    'suggestions',
+    'team',
+    'counselor-settings',
+  ],
 };
 
 interface InitAdminAuthOptions {
@@ -96,6 +121,13 @@ export function initAdminAuth(
     const allowed = new Set(ROLE_NAV_ACCESS[adminUser.role]);
     if (adminUser.role === 'staff' && adminUser.linked_counselor_page_id) {
       allowed.add('counselor-settings');
+      // Same page copy access an owner has, but only on Page Copy — never
+      // Business Info, and only ever their own linked page (enforced by
+      // the page itself + RLS, not just this nav visibility). 'content' is
+      // the parent group's own toggle-button key, needed on top of the
+      // child key or the "Website content" header never shows at all.
+      allowed.add('content');
+      allowed.add('content-page-copy');
     }
     document.querySelectorAll<HTMLElement>('[data-nav-key]').forEach((el) => {
       el.classList.toggle('hidden', !allowed.has(el.dataset.navKey!));

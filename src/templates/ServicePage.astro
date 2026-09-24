@@ -46,7 +46,7 @@ const counselors = getCounselorOptions(allPages);
     </Section>
   )}
   <PlanSteps steps={page.plan_steps} />
-  <CollapsibleSection markdown={page.storybrand_pitch} />
+  <CollapsibleSection markdown={page.storybrand_pitch} triggerText={page.storybrand_pitch_label} />
   <StoryBrandSection markdown={page.storybrand_success} />
   {page.storybrand_failure && (
     <Section>
@@ -54,15 +54,17 @@ const counselors = getCounselorOptions(allPages);
     </Section>
   )}
   <FAQ faqs={page.faqs} />
-  <CTA heading={page.cta_heading ?? `Get started with ${page.title}`} buttonText={page.cta_button_text ?? undefined} />
-  <LeadMagnet pageId={page.id} />
+  <CTA heading={page.cta_heading ?? `Get started with ${page.title}`} subheading={page.cta_subheading} buttonText={page.cta_button_text ?? undefined} />
+  <LeadMagnet pageId={page.id} turnstileSiteKey={business.cloudflare_turnstile_site_key} />
   <LeadGenerator
     slug={page.slug}
     heading={page.cta_button_text ?? undefined}
     submitText={page.cta_button_text ?? undefined}
     collectWebsiteUrl={business.collect_website_in_leads}
     responseTimeNote={business.lead_response_time_note}
+    turnstileSiteKey={business.cloudflare_turnstile_site_key}
     collectCounselorPreference={business.collect_counselor_preference}
+    collectSessionFormat={business.collect_session_format_preference}
     counselors={counselors}
   />
 </BaseLayout>

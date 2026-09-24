@@ -11,9 +11,19 @@ import { getLeadMagnetForPage } from '../lib/leadMagnets';
 
 interface Props {
   pageId: string;
+  // Cloudflare Turnstile — same opt-in prop LeadGenerator.astro already
+  // takes (business.cloudflare_turnstile_site_key, unset means skip it).
+  // Added 2026-09-14 after real bot activity was found hitting this
+  // form's old direct-REST path: honeypot + Turnstile were originally
+  // scoped to the contact form only (see CLAUDE.md's "Contact-form spam
+  // defense" section), on the reasoning that a lead-magnet download is a
+  // lower-cost-of-spam signal than a real appointment request — that
+  // reasoning held until this form actually started getting farmed by
+  // bots with randomized names and dot-obfuscated emails.
+  turnstileSiteKey?: string | null;
 }
 
-const { pageId } = Astro.props;
+const { pageId, turnstileSiteKey } = Astro.props;
 const magnet = await getLeadMagnetForPage(pageId);
 ---
 
@@ -29,6 +39,11 @@ const magnet = await getLeadMagnetForPage(pageId);
             <p class="mb-6 text-slate-200">{magnet.description}</p>
 
             <form class="lead-magnet-form space-y-3" data-magnet-id={magnet.id} data-file-url={magnet.file_url} data-file-name={magnet.file_name}>
+              {/* Honeypot — same pattern as LeadGenerator.astro, see that
+                  component's own comment for why enforcement is server-side. */}
+              <div class="absolute -left-[9999px] h-px w-px overflow-hidden" aria-hidden="true">
+                <input type="text" name="hp_website" tabindex="-1" autocomplete="off" />
+              </div>
               <input
                 name="name"
                 type="text"
@@ -43,6 +58,7 @@ const magnet = await getLeadMagnetForPage(pageId);
                 required
                 class="w-full rounded-md border border-white/20 bg-white/95 px-4 py-2.5 text-brand-ink placeholder:text-slate-500"
               />
+              {turnstileSiteKey && <div class="cf-turnstile" data-sitekey={turnstileSiteKey}></div>}
               <button
                 type="submit"
                 class="w-full rounded-md bg-brand-accent px-6 py-3 font-semibold text-white transition hover:opacity-90 hover:shadow-md"
@@ -98,6 +114,17 @@ const magnet = await getLeadMagnetForPage(pageId);
   const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
   const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
+  // Same guard as LeadGenerator.astro — load Cloudflare's script at most
+  // once even if both this widget and a LeadGenerator (or two of this
+  // widget, unlikely but not impossible) appear on the same page.
+  if (document.querySelector('.cf-turnstile') && !document.querySelector('script[src*="challenges.cloudflare.com/turnstile"]')) {
+    const turnstileScript = document.createElement('script');
+    turnstileScript.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+    turnstileScript.async = true;
+    turnstileScript.defer = true;
+    document.head.appendChild(turnstileScript);
+  }
+
   document.querySelectorAll<HTMLFormElement>('.lead-magnet-form').forEach((form) => {
     const status = form.querySelector<HTMLElement>('.lead-magnet-status');
     const successView = form.parentElement?.querySelector<HTMLElement>('.lead-magnet-success');
@@ -108,19 +135,20 @@ const magnet = await getLeadMagnetForPage(pageId);
       const formData = new FormData(form);
       status.textContent = 'Sending...';
 
-      const response = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/submit-lead`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           apikey: SUPABASE_ANON_KEY,
           Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          Prefer: 'return=minimal',
         },
         body: JSON.stringify({
           name: formData.get('name'),
           email: formData.get('email'),
           source_page: window.location.pathname,
           lead_magnet_id: form.dataset.magnetId,
+          hp_website: formData.get('hp_website') || '',
+          turnstile_token: formData.get('cf-turnstile-response') || null,
         }),
       });
 

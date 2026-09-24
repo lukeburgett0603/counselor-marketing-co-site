@@ -1,19 +1,20 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
+import { MODALITY_OPTIONS } from '../../lib/modalities';
 ---
 
 <AdminLayout title="Counselor settings | Admin" current="counselor-settings">
   <div class="max-w-lg space-y-6">
     <section>
-      <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold text-brand-ink">Counselor settings</h2>
       <p class="mb-4 text-sm text-slate-600">
-        Shown on your counselor page — your availability pill, telehealth badge, and training/modalities tags.
-        Update any of these any time.
+        Shown on your counselor page — your availability pill, telehealth badge, license number, and
+        training/modalities tags. Update any of these any time.
       </p>
 
       <div id="picker-wrap" class="hidden mb-4">
         <label class="mb-1 block text-sm font-semibold text-slate-700">Counselor</label>
         <select id="counselor-page-select" class="w-full rounded-md border border-slate-300 px-4 py-2"></select>
+        <p class="mt-1 text-xs text-slate-500">Owner/agency view — pick which counselor's settings to edit.</p>
       </div>
 
       <div id="not-linked-notice" class="hidden rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -45,14 +46,75 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         </label>
 
         <div>
-          <label class="mb-1 block text-sm font-semibold text-slate-700">Training &amp; modalities</label>
+          <label class="mb-1 block text-sm font-semibold text-slate-700">License number</label>
           <input
-            id="modalities-input"
+            id="license-input"
             type="text"
-            placeholder="EMDR, ACT, CBT"
+            placeholder="e.g. LPCA 12345"
             class="w-full rounded-md border border-slate-300 px-4 py-2"
           />
-          <p class="mt-1 text-xs text-slate-500">Separate each one with a comma — shown as tags on your page.</p>
+          <p class="mt-1 text-xs text-slate-500">Optional — shown next to your credentials on your page. Leave blank to hide it.</p>
+        </div>
+
+        <div>
+          <label class="mb-1 block text-sm font-semibold text-slate-700">Professional title</label>
+          <input
+            id="professional-title-input"
+            type="text"
+            placeholder="e.g. Licensed Professional Counselor Associate"
+            class="w-full rounded-md border border-slate-300 px-4 py-2"
+          />
+          <p class="mt-1 text-xs text-slate-500">Optional — the spelled-out form of your credentials, shown near your name. Leave blank to hide it.</p>
+        </div>
+
+        <div>
+          <label class="mb-1 block text-sm font-semibold text-slate-700">Education</label>
+          <input
+            id="education-input"
+            type="text"
+            placeholder="e.g. M.A. Clinical Mental Health Counseling, Colorado Christian University"
+            class="w-full rounded-md border border-slate-300 px-4 py-2"
+          />
+          <p class="mt-1 text-xs text-slate-500">Optional — your degree and school, shown near your credentials. Leave blank to hide it.</p>
+        </div>
+
+        <div>
+          <label class="mb-1 block text-sm font-semibold text-slate-700">Training &amp; modalities</label>
+          <input
+            id="modality-search"
+            type="text"
+            placeholder="Search modalities..."
+            class="mb-2 w-full rounded-md border border-slate-300 px-4 py-2 text-sm"
+          />
+          <div id="modality-options" class="grid max-h-64 grid-cols-1 gap-0.5 overflow-y-auto rounded-md border border-slate-200 p-2 sm:grid-cols-2">
+            {MODALITY_OPTIONS.map((option) => (
+              <label class="modality-option flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-slate-50" data-modality={option.toLowerCase()}>
+                <input type="checkbox" class="modality-checkbox" value={option} />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+          <p id="modality-no-results" class="hidden px-1 py-2 text-xs text-slate-500">No modalities match your search.</p>
+
+          <div class="mt-3">
+            <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Not listed? Add your own</p>
+            <div id="custom-modality-chips" class="mb-2 flex flex-wrap gap-2 empty:mb-0"></div>
+            <div class="flex gap-2">
+              <input
+                id="custom-modality-input"
+                type="text"
+                placeholder="Type a modality and press Add"
+                class="flex-1 rounded-md border border-slate-300 px-4 py-2 text-sm"
+              />
+              <button
+                type="button"
+                id="add-custom-modality-button"
+                class="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Add
+              </button>
+            </div>
+          </div>
         </div>
 
         <button
@@ -71,12 +133,16 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 <script>
   import { supabase, initAdminAuth, type AdminUser } from '../../lib/adminAuth';
   import { triggerRebuild } from '../../lib/publishFunction';
+  import { MODALITY_OPTIONS } from '../../lib/modalities';
 
   type CounselorPage = {
     id: string;
     title: string;
     availability_status: 'accepting' | 'almost_full' | 'not_accepting' | null;
     telehealth_available: boolean;
+    license_number: string | null;
+    professional_title: string | null;
+    education: string | null;
     modalities: string[];
   };
 
@@ -86,19 +152,92 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   const settingsForm = document.getElementById('settings-form')!;
   const settingsPageName = document.getElementById('settings-page-name')!;
   const telehealthCheckbox = document.getElementById('telehealth-checkbox') as HTMLInputElement;
-  const modalitiesInput = document.getElementById('modalities-input') as HTMLInputElement;
+  const licenseInput = document.getElementById('license-input') as HTMLInputElement;
+  const professionalTitleInput = document.getElementById('professional-title-input') as HTMLInputElement;
+  const educationInput = document.getElementById('education-input') as HTMLInputElement;
+  const modalitySearch = document.getElementById('modality-search') as HTMLInputElement;
+  const modalityNoResults = document.getElementById('modality-no-results')!;
+  const customModalityChips = document.getElementById('custom-modality-chips')!;
+  const customModalityInput = document.getElementById('custom-modality-input') as HTMLInputElement;
+  const addCustomModalityButton = document.getElementById('add-custom-modality-button')!;
   const saveButton = document.getElementById('settings-save-button')!;
   const statusMsg = document.getElementById('settings-status-msg')!;
   const radios = document.querySelectorAll<HTMLInputElement>('.availability-radio');
+  const modalityCheckboxes = document.querySelectorAll<HTMLInputElement>('.modality-checkbox');
+  const modalityOptionLabels = document.querySelectorAll<HTMLLabelElement>('.modality-option');
+
+  const KNOWN_MODALITIES = new Set(MODALITY_OPTIONS.map((m) => m.toLowerCase()));
 
   let counselorPages: CounselorPage[] = [];
   let selectedPage: CounselorPage | null = null;
+  // Free-text "Other" entries for the page currently loaded in the form —
+  // anything in selectedPage.modalities that doesn't exact-match (case-
+  // insensitive) a MODALITY_OPTIONS entry. Kept as separate UI state from
+  // the checkboxes so a custom entry survives re-rendering the chip list.
+  let customModalities: string[] = [];
 
   function escapeHtml(value: string): string {
     const div = document.createElement('div');
     div.textContent = value;
     return div.innerHTML;
   }
+
+  function renderCustomChips() {
+    customModalityChips.innerHTML = customModalities
+      .map(
+        (m) => `
+      <span class="inline-flex items-center gap-1.5 rounded-full bg-brand-tint/40 px-3 py-1 text-sm font-medium text-brand-ink">
+        ${escapeHtml(m)}
+        <button type="button" class="remove-custom-modality text-brand-ink/60 hover:text-brand-ink" data-value="${escapeHtml(m)}" aria-label="Remove ${escapeHtml(m)}">&times;</button>
+      </span>`
+      )
+      .join('');
+  }
+
+  customModalityChips.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement;
+    if (!target.classList.contains('remove-custom-modality')) return;
+    const value = target.dataset.value!;
+    customModalities = customModalities.filter((m) => m !== value);
+    renderCustomChips();
+  });
+
+  function addCustomModality() {
+    const value = customModalityInput.value.trim();
+    if (!value) return;
+    const normalized = value.toLowerCase();
+    if (KNOWN_MODALITIES.has(normalized)) {
+      // Already in the picker list above — check that box instead of
+      // creating a duplicate "custom" entry for the same modality.
+      modalityCheckboxes.forEach((cb) => {
+        if (cb.value.toLowerCase() === normalized) cb.checked = true;
+      });
+    } else if (!customModalities.some((m) => m.toLowerCase() === normalized)) {
+      customModalities = [...customModalities, value];
+      renderCustomChips();
+    }
+    customModalityInput.value = '';
+    customModalityInput.focus();
+  }
+
+  addCustomModalityButton.addEventListener('click', addCustomModality);
+  customModalityInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      addCustomModality();
+    }
+  });
+
+  modalitySearch.addEventListener('input', () => {
+    const query = modalitySearch.value.trim().toLowerCase();
+    let visibleCount = 0;
+    modalityOptionLabels.forEach((label) => {
+      const matches = !query || (label.dataset.modality ?? '').includes(query);
+      label.classList.toggle('hidden', !matches);
+      if (matches) visibleCount += 1;
+    });
+    modalityNoResults.classList.toggle('hidden', visibleCount > 0);
+  });
 
   function loadForm() {
     if (!selectedPage) {
@@ -111,7 +250,20 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       r.checked = r.value === selectedPage!.availability_status;
     });
     telehealthCheckbox.checked = selectedPage.telehealth_available;
-    modalitiesInput.value = (selectedPage.modalities ?? []).join(', ');
+    licenseInput.value = selectedPage.license_number ?? '';
+    professionalTitleInput.value = selectedPage.professional_title ?? '';
+    educationInput.value = selectedPage.education ?? '';
+
+    const stored = selectedPage.modalities ?? [];
+    modalityCheckboxes.forEach((cb) => {
+      cb.checked = stored.some((m) => m.toLowerCase() === cb.value.toLowerCase());
+    });
+    customModalities = stored.filter((m) => !KNOWN_MODALITIES.has(m.toLowerCase()));
+    renderCustomChips();
+    modalitySearch.value = '';
+    modalityOptionLabels.forEach((label) => label.classList.remove('hidden'));
+    modalityNoResults.classList.add('hidden');
+
     statusMsg.textContent = '';
   }
 
@@ -123,15 +275,18 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   saveButton.addEventListener('click', async () => {
     if (!selectedPage) return;
     const checked = document.querySelector<HTMLInputElement>('.availability-radio:checked');
-    const modalities = modalitiesInput.value
-      .split(',')
-      .map((m) => m.trim())
-      .filter(Boolean);
+    const pickedModalities = Array.from(modalityCheckboxes)
+      .filter((cb) => cb.checked)
+      .map((cb) => cb.value);
+    const modalities = [...pickedModalities, ...customModalities];
     statusMsg.textContent = 'Saving...';
     statusMsg.className = 'text-sm text-slate-600';
     const payload = {
       availability_status: checked?.value ?? null,
       telehealth_available: telehealthCheckbox.checked,
+      license_number: licenseInput.value.trim() || null,
+      professional_title: professionalTitleInput.value.trim() || null,
+      education: educationInput.value.trim() || null,
       modalities,
     };
     const { error } = await supabase.from('pages').update(payload).eq('id', selectedPage.id);
@@ -153,7 +308,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     if (adminUser.role === 'owner' || adminUser.role === 'agency') {
       const { data } = await supabase
         .from('pages')
-        .select('id, title, availability_status, telehealth_available, modalities')
+        .select('id, title, availability_status, telehealth_available, license_number, professional_title, education, modalities')
         .eq('page_type', 'Counselor Profile')
         .order('title');
       counselorPages = (data ?? []) as CounselorPage[];
@@ -172,7 +327,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     }
     const { data } = await supabase
       .from('pages')
-      .select('id, title, availability_status, telehealth_available, modalities')
+      .select('id, title, availability_status, telehealth_available, license_number, professional_title, education, modalities')
       .eq('id', adminUser.linked_counselor_page_id)
       .maybeSingle();
     if (!data) {

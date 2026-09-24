@@ -1,33 +1,20 @@
 ---
-// Redesigned 2026-09-20 via the design-taste-frontend skill ("/taste"),
-// overhaul mode: visuals treated as greenfield, content/IA/SEO/schema left
-// exactly as they were. See Site Structure.md's "Design authority" note
-// for the constraint this operates under, and this file's own inline
-// comments for the reasoning behind each section's layout choice — the
-// goal was genuine layout-family diversity (Section-Layout-Repetition
-// Ban), not just a typography/color pass on the old one-layout-repeated
-// structure.
-//
-// Every word on this page still comes from the same `page.*` fields the
-// old template read (h1, hero_subhead, storybrand_problem/guide_empathy/
-// pitch/success/failure, plan_steps, cta_heading/cta_button_text) — this
-// file only changes how that existing content is composed visually.
-// `splitByH3Sections()` (lib/markdown.ts, new) parses storybrand_pitch's
-// existing 3 "### " subsections into distinct entries instead of one long
-// flowing block; no copy was rewritten to make that split work, the field
-// already had that exact shape.
 import BaseLayout from '../layouts/BaseLayout.astro';
-import OptimizedImage from '../components/OptimizedImage.astro';
+import Hero from '../components/Hero.astro';
 import Section from '../components/Section.astro';
+import ValueAddStrip from '../components/ValueAddStrip.astro';
+import ValueProposition from '../components/ValueProposition.astro';
+import Guide from '../components/Guide.astro';
+import FeaturedServices from '../components/FeaturedServices.astro';
+import CounselorCards from '../components/CounselorCards.astro';
+import ExplanatoryBrandscript from '../components/ExplanatoryBrandscript.astro';
 import CTA from '../components/CTA.astro';
 import Testimonial from '../components/Testimonial.astro';
-import FeatureGrid from '../components/FeatureGrid.astro';
 import PlanSteps from '../components/PlanSteps.astro';
 import LeadGenerator from '../components/LeadGenerator.astro';
 import LeadMagnet from '../components/LeadMagnet.astro';
-import { renderCopy, splitByH3Sections } from '../lib/markdown';
+import { renderCopy } from '../lib/markdown';
 import { getCounselorOptions } from '../lib/pages';
-import { withBase } from '../lib/url';
 import type { Page, Business } from '../lib/pages';
 
 interface Props {
@@ -38,227 +25,142 @@ interface Props {
 
 const { page, allPages, business } = Astro.props;
 const counselors = getCounselorOptions(allPages);
-const heroImage = page.images.hero;
-const pitchSections = splitByH3Sections(page.storybrand_pitch);
 
-// The Case Study page is real, existing content (not new copy) — this just
-// gives the Guide/Empathy section's mention of Freedom Counseling Services
-// a real linked visual instead of leaving that reference as plain text,
-// the same "a split needs a real reason on the right, not filler" standard
-// the redesign held itself to elsewhere on this page.
-const caseStudyPage = allPages.find((p) => p.slug === 'case-study-freedom-counseling');
+// The overlay Hero style only actually renders as 'overlay' once a real
+// image is on file (see Hero.astro's own fallback) — computed once here
+// too so the aside form's field set/styling stays in lockstep with what
+// Hero.astro will actually show, rather than re-deriving the same
+// condition twice and risking the two drifting apart.
+const isOverlayHero = page.hero_style === 'overlay' && !!page.images.hero;
 ---
 
 <BaseLayout page={page} allPages={allPages} business={business}>
-  <!--
-    Hero — Asymmetric Split, not the old form-in-a-box-or-nothing layout.
-    A real photo (the founder's actual headshot, already live on the About
-    page) replaces the previous image-less hero; per that same precedent
-    elsewhere on this site, an image and the compact embedded lead form are
-    mutually exclusive, so this hero carries a single strong CTA instead
-    and the full lead form (unchanged) still sits at the bottom of the
-    page for anyone who scrolls. Max 3 text elements (headline, subhead,
-    CTA) — no eyebrow, no trust micro-strip, per the redesign's own Hero
-    Stack Discipline.
-  -->
-  <section class="relative overflow-hidden bg-gradient-to-br from-brand-tint/50 via-brand-neutral to-brand-neutral pb-16 pt-14 md:pb-24 md:pt-20">
-    <div class="mx-auto grid max-w-6xl items-center gap-12 px-6 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
-      <div>
-        <h1 class="font-[family-name:var(--font-display)] text-4xl font-bold leading-[1.05] tracking-tight text-brand-ink md:text-5xl lg:text-6xl">
-          {page.h1}
-        </h1>
-        {page.hero_subhead && <p class="mt-6 max-w-lg text-lg text-slate-600">{page.hero_subhead}</p>}
-        <a
-          href="#lead-generator"
-          class="btn mt-8 inline-block rounded-lg bg-brand-accent px-8 py-4 font-semibold text-white shadow-sm hover:opacity-90 hover:shadow-lg"
-        >
-          {page.cta_button_text ?? 'Get Started'}
-        </a>
-      </div>
-      {heroImage && (
-        <div class="relative mx-auto w-full max-w-sm lg:max-w-none">
-          <div class="aspect-[4/5] overflow-hidden rounded-2xl shadow-xl">
-            <OptimizedImage
-              src={heroImage.url}
-              alt={heroImage.alt}
-              class="h-full w-full object-cover"
-              loading="eager"
-              widths={[400, 600, 800]}
-              sizes="(min-width: 1024px) 420px, (min-width: 768px) 50vw, 90vw"
-            />
-          </div>
-          <p class="mt-3 text-center text-sm text-slate-500 lg:text-left">
-            Luke Burgett, LPCA &mdash; Licensed Counselor &amp; Founder
-          </p>
-        </div>
-      )}
-    </div>
-  </section>
+  <Hero
+    h1={page.h1 ?? page.title}
+    subhead={page.hero_subhead ?? undefined}
+    imageUrl={page.images.hero?.url}
+    imageAlt={page.images.hero?.alt}
+    imageCreditName={page.images.hero?.creditName}
+    imageCreditUrl={page.images.hero?.creditUrl}
+    imageFocalY={page.hero_image_focal_y}
+    ctaText={page.cta_button_text ?? 'Get Started'}
+    style={page.hero_style}
+    overlayColor={page.hero_overlay_color}
+    overlayOpacity={page.hero_overlay_opacity}
+  >
+    {/*
+      In the default style, only renders when there's no hero image
+      (Hero.astro's `aside` slot is ignored whenever imageUrl is set) — a
+      compact, lower-friction form as a second entry point for a homepage
+      that leads with a form instead of a photo. In the overlay style, this
+      renders alongside the full-bleed image as a frosted-glass card and
+      shows every field (compact=false) — the form itself is the page's
+      one real CTA there, matching Hero.astro's own CTA-button suppression
+      whenever this slot is visible. Either way, the full-fields
+      LeadGenerator further down the page stays too, for visitors who
+      scroll past the hero without converting.
+    */}
+    <Fragment slot="aside">
+      <LeadGenerator
+        slug={page.slug}
+        embedded
+        compact={!isOverlayHero}
+        frosted={isOverlayHero}
+        heading={page.cta_button_text ?? 'Get Started'}
+        submitText={page.cta_button_text ?? 'Get Started'}
+        collectWebsiteUrl={business.collect_website_in_leads}
+        responseTimeNote={business.lead_response_time_note}
+        turnstileSiteKey={business.cloudflare_turnstile_site_key}
+        collectCounselorPreference={business.collect_counselor_preference}
+        collectSessionFormat={business.collect_session_format_preference}
+        counselors={counselors}
+      />
+    </Fragment>
+  </Hero>
 
-  <!--
-    Problem — Editorial full-width statement, not another centered prose
-    box. A distinct tinted band separates it from the hero, wide (not
-    max-w-3xl) readable column, larger heading treatment via `.home-editorial`
-    scoped below. Different layout family from the hero split and from the
-    split-with-visual right after it.
-  -->
+  {/* Value Add strip — a quick, scannable first pass at value, distinct
+      from the fuller ValueProposition section below. */}
+  <ValueAddStrip items={page.value_add_items} />
+
+  {/* Stakes — storybrand_problem, relabeled "Stakes" in the admin for
+      Homepage rows only (same column/data as Service Page/Counselor
+      Profile's "The Problem", different admin-facing label). Loss-
+      aversion/philosophical-wrongness framing per copywriter guidance,
+      positioned right after the Hero so it isn't buried. */}
   {page.storybrand_problem && (
-    <section class="reveal bg-brand-tint/25 py-16 md:py-24">
-      <div class="home-editorial mx-auto max-w-3xl px-6">
-        <Fragment set:html={renderCopy(page.storybrand_problem)} />
-      </div>
-    </section>
+    <Section>
+      <Fragment set:html={renderCopy(page.storybrand_problem)} />
+    </Section>
   )}
 
-  <!--
-    Guide/Empathy — Split-Screen with a real supporting visual (not the
-    Split-Header-Ban pattern: that's specifically headline-plus-filler-text
-    in a section *header*; this is a full content column paired with a
-    real, linked case-study card, which is exactly the exception the
-    redesign brief itself calls out as legitimate).
-  -->
-  {page.storybrand_guide_empathy && (
-    <section class="reveal py-16 md:py-24">
-      <div class="mx-auto grid max-w-6xl items-center gap-12 px-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16">
-        <div class="prose">
-          <Fragment set:html={renderCopy(page.storybrand_guide_empathy)} />
-        </div>
-        {caseStudyPage && (
-          <a
-            href={withBase(`/${caseStudyPage.slug}`)}
-            class="block rounded-2xl border border-black/5 bg-white p-8 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-xl"
-          >
-            <p class="text-xs font-semibold uppercase tracking-wide text-brand-accent">Real, live proof</p>
-            <p class="mt-3 font-[family-name:var(--font-display)] text-xl font-bold text-brand-ink">
-              {caseStudyPage.title}
-            </p>
-            <p class="mt-3 text-sm text-slate-600">
-              A full website and growth platform build, live and working today for a real Christian counseling practice in Louisville, KY.
-            </p>
-            <span class="mt-5 inline-block text-sm font-semibold text-brand-accent">Read the case study &rarr;</span>
-          </a>
-        )}
-      </div>
-    </section>
-  )}
+  {/* Value Proposition — the positive flip, repurposed from
+      storybrand_pitch/storybrand_pitch_label (freed up now that
+      ExplanatoryBrandscript owns the freestanding full-brandscript
+      role). Centered layout, own CTA — no image (see
+      ValueProposition.astro's own comment on why that was dropped). */}
+  <ValueProposition
+    heading={page.storybrand_pitch_label}
+    body={page.storybrand_pitch}
+    ctaText={page.cta_button_text}
+  />
 
-  <FeatureGrid items={page.concerns} heading="What you get" />
+  {/* The Guide — empathy + scannable authority facts + own CTA, with the
+      existing optional Testimonial directly below (still independently
+      gated on having a real quote). Revised order (2026-09-16, client
+      request): Guide now precedes the Plan — a visitor should trust the
+      guide before being handed the plan, matching the classic StoryBrand
+      order (the original 10-section skeleton has Guide at position 4,
+      Plan at 5) rather than this rebuild's initial Plan-then-Guide draft. */}
+  <Guide body={page.storybrand_guide_empathy} authorityStats={page.guide_authority_stats} ctaText={page.cta_button_text} />
   {page.testimonial_quote && page.testimonial_author && (
     <Testimonial quote={page.testimonial_quote} author={page.testimonial_author} role={page.testimonial_role} />
   )}
 
-  <PlanSteps steps={page.plan_steps} />
+  {/* The Plan — unchanged rendering (H2 heading / H3 per step / optional
+      paragraph), now with its own inline CTA inside the same band. */}
+  <PlanSteps steps={page.plan_steps} ctaText={page.cta_button_text} />
 
-  <!--
-    Pitch — a numbered stack, not a card grid (PlanSteps already owns that
-    family on this page) and not more centered prose (Problem already owns
-    that). Large ghost numerals, generous vertical rhythm, borderless —
-    genuinely distinct from every other section family used so far.
-  -->
-  {pitchSections.length > 0 && (
-    <section class="reveal bg-brand-neutral py-16 md:py-24">
-      <div class="mx-auto max-w-3xl px-6">
-        <div class="space-y-14">
-          {pitchSections.map((section, index) => (
-            <div class="flex gap-6">
-              <span
-                class="font-[family-name:var(--font-display)] text-5xl font-bold leading-none text-brand-accent/25 md:text-6xl"
-                aria-hidden="true"
-              >
-                {String(index + 1).padStart(2, '0')}
-              </span>
-              <div class="prose flex-1 pt-1">
-                <h3 class="!mt-0">{section.title}</h3>
-                <Fragment set:html={section.bodyHtml} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  )}
+  {/* Featured Services — up to 3 cards, self-maintaining. */}
+  <FeaturedServices allPages={allPages} />
 
-  <!--
-    Success — a deliberate, one-time dark band (brand-primary), the page's
-    single "Color Block Story" moment per the redesign brief's own Page
-    Theme Lock exception. A short vision statement earns a real pause here
-    rather than blending into the surrounding light sections.
-  -->
-  {page.storybrand_success && (
-    <section class="reveal bg-brand-primary py-20 text-center md:py-28">
-      <div class="mx-auto max-w-2xl px-6">
-        <div class="home-editorial home-editorial--dark">
-          <Fragment set:html={renderCopy(page.storybrand_success)} />
-        </div>
-      </div>
-    </section>
-  )}
+  {/* Counselor cards — group-practice only, self-gates on >1 Counselor
+      Profile page. */}
+  <CounselorCards allPages={allPages} />
 
-  <!--
-    Failure — back to light: the stakes, stated plainly, immediately before
-    the CTA band (which is dark again) so the page doesn't stack two dark
-    sections back to back. Deliberately NOT `tight` here (unlike this
-    component's usual default elsewhere) — a short `tight` gap read as too
-    thin a pause between the two dark bands on either side of it on a real
-    pass in the browser; full padding gives the light band enough presence
-    to actually register as a rhythm break, not just a thin seam.
-  -->
-  {page.storybrand_failure && (
-    <Section>
-      <Fragment set:html={renderCopy(page.storybrand_failure)} />
-    </Section>
-  )}
+  {/* Explanatory Paragraph — the new freestanding full BrandScript,
+      collapsible, with optional video. */}
+  <ExplanatoryBrandscript
+    oneLiner={page.brandscript_one_liner}
+    teaser={page.brandscript_teaser}
+    full={page.brandscript_full}
+    videoUrl={page.brandscript_video_url}
+  />
 
-  <CTA heading={page.cta_heading ?? `Ready to work with ${business.display_name}?`} buttonText={page.cta_button_text ?? undefined} />
-  <LeadMagnet pageId={page.id} />
+  {/* Failure and Success no longer render as their own sections on the
+      Homepage (2026-09-16, client request) — the page now closes with
+      the Explanatory Paragraph directly into this CTA band.
+      storybrand_failure/storybrand_success stay as real columns
+      (Service Page/Counselor Profile still use them) but are hidden in
+      the admin for Homepage rows specifically, since nothing here reads
+      them anymore. The "why it's worth acting now" reminder that used
+      to live in storybrand_failure now belongs in this CTA's own
+      subheading instead — a real content task, not done automatically
+      by this rebuild. */}
+  <CTA
+    heading={page.cta_heading ?? `Ready to work with ${business.display_name}?`}
+    subheading={page.cta_subheading}
+    buttonText={page.cta_button_text ?? undefined}
+  />
+  <LeadMagnet pageId={page.id} turnstileSiteKey={business.cloudflare_turnstile_site_key} />
   <LeadGenerator
     slug={page.slug}
     heading={page.cta_button_text ?? undefined}
     submitText={page.cta_button_text ?? undefined}
     collectWebsiteUrl={business.collect_website_in_leads}
     responseTimeNote={business.lead_response_time_note}
+    turnstileSiteKey={business.cloudflare_turnstile_site_key}
     collectCounselorPreference={business.collect_counselor_preference}
+    collectSessionFormat={business.collect_session_format_preference}
     counselors={counselors}
   />
 </BaseLayout>
-
-<style>
-  /* Scoped to this page only (Astro's default `<style>` scoping) — the
-     Problem/Success sections' headline treatment, bigger and using the
-     display face, distinct from the shared `.prose h2` default everywhere
-     else on the site. */
-  .home-editorial :global(h2) {
-    font-family: var(--font-display);
-    font-size: 1.875rem;
-    line-height: 1.15;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    color: var(--color-brand-ink);
-  }
-  @media (min-width: 768px) {
-    .home-editorial :global(h2) {
-      font-size: 2.5rem;
-    }
-  }
-  .home-editorial :global(p) {
-    margin-top: 1.25rem;
-    font-size: 1.125rem;
-    line-height: 1.7;
-    color: #44403c;
-  }
-  .home-editorial--dark :global(h3),
-  .home-editorial--dark :global(p) {
-    color: white;
-  }
-  .home-editorial--dark :global(h3) {
-    font-family: var(--font-display);
-    font-size: 1.5rem;
-    font-weight: 700;
-  }
-  .home-editorial--dark :global(p) {
-    margin-top: 1rem;
-    font-size: 1.25rem;
-    line-height: 1.6;
-    color: rgba(255, 255, 255, 0.92);
-  }
-</style>

@@ -1,0 +1,49 @@
+---
+// The Guide section — empathy body (storybrand_guide_empathy) plus a
+// small row of scannable authority facts (guide_authority_stats, e.g.
+// "Experience" / "15+ years") and its own inline CTA. Testimonial.astro
+// renders separately, directly after this component in Homepage.astro —
+// kept as its own component since it's independently optional (only
+// renders when a real quote exists) and already handles its own
+// "genuine trust signal, never Review/AggregateRating schema" framing.
+// Renders nothing when storybrand_guide_empathy is empty.
+import { renderCopy } from '../lib/markdown';
+
+interface Props {
+  body: string | null;
+  authorityStats: { label: string; value: string }[];
+  ctaText?: string | null;
+}
+
+const { body, authorityStats, ctaText } = Astro.props;
+---
+
+{body && (
+  <section class="bg-brand-neutral py-14">
+    <div class="mx-auto max-w-3xl px-6">
+      <div class="prose" set:html={renderCopy(body)} />
+      {authorityStats.length > 0 && (
+        <div class="mt-8 grid gap-4 sm:grid-cols-3">
+          {authorityStats.map((stat) => (
+            <div class="rounded-lg border border-black/5 bg-white px-5 py-3 shadow-sm">
+              <h3 class="font-[family-name:var(--font-heading)] text-xs font-bold uppercase tracking-wide text-brand-primary">
+                {stat.label}
+              </h3>
+              <p class="text-brand-ink">{stat.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+      {ctaText && (
+        <div class="mt-8 text-center">
+          <a
+            href="#lead-generator"
+            class="inline-block rounded-md bg-brand-accent px-6 py-3 font-semibold text-white transition hover:opacity-90 hover:shadow-md"
+          >
+            {ctaText}
+          </a>
+        </div>
+      )}
+    </div>
+  </section>
+)}

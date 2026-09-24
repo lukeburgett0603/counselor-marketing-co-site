@@ -52,8 +52,18 @@ export function initUnsplashSearchModal({ onSelect }: UnsplashSearchModalOptions
   const searchButton = document.getElementById('unsplash-search-button')!;
   const status = document.getElementById('unsplash-status')!;
   const results = document.getElementById('unsplash-results')!;
+  const pagination = document.getElementById('unsplash-pagination')!;
+  const prevButton = document.getElementById('unsplash-prev-button') as HTMLButtonElement;
+  const nextButton = document.getElementById('unsplash-next-button') as HTMLButtonElement;
+  const pageIndicator = document.getElementById('unsplash-page-indicator')!;
 
   let lastResults: UnsplashPhoto[] = [];
+  // Tracked so Next/Previous can re-run the same query at an adjacent
+  // page without the caller needing to pass anything — the query only
+  // resets to page 1 when it actually changes (a new Search click/Enter),
+  // not on every render.
+  let currentQuery = '';
+  let currentPage = 1;
 
   function openModal() {
     modal.classList.remove('hidden');
@@ -68,12 +78,12 @@ export function initUnsplashSearchModal({ onSelect }: UnsplashSearchModalOptions
   triggerButton?.addEventListener('click', openModal);
   closeButton.addEventListener('click', closeModal);
 
-  async function runSearch() {
-    const query = queryInput.value.trim();
-    if (!query) return;
+  async function performSearch(query: string, page: number) {
     status.textContent = 'Searching...';
     results.innerHTML = '';
-    const result = await callSearchFunction({ action: 'search', query });
+    pagination.classList.add('hidden');
+    pagination.classList.remove('flex');
+    const result = await callSearchFunction({ action: 'search', query, page });
     if (!result.ok) {
       status.textContent =
         result.error === 'Live image search is not configured for this site'
@@ -81,8 +91,10 @@ export function initUnsplashSearchModal({ onSelect }: UnsplashSearchModalOptions
           : 'Could not search: ' + result.error;
       return;
     }
+    currentQuery = query;
+    currentPage = result.page ?? page;
     lastResults = result.results;
-    status.textContent = `${lastResults.length} results`;
+    status.textContent = `${lastResults.length} results — page ${currentPage}`;
     results.innerHTML = lastResults
       .map(
         (photo, i) => `
@@ -91,11 +103,34 @@ export function initUnsplashSearchModal({ onSelect }: UnsplashSearchModalOptions
       </button>`
       )
       .join('');
+
+    // Only worth showing pagination once there's somewhere to go — a
+    // one-page result set (most niche queries) doesn't need Prev/Next
+    // controls sitting there doing nothing.
+    if (currentPage > 1 || result.hasMore) {
+      pagination.classList.remove('hidden');
+      pagination.classList.add('flex');
+      prevButton.disabled = currentPage <= 1;
+      nextButton.disabled = !result.hasMore;
+      pageIndicator.textContent = `Page ${currentPage}`;
+    }
+  }
+
+  async function runSearch() {
+    const query = queryInput.value.trim();
+    if (!query) return;
+    await performSearch(query, 1);
   }
 
   searchButton.addEventListener('click', runSearch);
   queryInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') runSearch();
+  });
+  prevButton.addEventListener('click', () => {
+    if (currentPage > 1) performSearch(currentQuery, currentPage - 1);
+  });
+  nextButton.addEventListener('click', () => {
+    performSearch(currentQuery, currentPage + 1);
   });
 
   results.addEventListener('click', (event) => {

@@ -1,0 +1,45 @@
+---
+// The Homepage's "Featured Services" section — up to 3 cards, same
+// self-maintaining-grid pattern as ServicesOverview.astro (filter
+// allPages, sort, render), just additionally filtered to whichever
+// Service Page/Service Hub rows an owner/agency flagged
+// featured_on_homepage=true on that page's own edit screen, ordered by
+// homepage_feature_order. More than 3 flagged is harmless — only the
+// first 3 by order show. Renders nothing when none are flagged, same
+// never-show-an-empty-shell discipline as every other optional section.
+// See 0049_featured_services.sql.
+import { withBase } from '../lib/url';
+import type { Page } from '../lib/pages';
+
+interface Props {
+  allPages: Page[];
+  heading?: string;
+}
+
+const { allPages, heading = 'How We Can Help' } = Astro.props;
+
+const featuredServices = allPages
+  .filter((p) => (p.page_type === 'Service Page' || p.page_type === 'Service Hub') && p.featured_on_homepage)
+  .sort((a, b) => (a.homepage_feature_order ?? 999) - (b.homepage_feature_order ?? 999))
+  .slice(0, 3);
+---
+
+{featuredServices.length > 0 && (
+  <section class="mx-auto max-w-5xl px-6 py-14">
+    <h2 class="mb-8 text-center font-[family-name:var(--font-heading)] text-2xl font-extrabold tracking-tight text-brand-ink">
+      {heading}
+    </h2>
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {featuredServices.map((service) => (
+        <a
+          href={withBase(`/${service.slug}`)}
+          class="block rounded-lg border border-slate-200 p-6 hover:border-brand-primary hover:shadow-md"
+        >
+          <h3 class="font-[family-name:var(--font-heading)] text-lg font-bold text-brand-ink">{service.title}</h3>
+          {service.meta_description && <p class="mt-2 text-sm text-slate-600">{service.meta_description}</p>}
+          <span class="mt-3 inline-block text-sm font-semibold text-brand-primary">Learn more &rarr;</span>
+        </a>
+      ))}
+    </div>
+  </section>
+)}

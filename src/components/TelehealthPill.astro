@@ -1,0 +1,35 @@
+---
+// A counselor's telehealth-availability badge (page.telehealth_available)
+// — extracted once a second call site (CounselorsOverview.astro) needed
+// the identical pill CounselorProfile.astro's header card already had,
+// same reuse discipline as this project's other small shared pills
+// (StatusPill.astro). Renders nothing when false — never defaulted/
+// guessed, see 0029_counselor_card_v2.sql.
+//
+// The videocam icon is one of only 4 hand-authored line icons in this
+// template (see also InPersonPill.astro and the calendar/phone icons
+// inline in CounselorProfile.astro) — a deliberate, narrow exception to
+// this site's icon-free minimal aesthetic, not the start of an icon
+// library. Plain inline SVG, no icon font/library dependency.
+//
+// A light brand-primary (maroon) wash, not the bg-brand-tint/40 every
+// other informational pill (InPersonPill, Modalities) shares — client
+// request (2026-09-17): telehealth availability needed to read as
+// visually distinct at a glance, not blend into the same tan pill color
+// as purely informational tags like training/modalities.
+interface Props {
+  telehealthAvailable: boolean;
+}
+
+const { telehealthAvailable } = Astro.props;
+---
+
+{telehealthAvailable && (
+  <span class="inline-flex items-center gap-1.5 rounded-full bg-brand-primary/10 px-4 py-1.5 text-sm font-semibold text-brand-primary">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 shrink-0" aria-hidden="true">
+      <rect x="3" y="6" width="13" height="12" rx="2"></rect>
+      <path d="M16 10.5l5-3v9l-5-3"></path>
+    </svg>
+    Telehealth available
+  </span>
+)}

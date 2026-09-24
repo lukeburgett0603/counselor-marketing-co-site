@@ -38,12 +38,22 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 
   type PageInfo = { id: string; title: string };
 
+  // Labels match admin/content/page-copy.astro's own FIELD_LABELS map
+  // exactly — same fields, same names, just the review side instead of
+  // the submit side.
   const FIELD_LABELS: Record<string, string> = {
     h1: 'Page heading (H1)',
     meta_description: 'Meta description',
     focus_keyword: 'Focus keyword',
     hero_subhead: 'Hero subheading',
+    hero_headline: 'Headline (H1)',
     copy: 'Page copy',
+    storybrand_problem: 'The Problem',
+    storybrand_guide_empathy: 'We Understand',
+    storybrand_pitch: 'The Full Picture',
+    storybrand_pitch_label: '"The Full Picture" link text',
+    storybrand_success: "What's Possible",
+    storybrand_failure: "Why It's Worth Acting Now",
     images: 'Hero image',
   };
 
@@ -52,13 +62,26 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   // admin/content/page-copy.astro's SuggestEdit usage), not a structured
   // {url, alt} value, so there's nothing to write directly. Approving an
   // image suggestion is informational only; the actual photo still gets
-  // swapped via Website content.
+  // swapped via Website content. The 5 storybrand_* fields (plus the
+  // label) only exist on Homepage/Service Page/Counselor Profile, but
+  // that's fine here — a suggestion for one only ever gets created from
+  // a page that actually has the field, and applying it is just a plain
+  // column write like any other, tier-permission bypass included (see
+  // the approve-button handler below: 'agency' is exempt from
+  // enforce_content_permission entirely, so this write always succeeds).
   const FIELD_COLUMNS: Record<string, string> = {
     h1: 'h1',
     meta_description: 'meta_description',
     focus_keyword: 'focus_keyword',
     hero_subhead: 'hero_subhead',
+    hero_headline: 'hero_headline',
     copy: 'copy',
+    storybrand_problem: 'storybrand_problem',
+    storybrand_guide_empathy: 'storybrand_guide_empathy',
+    storybrand_pitch: 'storybrand_pitch',
+    storybrand_pitch_label: 'storybrand_pitch_label',
+    storybrand_success: 'storybrand_success',
+    storybrand_failure: 'storybrand_failure',
   };
 
   const pendingList = document.getElementById('pending-list')!;

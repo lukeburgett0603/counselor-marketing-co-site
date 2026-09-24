@@ -2227,6 +2227,73 @@ reusing rather than leaving `business.logo_url` empty:
    fixes any Open Graph preview gap on imageless pages (e.g. a homepage
    whose hero is a lead form instead of a photo).
 
+## Brought current with the template — 29 migrations, full code resync (2026-09-24)
+
+This repo had drifted from `local-business-site-template` by 29
+migrations and nearly every shared source file — see the template's own
+CLAUDE.md ("Counselor Marketing Co. brought current with the template")
+for the full technical writeup: a migration-history table that didn't
+reliably reflect what was actually on this database (diagnosed by
+diffing this project's live schema directly against Freedom's, not by
+trusting either project's migration history), a wholesale `rsync -a`
+resync of every shared component/template/lib/layout/page file, and a
+critical pre-launch catch — the newly-synced `LeadGenerator.astro`/
+`LeadMagnet.astro` call the `submit-lead` Edge Function, which this
+project didn't have deployed yet. Had this shipped un-caught, the real
+live contact form would have silently stopped accepting submissions.
+
+- **Migrations 0036-0064 applied**, including counselor-specific ones
+  (deliberate — see the template writeup for why skipping them was
+  actually riskier than including them). This project still has zero
+  `Counselor Profile` pages and never will by default — the added
+  columns are simply unused.
+- **Three real, CMC-only customizations were overwritten by the sync and
+  restored** (all recoverable via this repo's own git history, nothing
+  was ever actually at risk): `AdminLayout.astro`'s `current` prop needs
+  `| 'directory'` for `admin/directory.astro` (this repo's own client-
+  directory page, never part of the shared template); `lib/pages.ts`
+  needs `'Pricing'` in `PageType` and the `pricing_tiers` field back on
+  `Page` for this repo's own real Pricing page; `[...slug].astro` needs
+  its `Pricing` import/routing entry back. All three now carry an
+  explicit "re-add after syncing" comment, matching a pattern
+  `AdminLayout.astro` already had for exactly this situation.
+  `KeyTakeaways.astro`'s `heading` prop (used by this repo's own
+  `templates/Pricing.astro`) was instead generalized back into the
+  template itself, since it's a trivial backward-compatible addition —
+  no future sync should lose it again.
+- **New Edge Functions deployed to this project**: `submit-lead`
+  (critical — see above), `refresh-seo-rankings` (Tier 3 SEO Insights),
+  `notify-content-assignment` (Content Plan Phase 1). `get-gbp-insights`
+  (Tier 4) deliberately left undeployed — never requested for this site.
+- **What's live now but has zero real content/data yet**: SEO Insights
+  (`/admin/seo-insights`) and Content Plan (`/admin/content-plan`) both
+  render correctly with real nav integration and correct empty states —
+  genuinely no target keywords or content-plan items exist for this
+  site yet, not an error. `MANGOOLS_API_KEY` is not set as an Edge
+  Function secret on this project yet, so `refresh-seo-rankings` will
+  return a graceful "not configured" until that's set (this project's
+  own Mangools *research* access via MCP is separate from this
+  project-specific secret). Real keyword research + a `target_keywords`
+  seed pass (same shape as Freedom's own "Keyword curation session #1")
+  is genuinely open follow-up work, not done by this sync.
+- **The rebuilt Homepage's real StoryBrand content (Problem/Guide-
+  Empathy/Pitch) was already populated from an earlier, separate
+  migration** ("StoryBrand section-by-section copy editing," done for
+  both Freedom and this project together back when it was first built)
+  — confirmed still rendering correctly after this sync via a real
+  `npm run build`. The *new* Homepage sections this sync's migrations
+  added (Value Add strip, Guide authority stats, Featured Services,
+  Explanatory Paragraph) are genuinely empty for this site and correctly
+  render nothing — populating them with this project's own real content
+  is open follow-up work, not invented here.
+- **Verification**: `astro check` (0 errors), a real `npm run build`
+  against this project's live Supabase data, a live browser pass with a
+  throwaway owner account (Content Plan, SEO Insights, and the existing
+  Pricing page all confirmed working, zero console errors), and a real
+  end-to-end `submit-lead` call against this project's actual deployed
+  function (genuine success, test lead deleted after). All throwaway
+  accounts/test data removed afterward.
+
 ## Where the detailed rules live
 
 This file is a standards checklist and a "don't regress this" list, not

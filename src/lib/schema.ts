@@ -31,9 +31,13 @@ export function buildBusinessSchema(business: Business, siteUrl: string) {
     business.address_region ||
     business.postal_code
   ) {
+    // schema.org's PostalAddress has no separate suite/unit property —
+    // street_address_2 gets folded into streetAddress here, the same
+    // way every other renderer of this address combines the two.
+    const streetAddress = [business.street_address, business.street_address_2].filter(Boolean).join(', ');
     schema.address = {
       '@type': 'PostalAddress',
-      ...(business.street_address && { streetAddress: business.street_address }),
+      ...(streetAddress && { streetAddress }),
       ...(business.address_locality && { addressLocality: business.address_locality }),
       ...(business.address_region && { addressRegion: business.address_region }),
       ...(business.postal_code && { postalCode: business.postal_code }),
@@ -111,6 +115,62 @@ export function buildArticleSchema(page: Page, siteUrl: string, hasBlog: boolean
   return schema;
 }
 
+// The single source of truth for which real, already-declared facts
+// describe a Counselor Profile page's Person entity. Two very different
+// readers need this same list: buildPersonSchema() below (feeds Google's
+// invisible JSON-LD) and the counselor-facing writing guidance shown in
+// admin/content/page-copy.astro (feeds a human writing their own bio,
+// reminding them these are real facts worth naturally mentioning). Add a
+// fact here once and both pick it up automatically — the alternative
+// (each reader independently listing the fields it cares about) is
+// exactly the "two lists that happen to agree today, with nothing
+// stopping them from silently drifting apart tomorrow" shape this
+// project has hit before elsewhere. Each entry names the real
+// schema.org `Person` property it maps to, alongside a short label
+// meant for display to a non-technical reader — never invented, only
+// fields the page actually has set.
+//
+// Deliberately typed on a minimal structural shape rather than the full
+// `Page` type — the admin UI reader only ever has its own narrower local
+// row type in scope (it fetches a subset of columns, not every `Page`
+// field), and this function only ever touches these specific fields
+// anyway. Requiring the full `Page` type would force that caller to
+// either over-fetch columns it doesn't use or fight a type mismatch for
+// no real benefit.
+//
+// Returns one entry per atomic real fact — including one per specialty
+// and one per modality, not a single joined string — because two
+// different things need two different shapes from the same data:
+// buildPersonSchema() needs a real string[] for `knowsAbout` (schema.org
+// expects an array, not one comma-joined value), while the admin
+// guidance panel wants to group and display them together. Keeping this
+// function's output atomic and letting each reader shape it how it
+// needs is simpler than baking one reader's formatting into the shared
+// source of truth.
+export function getPersonEntityTerms(
+  page: {
+    credentials: string | null;
+    professional_title?: string | null;
+    specialties?: { label: string; page_slug: string | null }[] | null;
+    modalities?: string[] | null;
+  }
+): { label: string; value: string; schemaProperty: string }[] {
+  const terms: { label: string; value: string; schemaProperty: string }[] = [];
+  if (page.credentials) {
+    terms.push({ label: 'Credentials', value: page.credentials, schemaProperty: 'honorificSuffix' });
+  }
+  if (page.professional_title) {
+    terms.push({ label: 'Professional title', value: page.professional_title, schemaProperty: 'jobTitle' });
+  }
+  for (const specialty of page.specialties ?? []) {
+    terms.push({ label: 'Specialty', value: specialty.label, schemaProperty: 'knowsAbout' });
+  }
+  for (const modality of page.modalities ?? []) {
+    terms.push({ label: 'Modality', value: modality, schemaProperty: 'knowsAbout' });
+  }
+  return terms;
+}
+
 export function buildPersonSchema(page: Page, siteUrl: string) {
   const schema: Record<string, unknown> = {
     '@context': 'https://schema.org',
@@ -118,7 +178,22 @@ export function buildPersonSchema(page: Page, siteUrl: string) {
     name: page.title,
     worksFor: { '@id': businessId(siteUrl) },
   };
-  if (page.credentials) schema.honorificSuffix = page.credentials;
+  // Multiple terms can map to the same schema property (every specialty
+  // and modality maps to `knowsAbout`) — the first one sets it, a second
+  // promotes it to an array, a third+ just appends. Generic on purpose:
+  // this coalescing works for any future property that gains more than
+  // one contributing term, without needing to special-case a property
+  // name here.
+  for (const term of getPersonEntityTerms(page)) {
+    const existing = schema[term.schemaProperty];
+    if (existing === undefined) {
+      schema[term.schemaProperty] = term.value;
+    } else if (Array.isArray(existing)) {
+      existing.push(term.value);
+    } else {
+      schema[term.schemaProperty] = [existing, term.value];
+    }
+  }
   // See buildServiceSchema above — purpose is internal-only, never public.
   if (page.meta_description) schema.description = page.meta_description;
   if (page.images.headshot) schema.image = page.images.headshot.url;
@@ -223,7 +298,6 @@ export function buildPageSchemas(
       case 'Services Overview':
       case 'Blog Index':
       case 'Other':
-      case 'Pricing':
       default:
         return [buildWebPageSchema(page, siteUrl)];
     }

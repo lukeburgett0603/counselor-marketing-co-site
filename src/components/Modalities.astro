@@ -1,26 +1,34 @@
 ---
 // A counselor's own list of clinical training/approaches
-// (page.modalities) as a titled tag section below the personal quote.
-// Plain, non-clickable tags — distinct from SpecialtyPills.astro's
-// linkable style, since these don't point anywhere, they're just
-// informational. Only renders when real data exists; never invents
-// entries. See 0029_counselor_card_v2.sql.
+// (page.modalities), rendered inline inside CounselorProfile.astro's
+// header card, in its own labeled block right after SpecialtyPills —
+// deliberately still a visually separate section from the specialty
+// pills, not merged into the same row, so "what I work with" and "how
+// I'm trained" read as two distinct facts. Plain, non-clickable tags —
+// distinct from SpecialtyPills.astro's linkable style, since these
+// don't point anywhere, they're just informational. Only renders when
+// real data exists; never invents entries. See 0029_counselor_card_v2.sql.
 interface Props {
   modalities: string[];
+  // The header card (CounselorProfile.astro) left-aligns everything at
+  // sm+ widths, matching SpecialtyPills right above it. A grid card
+  // (CounselorsOverview.astro) stays centered at every width instead —
+  // pass centered to match that context rather than fighting it.
+  centered?: boolean;
 }
 
-const { modalities } = Astro.props;
+const { modalities, centered = false } = Astro.props;
 ---
 
 {modalities.length > 0 && (
-  <section class="mx-auto max-w-2xl px-6 pb-14 text-center">
-    <h2 class="mb-4 font-[family-name:var(--font-heading)] text-lg font-extrabold tracking-tight text-brand-ink">
+  <div>
+    <p class:list={['mb-1.5 text-center text-xs font-semibold uppercase tracking-wide text-slate-400', !centered && 'sm:text-left']}>
       Training &amp; Modalities
-    </h2>
-    <div class="flex flex-wrap justify-center gap-2">
+    </p>
+    <div class:list={['flex flex-wrap justify-center gap-2', !centered && 'sm:justify-start']}>
       {modalities.map((m) => (
         <span class="rounded-full bg-brand-tint/40 px-4 py-1.5 text-sm font-medium text-brand-ink">{m}</span>
       ))}
     </div>
-  </section>
+  </div>
 )}

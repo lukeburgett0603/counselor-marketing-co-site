@@ -65,54 +65,6 @@ export function extractTableOfContents(markdown: string | null): { text: string;
     .map((t) => ({ text: t.text, id: slugify(t.text) }));
 }
 
-export interface MarkdownH3Section {
-  title: string;
-  bodyHtml: string;
-}
-
-// Splits a StoryBrand field's markdown into one {title, bodyHtml} entry per
-// `### ` heading, for a caller that wants to give each real subsection its
-// own distinct visual treatment (a numbered stack, a card, etc.) instead of
-// one flowing `renderCopy()` block — the 2026-09-20 Homepage redesign's
-// pitch section is the first real use. Same lexer-based approach as
-// extractShortBenefitList() above (strip the interleaved 'space' tokens
-// first so heading/body pairs are adjacent by index, re-parse each group's
-// own token slice back to HTML rather than re-rendering the whole field and
-// slicing strings). Any content before the first H3 is dropped silently —
-// this is only meant for fields that are genuinely "## hook, then all ###
-// sections," which is this codebase's own established copy convention (see
-// this file's header comment on renderCopy's heading renderer). Returns an
-// empty array for a field with no H3s at all, so a caller can fall back to
-// plain renderCopy() in that case.
-export function splitByH3Sections(markdown: string | null): MarkdownH3Section[] {
-  if (!markdown) return [];
-  const lexed = marked.lexer(markdown);
-  const tokens = lexed.filter((t) => t.type !== 'space');
-
-  const sections: MarkdownH3Section[] = [];
-  let current: { title: string; tokens: typeof tokens } | null = null;
-
-  for (const token of tokens) {
-    if (token.type === 'heading' && (token as Tokens.Heading).depth === 3) {
-      if (current) {
-        const bodyTokens = current.tokens as ReturnType<typeof marked.lexer>;
-        bodyTokens.links = lexed.links;
-        sections.push({ title: current.title, bodyHtml: marked.parser(bodyTokens, { renderer }) as string });
-      }
-      current = { title: (token as Tokens.Heading).text, tokens: [] };
-    } else if (current) {
-      current.tokens.push(token);
-    }
-  }
-  if (current) {
-    const bodyTokens = current.tokens as ReturnType<typeof marked.lexer>;
-    bodyTokens.links = lexed.links;
-    sections.push({ title: current.title, bodyHtml: marked.parser(bodyTokens, { renderer }) as string });
-  }
-
-  return sections;
-}
-
 const SHORT_LIST_MAX_ITEMS_LENGTH = 220;
 const SHORT_LIST_MIN_ITEMS = 3;
 const SHORT_LIST_MAX_ITEMS = 4;
@@ -219,5 +171,53 @@ export function extractShortBenefitList(markdown: string | null): SplitStoryBran
     beforeHtml: beforeTokens.length ? (marked.parser(beforeTokens, { renderer }) as string) : '',
     benefits,
     afterHtml: afterTokens.length ? (marked.parser(afterTokens, { renderer }) as string) : '',
+  };
+}
+
+const INTRO_LIST_MAX_ITEM_LENGTH = 160;
+const INTRO_LIST_MIN_ITEMS = 2;
+const INTRO_LIST_MAX_ITEMS = 6;
+
+export interface ExtractedIntroList {
+  introHtml: string;
+  items: string[];
+}
+
+// A StoryBrand copy field that closes with a short bullet/numbered list
+// (e.g. a Counselor Profile's Value Proposition ending in "3 steady
+// steps") reads badly as a markdown <ul> rendered straight into a prose
+// block — a real client caught this live (2026-09-18, Luke Burgett's
+// page, "Move Toward Peace, Resilience, and Purpose"): centering it put
+// the bullet marker far from its own text, and even left-aligned it
+// still read as an undesigned list sitting under a heading that felt
+// out of step with the left-aligned headings above and below it. This
+// pulls the trailing list out as its own data (so ValueProposition.astro
+// can give it a real two-column layout — heading/intro/CTA on the left,
+// the list as a designed checklist on the right) instead of leaving it
+// inline. Deliberately conservative, same discipline as
+// extractShortBenefitList() above: only fires when the list is the LAST
+// thing in the field (never misfires partway through a real long-form
+// page) and every item is short (a real checklist line, not a
+// multi-sentence paragraph that happens to use list markup).
+export function extractIntroList(markdown: string | null): ExtractedIntroList | null {
+  if (!markdown) return null;
+
+  const lexed = marked.lexer(markdown);
+  const tokens = lexed.filter((t) => t.type !== 'space');
+  if (tokens.length === 0) return null;
+
+  const last = tokens[tokens.length - 1];
+  if (last.type !== 'list') return null;
+
+  const listItems = (last as Tokens.List).items;
+  if (listItems.length < INTRO_LIST_MIN_ITEMS || listItems.length > INTRO_LIST_MAX_ITEMS) return null;
+  if (listItems.some((item) => item.text.length > INTRO_LIST_MAX_ITEM_LENGTH)) return null;
+
+  const introTokens = tokens.slice(0, -1) as ReturnType<typeof marked.lexer>;
+  introTokens.links = lexed.links;
+
+  return {
+    introHtml: introTokens.length ? (marked.parser(introTokens, { renderer }) as string) : '',
+    items: listItems.map((item) => marked.parseInline(item.text, { renderer }) as string),
   };
 }

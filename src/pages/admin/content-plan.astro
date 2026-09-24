@@ -1,0 +1,696 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<!--
+  Reachable by every role, unlike SEO Insights itself (owner/agency
+  only) — staff/counselors already have blog-authoring access, and
+  should see and act on their own content assignments too. One page
+  serves both audiences via role-conditional rendering, same pattern as
+  admin/counselor-settings.astro's owner/agency-vs-linked-counselor
+  split, rather than two separate pages.
+-->
+<AdminLayout title="Content Plan | Admin" current="content-plan">
+  <!-- Owner/agency: the full board -->
+  <div id="plan-board-view" class="hidden">
+    <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <label class="block text-xs font-semibold text-slate-500">Status</label>
+        <select id="plan-filter-status" class="rounded-md border border-slate-300 px-3 py-2 text-sm">
+          <option value="active" selected>Active (not yet published)</option>
+          <option value="all">All</option>
+          <option value="idea">Idea</option>
+          <option value="assigned">Assigned</option>
+          <option value="drafted">Drafted</option>
+          <option value="published">Published</option>
+        </select>
+      </div>
+      <button
+        id="add-idea-button"
+        type="button"
+        class="rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+      >
+        + Add idea
+      </button>
+    </div>
+
+    <p id="plan-count" class="mb-3 text-sm text-slate-600"></p>
+
+    <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <table class="w-full text-left text-sm">
+        <thead class="border-b border-slate-200 bg-slate-50">
+          <tr>
+            <th class="px-4 py-3 font-semibold">Title</th>
+            <th class="px-4 py-3 font-semibold">Keyword</th>
+            <th class="px-4 py-3 font-semibold">Search volume</th>
+            <th class="px-4 py-3 font-semibold">Content type</th>
+            <th class="px-4 py-3 font-semibold">Assigned to</th>
+            <th class="px-4 py-3 font-semibold">Due date</th>
+            <th class="px-4 py-3 font-semibold">Status</th>
+            <th class="px-4 py-3 font-semibold"></th>
+          </tr>
+        </thead>
+        <tbody id="plan-table-body"></tbody>
+      </table>
+    </div>
+    <p id="plan-empty" class="hidden px-1 py-4 text-sm text-slate-500">No content plan items yet.</p>
+  </div>
+
+  <!-- Staff: only their own assignments -->
+  <div id="plan-my-assignments-view" class="hidden">
+    <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold text-brand-ink">My content assignments</h2>
+    <div id="my-assignments-list" class="space-y-4"></div>
+    <p id="my-assignments-empty" class="hidden text-sm text-slate-500">Nothing assigned to you yet.</p>
+  </div>
+
+  <!-- Shared row-actions menu (owner/agency board only) -->
+  <div id="actions-menu" class="fixed z-50 hidden w-32 rounded-md border border-slate-200 bg-white py-1 text-left shadow-lg">
+    <button type="button" id="actions-menu-edit" class="block w-full px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50">
+      Edit
+    </button>
+    <button type="button" id="actions-menu-delete" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-red-50">
+      Delete
+    </button>
+  </div>
+
+  <!-- Add/Edit idea modal (owner/agency only) -->
+  <div id="idea-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+    <div class="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-lg bg-white p-6">
+      <div class="mb-4 flex items-center justify-between">
+        <h3 id="idea-modal-title" class="font-[family-name:var(--font-heading)] text-lg font-bold text-brand-ink">Add idea</h3>
+        <button id="idea-modal-close-button" type="button" class="text-sm text-slate-500 hover:text-slate-800">Close</button>
+      </div>
+      <button
+        id="modal-draft-blog-button"
+        type="button"
+        class="hidden mb-4 w-full rounded-md border border-brand-primary px-4 py-2 text-sm font-semibold text-brand-primary hover:bg-brand-neutral"
+      >
+        Draft blog post &rarr;
+      </button>
+      <form id="idea-form" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500">Title</label>
+          <input name="title" type="text" required class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500">Keyword</label>
+          <input name="keyword" type="text" placeholder="The real keyword to work into this content" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500">Content type</label>
+          <select name="content_type" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+            <option value="undecided" selected>Undecided</option>
+            <option value="blog_post">Blog post</option>
+            <option value="service_page">New Service Page</option>
+            <option value="who_we_serve_page">New Who We Serve page</option>
+            <option value="update_existing_page">Update existing page</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500">Linked page (update target, or once published)</label>
+          <select name="linked_page_id" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+            <option value="">None</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500">Category</label>
+            <select name="category" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+              <option value="">None</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500">Due date</label>
+            <input name="due_date" type="date" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500">Assigned to</label>
+          <select name="assigned_to" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+            <option value="">Unassigned</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500">Target question (from Mangools' Questions tab, if researched)</label>
+          <input name="target_question" type="text" placeholder="e.g. How does OCD affect relationships?" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500">Notes</label>
+          <textarea name="notes" rows="3" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"></textarea>
+        </div>
+        <p id="idea-form-status" class="text-sm text-red-600"></p>
+        <button type="submit" class="w-full rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
+          Save
+        </button>
+      </form>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  import { supabase, initAdminAuth } from '../../lib/adminAuth';
+  import { withBase } from '../../lib/url';
+
+  function escapeHtml(value: string): string {
+    const div = document.createElement('div');
+    div.textContent = value;
+    return div.innerHTML;
+  }
+
+  interface ContentPlanItem {
+    id: string;
+    title: string;
+    keyword: string | null;
+    target_keyword_id: string | null;
+    search_volume: number | null;
+    priority: 'high' | 'medium' | 'low' | null;
+    source_note: string | null;
+    target_question: string | null;
+    content_type: 'blog_post' | 'service_page' | 'who_we_serve_page' | 'update_existing_page' | 'undecided';
+    linked_page_id: string | null;
+    category: string | null;
+    status: 'idea' | 'assigned' | 'drafted' | 'published';
+    assigned_to: string | null;
+    due_date: string | null;
+    notes: string | null;
+  }
+
+  type AdminUserRow = { id: string; email: string; role: string; status: string };
+  type PageRow = { id: string; title: string };
+
+  const CONTENT_TYPE_LABELS: Record<string, string> = {
+    blog_post: 'Blog post',
+    service_page: 'New Service Page',
+    who_we_serve_page: 'New Who We Serve page',
+    update_existing_page: 'Update existing page',
+    undecided: 'Undecided',
+  };
+  const STATUS_LABELS: Record<string, string> = {
+    idea: 'Idea',
+    assigned: 'Assigned',
+    drafted: 'Drafted',
+    published: 'Published',
+  };
+
+  let isStaffSession = false;
+  let items: ContentPlanItem[] = [];
+  let assignableUsers: AdminUserRow[] = [];
+  let pages: PageRow[] = [];
+  let categories: string[] = [];
+  let editingItemId: string | null = null;
+  let actionsMenuItemId: string | null = null;
+
+  const boardView = document.getElementById('plan-board-view')!;
+  const myAssignmentsView = document.getElementById('plan-my-assignments-view')!;
+  const statusFilter = document.getElementById('plan-filter-status') as HTMLSelectElement;
+  const addIdeaButton = document.getElementById('add-idea-button')!;
+  const planCount = document.getElementById('plan-count')!;
+  const planTableBody = document.getElementById('plan-table-body')!;
+  const planEmpty = document.getElementById('plan-empty')!;
+  const myAssignmentsList = document.getElementById('my-assignments-list')!;
+  const myAssignmentsEmpty = document.getElementById('my-assignments-empty')!;
+  const actionsMenu = document.getElementById('actions-menu')!;
+  const actionsMenuEditButton = document.getElementById('actions-menu-edit')!;
+  const actionsMenuDeleteButton = document.getElementById('actions-menu-delete')!;
+  const ideaModal = document.getElementById('idea-modal')!;
+  const ideaModalTitle = document.getElementById('idea-modal-title')!;
+  const ideaModalCloseButton = document.getElementById('idea-modal-close-button')!;
+  const ideaForm = document.getElementById('idea-form') as HTMLFormElement;
+  const ideaFormStatus = document.getElementById('idea-form-status')!;
+  const linkedPageSelect = ideaForm.elements.namedItem('linked_page_id') as HTMLSelectElement;
+  const categorySelect = ideaForm.elements.namedItem('category') as HTMLSelectElement;
+  const assignedToSelect = ideaForm.elements.namedItem('assigned_to') as HTMLSelectElement;
+  const modalDraftBlogButton = document.getElementById('modal-draft-blog-button')!;
+
+  // Same-tab, consume-once handshake with admin/blog.astro — not URL
+  // query params, since this never needs to be shareable/bookmarkable.
+  // See CLAUDE.md's "Content Planning & Management screen" section. Carries
+  // keyword/target_question too, so the drafting screen can show a real
+  // "what this post needs to cover" panel instead of just prefilling
+  // title/category with no context about why.
+  function startBlogDraftHandoff(item: ContentPlanItem) {
+    sessionStorage.setItem(
+      'contentPlanDraftHandoff',
+      JSON.stringify({
+        planItemId: item.id,
+        title: item.title,
+        category: item.category,
+        linkedPageId: item.linked_page_id,
+        keyword: item.keyword,
+        targetQuestion: item.target_question,
+      })
+    );
+    window.location.href = withBase('/admin/blog');
+  }
+
+  function userLabel(u: AdminUserRow): string {
+    return `${u.email} (${u.role})`;
+  }
+
+  function assigneeLabel(userId: string | null): string {
+    if (!userId) return 'Unassigned';
+    const u = assignableUsers.find((a) => a.id === userId);
+    return u ? u.email : 'Unknown';
+  }
+
+  // --- Owner/agency board ---
+
+  function applyStatusFilter(list: ContentPlanItem[]): ContentPlanItem[] {
+    const status = statusFilter.value;
+    if (status === 'all') return list;
+    // Default view: everything not yet published — a published item stays
+    // fully visible via the explicit "Published"/"All" filter options, it
+    // just stops cluttering the "still needs to be created" default view.
+    if (status === 'active') return list.filter((i) => i.status !== 'published');
+    return list.filter((i) => i.status === status);
+  }
+
+  function renderBoard() {
+    const filtered = applyStatusFilter(items);
+    planCount.textContent = `${filtered.length} item${filtered.length === 1 ? '' : 's'}`;
+    planEmpty.classList.toggle('hidden', filtered.length > 0);
+    planTableBody.innerHTML = filtered
+      .map(
+        (item) => `
+      <tr class="border-b border-slate-100 last:border-0" data-item-id="${item.id}">
+        <td class="px-4 py-3">
+          <div class="flex items-center gap-2">
+            <span>${escapeHtml(item.title)}</span>
+            ${
+              item.content_type === 'blog_post'
+                ? `<button type="button" class="draft-blog-link whitespace-nowrap rounded-md border border-brand-primary px-2 py-1 text-xs font-semibold text-brand-primary hover:bg-brand-neutral" data-item-id="${item.id}">Draft blog post &rarr;</button>`
+                : ''
+            }
+          </div>
+        </td>
+        <td class="px-4 py-3">${item.keyword ? escapeHtml(item.keyword) : '—'}</td>
+        <td class="px-4 py-3">${item.search_volume != null ? `${item.search_volume.toLocaleString()}/mo` : '—'}</td>
+        <td class="px-4 py-3">${CONTENT_TYPE_LABELS[item.content_type]}</td>
+        <td class="px-4 py-3">${escapeHtml(assigneeLabel(item.assigned_to))}</td>
+        <td class="px-4 py-3 whitespace-nowrap">${item.due_date ? new Date(item.due_date + 'T00:00:00').toLocaleDateString() : '—'}</td>
+        <td class="px-4 py-3">
+          <select class="row-status-select rounded-md border border-slate-300 px-2 py-1 text-sm" data-item-id="${item.id}">
+            ${Object.entries(STATUS_LABELS)
+              .map(([value, label]) => `<option value="${value}" ${item.status === value ? 'selected' : ''}>${label}</option>`)
+              .join('')}
+          </select>
+        </td>
+        <td class="px-4 py-3 text-right">
+          <button type="button" class="actions-toggle rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50" data-item-id="${item.id}">
+            Actions &#9662;
+          </button>
+        </td>
+      </tr>`
+      )
+      .join('');
+  }
+
+  statusFilter.addEventListener('change', renderBoard);
+
+  function populateLinkedPagePicker() {
+    linkedPageSelect.innerHTML =
+      '<option value="">None</option>' + pages.map((p) => `<option value="${p.id}">${escapeHtml(p.title)}</option>`).join('');
+  }
+
+  function populateAssigneePicker() {
+    assignedToSelect.innerHTML =
+      '<option value="">Unassigned</option>' +
+      assignableUsers.map((u) => `<option value="${u.id}">${escapeHtml(userLabel(u))}</option>`).join('');
+  }
+
+  function populateCategoryPicker() {
+    categorySelect.innerHTML =
+      '<option value="">None</option>' + categories.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  }
+
+  function openAddModal() {
+    editingItemId = null;
+    ideaModalTitle.textContent = 'Add idea';
+    ideaForm.reset();
+    ideaFormStatus.textContent = '';
+    modalDraftBlogButton.classList.add('hidden');
+    ideaModal.classList.remove('hidden');
+    ideaModal.classList.add('flex');
+  }
+
+  function openEditModal(itemId: string) {
+    const item = items.find((i) => i.id === itemId);
+    if (!item) return;
+    editingItemId = itemId;
+    ideaModalTitle.textContent = 'Edit idea';
+    ideaForm.reset();
+    (ideaForm.elements.namedItem('title') as HTMLInputElement).value = item.title;
+    (ideaForm.elements.namedItem('keyword') as HTMLInputElement).value = item.keyword ?? '';
+    (ideaForm.elements.namedItem('content_type') as HTMLSelectElement).value = item.content_type;
+    linkedPageSelect.value = item.linked_page_id ?? '';
+    categorySelect.value = item.category ?? '';
+    (ideaForm.elements.namedItem('due_date') as HTMLInputElement).value = item.due_date ?? '';
+    assignedToSelect.value = item.assigned_to ?? '';
+    (ideaForm.elements.namedItem('target_question') as HTMLInputElement).value = item.target_question ?? '';
+    (ideaForm.elements.namedItem('notes') as HTMLTextAreaElement).value = item.notes ?? '';
+    ideaFormStatus.textContent = '';
+    // Only a blog_post idea has a real no-code creation screen to hand
+    // off to — Service Page/Who We Serve/update-existing-page ideas stay
+    // planning records, same as today.
+    modalDraftBlogButton.classList.toggle('hidden', item.content_type !== 'blog_post');
+    ideaModal.classList.remove('hidden');
+    ideaModal.classList.add('flex');
+  }
+
+  modalDraftBlogButton.addEventListener('click', () => {
+    if (!editingItemId) return;
+    const item = items.find((i) => i.id === editingItemId);
+    if (item) startBlogDraftHandoff(item);
+  });
+
+  function closeIdeaModal() {
+    ideaModal.classList.add('hidden');
+    ideaModal.classList.remove('flex');
+    editingItemId = null;
+  }
+
+  addIdeaButton.addEventListener('click', openAddModal);
+  ideaModalCloseButton.addEventListener('click', closeIdeaModal);
+
+  // Best-effort — the item is already saved by the time this is called,
+  // so a failure here (e.g. email not configured for this site) never
+  // blocks or un-does the save itself. See supabase/functions/
+  // notify-content-assignment for the actual send + its own graceful
+  // "not configured" handling.
+  async function notifyAssignment(itemId: string) {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
+      const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+      await fetch(`${SUPABASE_URL}/functions/v1/notify-content-assignment`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${sessionData.session?.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content_plan_item_id: itemId,
+          redirectTo: window.location.origin + withBase('/admin/content-plan'),
+        }),
+      });
+    } catch {
+      // Swallow — see comment above.
+    }
+  }
+
+  ideaForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    ideaFormStatus.textContent = '';
+    const formData = new FormData(ideaForm);
+    const title = (formData.get('title') as string).trim();
+    if (!title) return;
+
+    const newAssignedTo = (formData.get('assigned_to') as string) || null;
+    // Status no longer lives in this modal (moved to a row-level select on
+    // the board, matching the staff assignment card's own pattern) — never
+    // included in this payload, so saving content fields can't accidentally
+    // reset a status someone already advanced.
+    const payload = {
+      title,
+      keyword: (formData.get('keyword') as string).trim() || null,
+      content_type: formData.get('content_type') as string,
+      linked_page_id: (formData.get('linked_page_id') as string) || null,
+      category: (formData.get('category') as string) || null,
+      due_date: (formData.get('due_date') as string) || null,
+      assigned_to: newAssignedTo,
+      target_question: (formData.get('target_question') as string).trim() || null,
+      notes: (formData.get('notes') as string).trim() || null,
+    };
+
+    // Only notify on a genuine new assignment — creating/editing an item
+    // that's already assigned to the same person again shouldn't re-email
+    // them every time an unrelated field changes.
+    const previousAssignedTo = editingItemId ? items.find((i) => i.id === editingItemId)?.assigned_to ?? null : null;
+    const isNewAssignment = !!newAssignedTo && newAssignedTo !== previousAssignedTo;
+
+    const submitButton = ideaForm.querySelector('button[type="submit"]') as HTMLButtonElement;
+    submitButton.disabled = true;
+    let savedItemId = editingItemId;
+    let error: { message: string } | null;
+    if (editingItemId) {
+      ({ error } = await supabase.from('content_plan_items').update(payload).eq('id', editingItemId));
+    } else {
+      const { data, error: insertError } = await supabase.from('content_plan_items').insert(payload).select().single();
+      error = insertError;
+      if (data) savedItemId = data.id;
+    }
+    submitButton.disabled = false;
+
+    if (error) {
+      ideaFormStatus.textContent = 'Could not save: ' + error.message;
+      return;
+    }
+
+    if (isNewAssignment && savedItemId) await notifyAssignment(savedItemId);
+
+    closeIdeaModal();
+    await loadBoard();
+  });
+
+  // --- Row actions menu ---
+
+  function closeActionsMenu() {
+    actionsMenu.classList.add('hidden');
+    actionsMenuItemId = null;
+  }
+
+  function openActionsMenuFor(button: HTMLElement, itemId: string) {
+    actionsMenuItemId = itemId;
+    const rect = button.getBoundingClientRect();
+    const estimatedMenuHeight = 80;
+    const openUpward = window.innerHeight - rect.bottom < estimatedMenuHeight;
+    const menuWidth = 128;
+    const left = Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8));
+    actionsMenu.style.left = `${left}px`;
+    if (openUpward) {
+      actionsMenu.style.top = 'auto';
+      actionsMenu.style.bottom = `${window.innerHeight - rect.top + 4}px`;
+    } else {
+      actionsMenu.style.bottom = 'auto';
+      actionsMenu.style.top = `${rect.bottom + 4}px`;
+    }
+    actionsMenu.classList.remove('hidden');
+  }
+
+  document.addEventListener('click', (event) => {
+    if (actionsMenu.classList.contains('hidden')) return;
+    const target = event.target as HTMLElement;
+    if (target.closest('#actions-menu') || target.closest('.actions-toggle')) return;
+    closeActionsMenu();
+  });
+  window.addEventListener('scroll', closeActionsMenu, true);
+  window.addEventListener('resize', closeActionsMenu);
+
+  planTableBody.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement;
+
+    const draftLink = target.closest<HTMLElement>('.draft-blog-link');
+    if (draftLink) {
+      const item = items.find((i) => i.id === draftLink.dataset.itemId);
+      if (item) startBlogDraftHandoff(item);
+      return;
+    }
+
+    const toggleButton = target.closest<HTMLElement>('.actions-toggle');
+    if (!toggleButton) return;
+    const itemId = toggleButton.dataset.itemId!;
+    if (actionsMenuItemId === itemId && !actionsMenu.classList.contains('hidden')) {
+      closeActionsMenu();
+    } else {
+      openActionsMenuFor(toggleButton, itemId);
+    }
+  });
+
+  // Row-level status select — same pattern as the staff assignment card's
+  // own .my-status-select, moved here since status is no longer part of
+  // the Edit modal (see CLAUDE.md's "Content Plan" sections).
+  planTableBody.addEventListener('change', async (event) => {
+    const select = (event.target as HTMLElement).closest<HTMLSelectElement>('.row-status-select');
+    if (!select) return;
+    const itemId = select.dataset.itemId!;
+    const { error } = await supabase.from('content_plan_items').update({ status: select.value }).eq('id', itemId);
+    if (error) {
+      window.alert('Could not update status: ' + error.message);
+      return;
+    }
+    const item = items.find((i) => i.id === itemId);
+    if (item) item.status = select.value as ContentPlanItem['status'];
+    // Re-render rather than leave the row alone — the default "Active"
+    // filter should drop a row the moment it's marked Published, not wait
+    // for the next full reload.
+    renderBoard();
+  });
+
+  actionsMenuEditButton.addEventListener('click', () => {
+    const itemId = actionsMenuItemId;
+    closeActionsMenu();
+    if (itemId) openEditModal(itemId);
+  });
+
+  actionsMenuDeleteButton.addEventListener('click', async () => {
+    const itemId = actionsMenuItemId;
+    closeActionsMenu();
+    if (!itemId) return;
+    const item = items.find((i) => i.id === itemId);
+    if (!item) return;
+    if (!window.confirm(`Delete "${item.title}"? This cannot be undone.`)) return;
+    const { error } = await supabase.from('content_plan_items').delete().eq('id', itemId);
+    if (error) {
+      window.alert('Could not delete: ' + error.message);
+      return;
+    }
+    await loadBoard();
+  });
+
+  async function loadBoard() {
+    const { data, error } = await supabase
+      .from('content_plan_items')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) {
+      planTableBody.innerHTML = `<tr><td colspan="7" class="px-4 py-3 text-red-600">Could not load: ${escapeHtml(error.message)}</td></tr>`;
+      return;
+    }
+    items = (data as ContentPlanItem[]) ?? [];
+    renderBoard();
+  }
+
+  // --- Staff: my assignments ---
+
+  function renderMyAssignments() {
+    myAssignmentsEmpty.classList.toggle('hidden', items.length > 0);
+    myAssignmentsList.innerHTML = items
+      .map(
+        (item) => `
+      <div class="assignment-card rounded-lg border border-black/5 bg-white p-5 shadow-sm" data-item-id="${item.id}">
+        <div class="mb-2 flex items-start justify-between gap-3">
+          <h3 class="font-[family-name:var(--font-heading)] text-lg font-bold text-brand-ink">${escapeHtml(item.title)}</h3>
+          <select class="my-status-select rounded-md border border-slate-300 px-2 py-1 text-sm" data-item-id="${item.id}">
+            ${Object.entries(STATUS_LABELS)
+              .map(([value, label]) => `<option value="${value}" ${item.status === value ? 'selected' : ''}>${label}</option>`)
+              .join('')}
+          </select>
+        </div>
+        <p class="mb-2 text-xs text-slate-500">
+          ${CONTENT_TYPE_LABELS[item.content_type]}${item.due_date ? ` &middot; Due ${new Date(item.due_date + 'T00:00:00').toLocaleDateString()}` : ''}${item.search_volume != null ? ` &middot; ${item.search_volume.toLocaleString()}/mo search volume` : ''}
+        </p>
+        ${item.keyword ? `<p class="mb-2 text-sm font-semibold text-brand-ink">Target keyword: <span class="font-normal">${escapeHtml(item.keyword)}</span></p>` : ''}
+        ${item.target_question ? `<p class="mb-2 text-sm italic text-slate-600">Target question: "${escapeHtml(item.target_question)}"</p>` : ''}
+        ${
+          item.content_type === 'blog_post'
+            ? `<button type="button" class="draft-blog-link mb-3 rounded-md border border-brand-primary px-3 py-1.5 text-xs font-semibold text-brand-primary hover:bg-brand-neutral" data-item-id="${item.id}">Draft blog post &rarr;</button>`
+            : ''
+        }
+        <label class="mb-1 block text-xs font-semibold text-slate-500">Notes</label>
+        <textarea class="my-notes-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm" rows="2" data-item-id="${item.id}">${escapeHtml(item.notes ?? '')}</textarea>
+        <button type="button" class="my-notes-save mt-2 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50" data-item-id="${item.id}">
+          Save notes
+        </button>
+        <span class="my-save-status ml-2 text-xs"></span>
+      </div>`
+      )
+      .join('');
+  }
+
+  myAssignmentsList.addEventListener('change', async (event) => {
+    const select = (event.target as HTMLElement).closest<HTMLSelectElement>('.my-status-select');
+    if (!select) return;
+    const itemId = select.dataset.itemId!;
+    const { error } = await supabase.from('content_plan_items').update({ status: select.value }).eq('id', itemId);
+    if (error) window.alert('Could not update status: ' + error.message);
+    const item = items.find((i) => i.id === itemId);
+    if (item && !error) item.status = select.value as ContentPlanItem['status'];
+  });
+
+  myAssignmentsList.addEventListener('click', async (event) => {
+    const target = event.target as HTMLElement;
+
+    const draftLink = target.closest<HTMLElement>('.draft-blog-link');
+    if (draftLink) {
+      const item = items.find((i) => i.id === draftLink.dataset.itemId);
+      if (item) startBlogDraftHandoff(item);
+      return;
+    }
+
+    const button = target.closest<HTMLButtonElement>('.my-notes-save');
+    if (!button) return;
+    const itemId = button.dataset.itemId!;
+    const card = button.closest<HTMLElement>('.assignment-card')!;
+    const textarea = card.querySelector<HTMLTextAreaElement>('.my-notes-field')!;
+    const statusEl = card.querySelector<HTMLElement>('.my-save-status')!;
+    statusEl.textContent = 'Saving...';
+    statusEl.className = 'my-save-status ml-2 text-xs text-slate-500';
+    const { error } = await supabase.from('content_plan_items').update({ notes: textarea.value }).eq('id', itemId);
+    statusEl.textContent = error ? 'Could not save: ' + error.message : 'Saved.';
+    statusEl.className = 'my-save-status ml-2 text-xs ' + (error ? 'text-red-600' : 'text-emerald-700');
+  });
+
+  async function loadMyAssignments(userId: string) {
+    const { data, error } = await supabase
+      .from('content_plan_items')
+      .select('*')
+      .eq('assigned_to', userId)
+      .order('due_date', { ascending: true, nullsFirst: false });
+    if (error) {
+      myAssignmentsList.innerHTML = `<p class="text-sm text-red-600">Could not load: ${escapeHtml(error.message)}</p>`;
+      return;
+    }
+    items = (data as ContentPlanItem[]) ?? [];
+    renderMyAssignments();
+  }
+
+  // --- Shared loaders ---
+
+  async function loadAssignableUsers() {
+    const { data } = await supabase.from('admin_users').select('id, email, role, status').eq('status', 'active');
+    assignableUsers = (data as AdminUserRow[]) ?? [];
+    populateAssigneePicker();
+  }
+
+  async function loadPages() {
+    const { data } = await supabase.from('pages').select('id, title').order('title');
+    pages = (data as PageRow[]) ?? [];
+    populateLinkedPagePicker();
+  }
+
+  // Same real-categories-only query as admin/blog.astro's own category
+  // dropdown (both 'Content Pillar' and 'Service Hub' can own one) — a
+  // content-plan idea's category has to match a real hub page's category,
+  // never a typo'd free-text value the blog category dropdown then can't
+  // match against.
+  async function loadCategories() {
+    const { data, error } = await supabase.from('pages').select('category').in('page_type', ['Content Pillar', 'Service Hub']);
+    categories = error
+      ? []
+      : [...new Set((data ?? []).map((r) => r.category).filter((c): c is string => !!c))].sort();
+    populateCategoryPicker();
+  }
+
+  initAdminAuth(async (adminUser) => {
+    // Explicitly hide both before showing the right one — onAuthed can
+    // fire more than once per page load (log out, then log back in as
+    // a different role, with no full navigation in between), and
+    // without this the previous role's view stays stacked underneath
+    // instead of being replaced.
+    boardView.classList.add('hidden');
+    myAssignmentsView.classList.add('hidden');
+
+    isStaffSession = adminUser.role === 'staff';
+    if (isStaffSession) {
+      myAssignmentsView.classList.remove('hidden');
+      await loadMyAssignments(adminUser.id);
+    } else {
+      boardView.classList.remove('hidden');
+      await loadAssignableUsers();
+      await loadPages();
+      await loadCategories();
+      await loadBoard();
+    }
+  });
+</script>

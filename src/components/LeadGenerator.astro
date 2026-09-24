@@ -38,6 +38,19 @@ interface Props {
   // used on a Counselor Profile page itself, where the visitor has
   // already picked who they want by being on that page.
   defaultCounselorId?: string;
+  // "Preferred Session Format" (In-Person / Telehealth) radio group —
+  // opt-in via business.collect_session_format_preference, same pattern
+  // as collectCounselorPreference. Neither option is pre-selected;
+  // leaving both unchecked is a normal, expected "no preference" answer,
+  // not a missing one — see 0039_session_format_preference.sql.
+  collectSessionFormat?: boolean;
+  // Cloudflare Turnstile (bot-defense widget) — opt-in via
+  // business.cloudflare_turnstile_site_key, same "unset means skip it"
+  // pattern as every other optional business flag threaded through this
+  // component. See 0042_turnstile_site_key.sql and submit-lead's own
+  // server-side verification, which is the real enforcement — this only
+  // controls whether the client-side widget renders.
+  turnstileSiteKey?: string | null;
 }
 
 const {
@@ -60,6 +73,8 @@ const {
   collectCounselorPreference = false,
   counselors = [],
   defaultCounselorId,
+  collectSessionFormat = false,
+  turnstileSiteKey,
 } = Astro.props;
 
 const Wrapper = embedded ? 'div' : 'section';
@@ -90,26 +105,38 @@ const Wrapper = embedded ? 'div' : 'section';
       data-source-page={slug}
       data-collect-website={collectWebsiteUrl ? 'true' : 'false'}
     >
+      {/*
+        Honeypot: invisible to a real visitor (off-screen + aria-hidden, so
+        neither a sighted user nor a screen reader ever encounters it), but
+        present in the DOM for an unsophisticated bot that fills in every
+        input it finds. The real enforcement is server-side in submit-lead
+        (a bot calling the Edge Function directly, bypassing this form
+        entirely, wouldn't be stopped by a client-only check) — this field
+        just gives that check something to catch.
+      */}
+      <div class="absolute -left-[9999px] h-px w-px overflow-hidden" aria-hidden="true">
+        <input type="text" name="hp_website" tabindex="-1" autocomplete="off" />
+      </div>
       <input
         name="name"
         type="text"
         placeholder="Name"
         required
-        class="w-full rounded-lg border border-slate-300 px-4 py-2 transition focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
+        class="w-full rounded-md border border-slate-300 px-4 py-2"
       />
       <input
         name="email"
         type="email"
         placeholder="Email"
         required
-        class="w-full rounded-lg border border-slate-300 px-4 py-2 transition focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
+        class="w-full rounded-md border border-slate-300 px-4 py-2"
       />
       {!compact && (
         <input
           name="phone"
           type="tel"
           placeholder="Phone (optional)"
-          class="w-full rounded-lg border border-slate-300 px-4 py-2 transition focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
+          class="w-full rounded-md border border-slate-300 px-4 py-2"
         />
       )}
       {collectWebsiteUrl && (
@@ -117,14 +144,14 @@ const Wrapper = embedded ? 'div' : 'section';
           name="existing_website_url"
           type="url"
           placeholder="Current website (optional — skip if you don't have one yet)"
-          class="w-full rounded-lg border border-slate-300 px-4 py-2 transition focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
+          class="w-full rounded-md border border-slate-300 px-4 py-2"
         />
       )}
       {collectCounselorPreference && counselors.length > 0 && (
         <select
           name="preferred_counselor_page_id"
           aria-label="Select a Counselor"
-          class="w-full rounded-lg border border-slate-300 px-4 py-2 transition focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/30 text-slate-700"
+          class="w-full rounded-md border border-slate-300 px-4 py-2 text-slate-700"
         >
           <option value="" selected={!defaultCounselorId}>Help me choose</option>
           {counselors.map((counselor) => (
@@ -134,16 +161,32 @@ const Wrapper = embedded ? 'div' : 'section';
           ))}
         </select>
       )}
+      {collectSessionFormat && (
+        <div class="space-y-1.5">
+          <p class="text-sm font-medium text-slate-700">Preferred session format (optional)</p>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="flex items-center justify-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+              <input type="radio" name="preferred_session_format" value="in_person" />
+              In-Person
+            </label>
+            <label class="flex items-center justify-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+              <input type="radio" name="preferred_session_format" value="telehealth" />
+              Telehealth
+            </label>
+          </div>
+        </div>
+      )}
       {!compact && (
         <textarea
           name="message"
           placeholder="How can we help?"
           rows="4"
-          class="w-full rounded-lg border border-slate-300 px-4 py-2 transition focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/30"></textarea>
+          class="w-full rounded-md border border-slate-300 px-4 py-2"></textarea>
       )}
+      {turnstileSiteKey && <div class="cf-turnstile" data-sitekey={turnstileSiteKey}></div>}
       <button
         type="submit"
-        class="btn w-full rounded-lg bg-brand-accent px-6 py-3 font-semibold text-white shadow-sm hover:opacity-90 hover:shadow-lg"
+        class="w-full rounded-md bg-brand-accent px-6 py-3 font-semibold text-white transition hover:opacity-90 hover:shadow-md"
       >
         {submitText}
       </button>
@@ -165,6 +208,20 @@ const Wrapper = embedded ? 'div' : 'section';
   const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
   const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
+  // Cloudflare Turnstile's script does implicit auto-rendering of every
+  // .cf-turnstile element on the page once loaded, so it only needs
+  // loading once even though this component (and its .cf-turnstile div)
+  // can appear more than once per page — guarded here rather than in the
+  // markup so a page with two LeadGenerator instances doesn't inject the
+  // script twice, which would otherwise try to double-render each widget.
+  if (document.querySelector('.cf-turnstile') && !document.querySelector('script[src*="challenges.cloudflare.com/turnstile"]')) {
+    const turnstileScript = document.createElement('script');
+    turnstileScript.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+    turnstileScript.async = true;
+    turnstileScript.defer = true;
+    document.head.appendChild(turnstileScript);
+  }
+
   document.querySelectorAll<HTMLFormElement>('.lead-form').forEach((form) => {
     const status = form.querySelector<HTMLElement>('.lead-form-status');
 
@@ -180,6 +237,16 @@ const Wrapper = embedded ? 'div' : 'section';
         phone: formData.get('phone') || null,
         message: formData.get('message') || null,
         source_page: form.dataset.sourcePage,
+        // Honeypot — empty for a real visitor (the field is invisible to
+        // them), filled in by an unsophisticated bot. submit-lead is what
+        // actually acts on this; see the field's own comment in the
+        // markup above for why enforcement can't live only here.
+        hp_website: formData.get('hp_website') || '',
+        // Present only when this instance rendered the Turnstile widget
+        // (Cloudflare's script inserts this hidden input itself inside
+        // the .cf-turnstile div) — null when Turnstile isn't configured
+        // for this client, which submit-lead treats as "skip the check."
+        turnstile_token: formData.get('cf-turnstile-response') || null,
       };
       if (form.dataset.collectWebsite === 'true') {
         payload.existing_website_url = formData.get('existing_website_url') || null;
@@ -187,14 +254,16 @@ const Wrapper = embedded ? 'div' : 'section';
       if (form.querySelector('[name="preferred_counselor_page_id"]')) {
         payload.preferred_counselor_page_id = formData.get('preferred_counselor_page_id') || null;
       }
+      if (form.querySelector('[name="preferred_session_format"]')) {
+        payload.preferred_session_format = formData.get('preferred_session_format') || null;
+      }
 
-      const response = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/submit-lead`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           apikey: SUPABASE_ANON_KEY,
           Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          Prefer: 'return=minimal',
         },
         body: JSON.stringify(payload),
       });

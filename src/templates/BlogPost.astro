@@ -65,15 +65,17 @@ const publishedDate = page.date_published
   <article class="prose prose-lg mx-auto max-w-3xl px-6 pb-10 pt-4">
     <Fragment set:html={renderCopy(page.copy)} />
   </article>
-  <CTA heading={page.cta_heading ?? `Want help from ${business.display_name}?`} buttonText={page.cta_button_text ?? undefined} />
-  <LeadMagnet pageId={page.id} />
+  <CTA heading={page.cta_heading ?? `Want help from ${business.display_name}?`} subheading={page.cta_subheading} buttonText={page.cta_button_text ?? undefined} />
+  <LeadMagnet pageId={page.id} turnstileSiteKey={business.cloudflare_turnstile_site_key} />
   <LeadGenerator
     slug={page.slug}
     heading={page.cta_button_text ?? undefined}
     submitText={page.cta_button_text ?? undefined}
     collectWebsiteUrl={business.collect_website_in_leads}
     responseTimeNote={business.lead_response_time_note}
+    turnstileSiteKey={business.cloudflare_turnstile_site_key}
     collectCounselorPreference={business.collect_counselor_preference}
+    collectSessionFormat={business.collect_session_format_preference}
     counselors={counselors}
   />
 </BaseLayout>

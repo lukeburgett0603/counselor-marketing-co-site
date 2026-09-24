@@ -1,0 +1,27 @@
+---
+// A companion to TelehealthPill.astro — shown next to it in the header
+// card whenever the practice has a real physical office on file
+// (business.street_address set), never a per-counselor field: this
+// practice's counselors all see clients at the one shared office, and
+// there's no data suggesting otherwise for any client this template
+// serves today. If a future client has a counselor who is genuinely
+// telehealth-only despite the practice having an office, this would need
+// promoting to a real per-counselor field (mirroring telehealth_available)
+// rather than this shared boolean — don't force that complexity before a
+// real client actually needs it.
+interface Props {
+  hasOffice: boolean;
+}
+
+const { hasOffice } = Astro.props;
+---
+
+{hasOffice && (
+  <span class="inline-flex items-center gap-1.5 rounded-full bg-brand-tint/40 px-4 py-1.5 text-sm font-semibold text-brand-ink">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 shrink-0" aria-hidden="true">
+      <path d="M12 21s7-7.1 7-12a7 7 0 10-14 0c0 4.9 7 12 7 12z"></path>
+      <circle cx="12" cy="9" r="2.5"></circle>
+    </svg>
+    In-person sessions
+  </span>
+)}

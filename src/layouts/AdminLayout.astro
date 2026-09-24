@@ -20,6 +20,8 @@ interface Props {
     | 'team'
     | 'suggestions'
     | 'counselor-settings'
+    | 'seo-insights'
+    | 'content-plan'
     // Client-repo-only — admin/directory.astro isn't part of the shared
     // template (see CLAUDE.md's "client directory" note), so this repo's
     // copy of AdminLayout.astro carries one extra union member the
@@ -44,14 +46,20 @@ const { title, current } = Astro.props;
 // "Website content" is a collapsible group rather than a single link —
 // business info/testimonials and page copy used to be three stacked
 // sections on one route, but grew enough to warrant their own pages.
-// Both children share `navKey: 'content'` (not each child's own `key`)
-// so adminAuth.ts's role-based hide/show — which only knows about the
-// single 'content' permission — keeps treating them as one unit, exactly
-// as it did when this was one nav item. `key` (distinct per child) is
-// only used here, for current-route highlighting and default-expanded.
+// Each child now carries its OWN distinct `navKey` (previously both
+// shared the parent's 'content' key, hiding/showing as one unit) —
+// split the day a linked-counselor staff login needed Page Copy access
+// to their own page without also getting Business Info, exactly the
+// "future page needs the two children gated separately" case this
+// comment used to warn about. The parent `<li>` (the toggle button
+// itself) still gates on its own 'content' key — a role needs that key
+// too, or the group header never shows regardless of which children it
+// can reach.
 const navItems = [
   { key: 'leads', label: 'Leads and analytics', href: withBase('/admin/leads') },
   { key: 'crm', label: 'Lead CRM', href: withBase('/admin/crm') },
+  { key: 'seo-insights', label: 'SEO Insights', href: withBase('/admin/seo-insights') },
+  { key: 'content-plan', label: 'Content Plan', href: withBase('/admin/content-plan') },
   { key: 'blog', label: 'Blog posts', href: withBase('/admin/blog') },
   {
     key: 'content',
@@ -59,13 +67,13 @@ const navItems = [
     children: [
       {
         key: 'content-business-info',
-        navKey: 'content',
+        navKey: 'content-business-info',
         label: 'Business info & testimonials',
         href: withBase('/admin/content/business-info'),
       },
       {
         key: 'content-page-copy',
-        navKey: 'content',
+        navKey: 'content-page-copy',
         label: 'Page copy',
         href: withBase('/admin/content/page-copy'),
       },
@@ -76,6 +84,16 @@ const navItems = [
   { key: 'team', label: 'Team', href: withBase('/admin/team') },
   { key: 'counselor-settings', label: 'Counselor settings', href: withBase('/admin/counselor-settings') },
 ] as const;
+
+// One source of truth for "which page is this" — the sidebar highlight
+// and the page's own heading both read the same nav label, so they can
+// never drift apart the way a hand-typed <h1> on each page could.
+const pageHeading =
+  navItems
+    .flatMap((item): { key: string; label: string }[] =>
+      'children' in item ? item.children.map((child) => ({ key: child.key, label: child.label })) : [{ key: item.key, label: item.label }]
+    )
+    .find((entry) => entry.key === current)?.label ?? title;
 ---
 
 <!doctype html>
@@ -257,6 +275,7 @@ const navItems = [
         </button>
       </nav>
       <main class="min-w-0 flex-1 p-6">
+        <h1 class="mb-6 font-[family-name:var(--font-heading)] text-2xl font-extrabold text-brand-ink">{pageHeading}</h1>
         <slot />
       </main>
     </div>

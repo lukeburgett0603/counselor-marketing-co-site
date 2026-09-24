@@ -3,19 +3,26 @@ import { withBase } from '../lib/url';
 
 interface Props {
   heading: string;
+  // Optional short paragraph between the heading and the button — e.g.
+  // Homepage's closing CTA uses this to carry a brief "why it's worth
+  // acting now" reminder now that storybrand_failure no longer renders
+  // as its own standalone section. Omitted by every other existing call
+  // site, which keeps their current no-subheading appearance unchanged.
+  subheading?: string | null;
   buttonText?: string;
   href?: string;
 }
 
-const { heading, buttonText = 'Contact Us', href = withBase('/contact') } = Astro.props;
+const { heading, subheading, buttonText = 'Contact Us', href = withBase('/contact') } = Astro.props;
 ---
 
-<section class="bg-brand-primary py-16 text-center text-white md:py-20">
-  <div class="reveal mx-auto max-w-3xl px-6">
+<section class="bg-brand-primary py-16 text-center text-white">
+  <div class="mx-auto max-w-3xl px-6">
     <h2 class="font-[family-name:var(--font-heading)] text-2xl font-extrabold tracking-tight md:text-3xl">{heading}</h2>
+    {subheading && <p class="mt-3 text-white/90">{subheading}</p>}
     <a
       href={href}
-      class="btn mt-7 inline-block rounded-lg bg-white px-7 py-3.5 font-semibold text-brand-primary shadow-sm hover:bg-brand-neutral hover:shadow-lg"
+      class="mt-6 inline-block rounded-md bg-white px-6 py-3 font-semibold text-brand-primary transition hover:bg-brand-neutral hover:shadow-md"
     >
       {buttonText}
     </a>

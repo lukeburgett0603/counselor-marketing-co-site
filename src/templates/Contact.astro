@@ -15,6 +15,12 @@ interface Props {
 
 const { page, allPages, business } = Astro.props;
 const counselors = getCounselorOptions(allPages);
+// See Footer.astro's own comment on why this is built as one string —
+// same Astro compiler whitespace-collapsing behavior applies here.
+const streetLine = [business.street_address, business.street_address_2].filter(Boolean).join(', ');
+const fullAddress = streetLine
+  ? `${streetLine}, ${business.address_locality} ${business.address_region} ${business.postal_code}`
+  : null;
 ---
 
 <BaseLayout page={page} allPages={allPages} business={business}>
@@ -37,20 +43,18 @@ const counselors = getCounselorOptions(allPages);
         Email: <a href={`mailto:${business.email}`} class="text-brand-primary">{business.email}</a>
       </p>
     )}
-    {business.street_address && (
-      <p>
-        {business.street_address}, {business.address_locality} {business.address_region} {business.postal_code}
-      </p>
-    )}
+    {fullAddress && <p>{fullAddress}</p>}
   </div>
-  <LeadMagnet pageId={page.id} />
+  <LeadMagnet pageId={page.id} turnstileSiteKey={business.cloudflare_turnstile_site_key} />
   <LeadGenerator
     slug={page.slug}
     heading="Send us a message"
     submitText="Send"
     collectWebsiteUrl={business.collect_website_in_leads}
     responseTimeNote={business.lead_response_time_note}
+    turnstileSiteKey={business.cloudflare_turnstile_site_key}
     collectCounselorPreference={business.collect_counselor_preference}
+    collectSessionFormat={business.collect_session_format_preference}
     counselors={counselors}
   />
 </BaseLayout>

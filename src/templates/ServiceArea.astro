@@ -4,6 +4,7 @@ import Hero from '../components/Hero.astro';
 import Section from '../components/Section.astro';
 import Testimonial from '../components/Testimonial.astro';
 import PlanSteps from '../components/PlanSteps.astro';
+import CollapsibleSection from '../components/CollapsibleSection.astro';
 import FAQ from '../components/FAQ.astro';
 import CTA from '../components/CTA.astro';
 import LeadGenerator from '../components/LeadGenerator.astro';
@@ -41,19 +42,25 @@ const counselors = getCounselorOptions(allPages);
     <Testimonial quote={page.testimonial_quote} author={page.testimonial_author} role={page.testimonial_role} />
   )}
   <PlanSteps steps={page.plan_steps} />
+  <CollapsibleSection
+    markdown={page.local_area_detail}
+    triggerText={page.area_served_name ? `More about serving ${page.area_served_name}` : undefined}
+  />
   <FAQ
     faqs={page.faqs}
     heading={page.area_served_name ? `Common questions from ${page.area_served_name} clients` : undefined}
   />
-  <CTA heading={page.cta_heading ?? `Serving ${page.area_served_name ?? 'your area'}`} buttonText={page.cta_button_text ?? undefined} />
-  <LeadMagnet pageId={page.id} />
+  <CTA heading={page.cta_heading ?? `Serving ${page.area_served_name ?? 'your area'}`} subheading={page.cta_subheading} buttonText={page.cta_button_text ?? undefined} />
+  <LeadMagnet pageId={page.id} turnstileSiteKey={business.cloudflare_turnstile_site_key} />
   <LeadGenerator
     slug={page.slug}
     heading={page.cta_button_text ?? undefined}
     submitText={page.cta_button_text ?? undefined}
     collectWebsiteUrl={business.collect_website_in_leads}
     responseTimeNote={business.lead_response_time_note}
+    turnstileSiteKey={business.cloudflare_turnstile_site_key}
     collectCounselorPreference={business.collect_counselor_preference}
+    collectSessionFormat={business.collect_session_format_preference}
     counselors={counselors}
   />
 </BaseLayout>

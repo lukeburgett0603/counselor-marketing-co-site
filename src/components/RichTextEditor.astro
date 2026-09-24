@@ -41,5 +41,9 @@ const { id, helpText } = Astro.props;
     class="prose prose-sm min-h-[240px] max-w-none rounded-b-md border border-slate-300 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary/30"
   >
   </div>
-  {helpText && <p class="mt-1 text-xs text-slate-500">{helpText}</p>}
+  {helpText && (
+    <p id={`${id}-help`} class="mt-1 text-xs text-slate-500">
+      {helpText}
+    </p>
+  )}
 </div>

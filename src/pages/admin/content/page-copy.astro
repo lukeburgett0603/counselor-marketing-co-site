@@ -9,25 +9,62 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
 <AdminLayout title="Page copy | Admin" current="content-page-copy">
   <div class="max-w-2xl space-y-12">
     <section>
-      <h2 class="mb-1 font-[family-name:var(--font-heading)] text-xl font-extrabold text-brand-ink">Page copy</h2>
       <p id="content-tier-note" class="mb-4 text-sm text-slate-600"></p>
+
+      <div id="content-not-linked-notice" class="hidden mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        Your login isn't linked to a counselor page yet — ask the site owner to link one from the Team page.
+      </div>
+
       <div class="space-y-4">
-        <div>
+        <div id="content-page-select-wrap">
           <label class="mb-1 block text-sm font-semibold text-slate-700">Page</label>
           <select id="content-page-select" class="w-full rounded-md border border-slate-300 px-4 py-2"></select>
         </div>
 
         <div id="content-fields" class="hidden space-y-6">
-          <LockedField fieldKey="h1" label="Page heading (H1)" inputId="content-h1" />
+          <!--
+            Hidden entirely for Counselor Profile pages — that page type
+            never reads page.h1 at all (CounselorProfile.astro's real
+            <h1> comes from hero_headline ?? title instead; see the
+            "Headline (H1)" field below). Showing a locked, empty field
+            labeled "H1" that has zero effect on the actual page was
+            real, confirmed confusion for a linked-counselor session —
+            same "hide what genuinely doesn't apply" discipline already
+            used for #content-hero-style-wrap on this page.
+          -->
+          <!--
+            Keyword + meta description come first, before H1 — fixed
+            across every page type (2026-09-16, client request): these
+            are the research/metadata that should inform the H1 you
+            write, not an afterthought below it.
+          -->
+          <LockedField fieldKey="focus_keyword" label="Focus keyword" inputId="content-focus-keyword" />
           <LockedField
             fieldKey="meta_description"
             label="Meta description"
             inputId="content-meta-description"
             inputType="textarea"
           />
-          <LockedField fieldKey="focus_keyword" label="Focus keyword" inputId="content-focus-keyword" />
+          <div id="content-h1-wrap">
+            <LockedField fieldKey="h1" label="Page heading (H1)" inputId="content-h1" />
+          </div>
 
-          <div data-field="hero_subhead">
+          <div id="content-hero-headline-wrap" class="hidden" data-field="hero_headline">
+            <label class="mb-1 block text-sm font-semibold text-slate-700">Headline (H1)</label>
+            <input id="content-hero-headline" type="text" class="editable-view w-full rounded-md border border-slate-300 px-4 py-2" />
+            <p class="locked-view rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700" data-locked-value></p>
+            <p class="mt-1 text-xs text-slate-500">
+              A persuasive tagline shown as the main heading on your page (e.g. "Helping boys and men reclaim peace,
+              clarity, and purpose."). Your name still shows separately in the header card either way. Leave blank
+              to show your name as the heading instead.
+            </p>
+            <p class="tier-note mt-1 text-xs text-slate-500">
+              Included as an agency-managed field on your plan — suggest a change below.
+            </p>
+            <SuggestEdit fieldLabel="Headline (H1)" />
+          </div>
+
+          <div id="content-hero-subhead-wrap" data-field="hero_subhead">
             <label class="mb-1 block text-sm font-semibold text-slate-700">Hero subheading</label>
             <input id="content-hero-subhead" type="text" class="editable-view w-full rounded-md border border-slate-300 px-4 py-2" />
             <p class="locked-view rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700" data-locked-value></p>
@@ -71,8 +108,88 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
               paragraph, but it's fine to leave one blank if it genuinely doesn't apply.
             </p>
 
-            <div data-field="storybrand_problem">
-              <label class="mb-1 block text-sm font-semibold text-slate-700">The Problem</label>
+            <!--
+              Counselor-facing writing guidance — shown only for a
+              linked-counselor staff session (see isLinkedCounselorSession()
+              below), never for owner/agency, who have their own SEO
+              strategist handling this. Translates keyword-usage-rules.md's
+              guidance (no fixed repetition count, natural placement, and
+              the schema-alignment rule) into something a non-copywriter can
+              actually act on — the entity-term line is read straight from
+              getPersonEntityTerms() (src/lib/schema.ts), the same function
+              buildPersonSchema() itself uses, so this can't silently drift
+              from what the page's real schema markup says. See CLAUDE.md's
+              "getPersonEntityTerms()" section for the full reasoning.
+            -->
+            <div id="content-counselor-guidance" class="hidden space-y-2 rounded-md border border-brand-tint bg-brand-neutral p-4">
+              <h4 class="text-sm font-semibold text-brand-ink">Writing tips for your bio</h4>
+              <p id="content-counselor-keyword-tip" class="text-sm text-slate-700"></p>
+              <p id="content-counselor-entity-tip" class="text-sm text-slate-700"></p>
+              <p id="content-counselor-keyword-count" class="text-xs text-slate-500"></p>
+            </div>
+
+            <!--
+              Homepage-only additions from the StoryBrand rebuild — see
+              CLAUDE.md's "Homepage StoryBrand rebuild" section. Hidden
+              entirely (via #content-value-add-wrap/#content-authority-
+              stats-wrap/#content-explanatory-wrap's own toggles in
+              loadContentForm()) for Service Page/Counselor Profile,
+              which don't render these sections.
+            -->
+            <div id="content-value-add-wrap" data-field="value_add_items" class="hidden space-y-2">
+              <label class="mb-1 block text-sm font-semibold text-slate-700">Value Add strip</label>
+              <p class="mb-2 text-xs text-slate-500">
+                2–4 short icon+label items shown right under the Hero (e.g. "Faith-Integrated Care," "Licensed
+                Experts"). Pick an icon and a short label for each.
+              </p>
+              <div id="content-value-add-list" class="editable-view space-y-2"></div>
+              <button
+                type="button"
+                id="content-value-add-add"
+                class="editable-view rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                + Add an item
+              </button>
+              <p class="locked-view rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700" data-locked-value></p>
+              <p class="tier-note mt-1 text-xs text-slate-500">
+                Included as an agency-managed field on your plan — suggest a change below.
+              </p>
+              <SuggestEdit fieldLabel="Value Add strip" />
+            </div>
+
+            <!--
+              The counselor's own quote — Counselor-Profile-only (2026-
+              09-16), shown/hidden directly in loadContentForm() rather
+              than via *_PAGE_TYPES like the ungated "Additional page
+              elements" fields, since it lives inside this StoryBrand
+              container, not that section. Ungated on purpose — no
+              data-field/locked-view/SuggestEdit — testimonial_quote/
+              testimonial_author are never tier-gated for owner/agency
+              either (see business-info.astro's Testimonials editor).
+            -->
+            <div id="content-testimonial-wrap" class="hidden space-y-2">
+              <label class="mb-1 block text-sm font-semibold text-slate-700">Your quote</label>
+              <p class="mb-2 text-xs text-slate-500">
+                A short, personal line shown near the top of your page — your own words about how you work, not a
+                client testimonial. This component adds its own decorative quote mark, so don't type literal quote
+                characters around it.
+              </p>
+              <textarea
+                id="content-testimonial-quote"
+                rows="2"
+                placeholder="You don't have to have it figured out before you walk in..."
+                class="w-full rounded-md border border-slate-300 px-4 py-2 text-sm"
+              ></textarea>
+              <input
+                id="content-testimonial-author"
+                type="text"
+                placeholder="Your name, as it should appear under the quote"
+                class="mt-2 w-full rounded-md border border-slate-300 px-4 py-2 text-sm"
+              />
+            </div>
+
+            <div id="content-storybrand-problem-wrap" data-field="storybrand_problem">
+              <label id="content-storybrand-problem-field-label" class="mb-1 block text-sm font-semibold text-slate-700">The Problem</label>
               <div class="editable-view">
                 <RichTextEditor
                   id="content-storybrand-problem-editor"
@@ -87,7 +204,7 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
               <SuggestEdit fieldLabel="The Problem" />
             </div>
 
-            <div data-field="storybrand_guide_empathy">
+            <div id="content-storybrand-guide-empathy-wrap" data-field="storybrand_guide_empathy">
               <label class="mb-1 block text-sm font-semibold text-slate-700">We Understand</label>
               <div class="editable-view">
                 <RichTextEditor
@@ -103,8 +220,29 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
               <SuggestEdit fieldLabel="We Understand" />
             </div>
 
-            <div data-field="storybrand_pitch">
-              <label class="mb-1 block text-sm font-semibold text-slate-700">The Full Picture</label>
+            <div id="content-authority-stats-wrap" data-field="guide_authority_stats" class="hidden space-y-2">
+              <label class="mb-1 block text-sm font-semibold text-slate-700">Guide — Authority</label>
+              <p class="mb-2 text-xs text-slate-500">
+                Short, scannable credibility facts shown next to your empathy statement (e.g. "Experience" / "15+
+                years", "Credentials" / "LPCA, LCSW"). Optional — leave empty to skip this.
+              </p>
+              <div id="content-authority-stats-list" class="editable-view space-y-2"></div>
+              <button
+                type="button"
+                id="content-authority-stats-add"
+                class="editable-view rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                + Add a fact
+              </button>
+              <p class="locked-view rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700" data-locked-value></p>
+              <p class="tier-note mt-1 text-xs text-slate-500">
+                Included as an agency-managed field on your plan — suggest a change below.
+              </p>
+              <SuggestEdit fieldLabel="Guide — Authority" />
+            </div>
+
+            <div id="content-storybrand-pitch-wrap" data-field="storybrand_pitch">
+              <label id="content-storybrand-pitch-field-label" class="mb-1 block text-sm font-semibold text-slate-700">The Full Picture</label>
               <div class="editable-view">
                 <RichTextEditor
                   id="content-storybrand-pitch-editor"
@@ -119,7 +257,26 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
               <SuggestEdit fieldLabel="The Full Picture" />
             </div>
 
-            <div data-field="storybrand_success">
+            <div id="content-storybrand-pitch-label-wrap" data-field="storybrand_pitch_label">
+              <label id="content-storybrand-pitch-label-field-label" class="mb-1 block text-sm font-semibold text-slate-700">"The Full Picture" link text</label>
+              <input
+                id="content-storybrand-pitch-label"
+                type="text"
+                placeholder="Learn more about our approach"
+                class="editable-view w-full rounded-md border border-slate-300 px-4 py-2"
+              />
+              <p class="locked-view rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700" data-locked-value></p>
+              <p id="content-storybrand-pitch-label-help" class="mt-1 text-xs text-slate-500">
+                Shown as a heading visitors click to expand "The Full Picture" above. Leave blank to use the default,
+                "Learn more about our approach."
+              </p>
+              <p class="tier-note mt-1 text-xs text-slate-500">
+                Included as an agency-managed field on your plan — suggest a change below.
+              </p>
+              <SuggestEdit fieldLabel="&quot;The Full Picture&quot; link text" />
+            </div>
+
+            <div id="content-storybrand-success-wrap" data-field="storybrand_success">
               <label class="mb-1 block text-sm font-semibold text-slate-700">What's Possible</label>
               <div class="editable-view">
                 <RichTextEditor
@@ -135,7 +292,7 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
               <SuggestEdit fieldLabel="What's Possible" />
             </div>
 
-            <div data-field="storybrand_failure">
+            <div id="content-storybrand-failure-wrap" data-field="storybrand_failure">
               <label class="mb-1 block text-sm font-semibold text-slate-700">Why It's Worth Acting Now</label>
               <div class="editable-view">
                 <RichTextEditor
@@ -150,9 +307,88 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
               </p>
               <SuggestEdit fieldLabel="Why It's Worth Acting Now" />
             </div>
+
+            <div id="content-explanatory-wrap" class="hidden space-y-6 border-t border-slate-200 pt-6">
+              <div>
+                <h3 class="text-sm font-semibold text-slate-700">Explanatory Paragraph</h3>
+                <p class="mt-1 text-xs text-slate-500">
+                  A genuinely separate, freestanding full BrandScript — not one of the short sections above. Visitors
+                  see a one-line heading and a short teaser; "Continue reading" expands the full text. This is where
+                  most of your SEO content lives.
+                </p>
+              </div>
+
+              <div data-field="brandscript_one_liner">
+                <label class="mb-1 block text-sm font-semibold text-slate-700">One-liner</label>
+                <input id="content-brandscript-one-liner" type="text" class="editable-view w-full rounded-md border border-slate-300 px-4 py-2" />
+                <p class="locked-view rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700" data-locked-value></p>
+                <p class="tier-note mt-1 text-xs text-slate-500">
+                  Included as an agency-managed field on your plan — suggest a change below.
+                </p>
+                <SuggestEdit fieldLabel="Explanatory Paragraph one-liner" />
+              </div>
+
+              <div data-field="brandscript_teaser">
+                <label class="mb-1 block text-sm font-semibold text-slate-700">Teaser</label>
+                <textarea id="content-brandscript-teaser" rows="2" class="editable-view w-full rounded-md border border-slate-300 px-4 py-2"></textarea>
+                <p class="locked-view rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700" data-locked-value></p>
+                <p class="tier-note mt-1 text-xs text-slate-500">
+                  Included as an agency-managed field on your plan — suggest a change below.
+                </p>
+                <SuggestEdit fieldLabel="Explanatory Paragraph teaser" />
+              </div>
+
+              <div data-field="brandscript_full">
+                <label class="mb-1 block text-sm font-semibold text-slate-700">Full BrandScript</label>
+                <div class="editable-view">
+                  <RichTextEditor
+                    id="content-brandscript-full-editor"
+                    helpText="The complete, long-form BrandScript — paste the whole thing in. This is only revealed when a visitor clicks 'Continue reading,' so it's the right place for the fuller SEO-oriented version of your story."
+                  />
+                </div>
+                <div class="locked-view prose prose-sm max-w-none rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700" data-locked-value-html>
+                </div>
+                <p class="tier-note mt-1 text-xs text-slate-500">
+                  Included as an agency-managed field on your plan — suggest a change below.
+                </p>
+                <SuggestEdit fieldLabel="Full BrandScript" />
+              </div>
+
+              <div data-field="brandscript_video_url">
+                <label class="mb-1 block text-sm font-semibold text-slate-700">Video (optional)</label>
+                <div class="editable-view space-y-2">
+                  <input
+                    id="content-brandscript-video-url"
+                    type="url"
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    class="w-full rounded-md border border-slate-300 px-4 py-2"
+                  />
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-xs text-slate-400">or upload a file</span>
+                    <label
+                      for="content-video-file"
+                      class="inline-block cursor-pointer rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      Choose File
+                    </label>
+                    <input id="content-video-file" type="file" accept="video/mp4,video/quicktime,video/webm" class="sr-only" />
+                  </div>
+                  <p id="content-video-status" class="text-xs text-slate-500"></p>
+                </div>
+                <p class="locked-view rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700" data-locked-value></p>
+                <p class="mt-1 text-xs text-slate-500">
+                  A YouTube/Vimeo link, or upload a video file directly (200MB max, MP4/MOV/WebM). Leave blank to skip
+                  the video.
+                </p>
+                <p class="tier-note mt-1 text-xs text-slate-500">
+                  Included as an agency-managed field on your plan — suggest a change below.
+                </p>
+                <SuggestEdit fieldLabel="Explanatory Paragraph video" />
+              </div>
+            </div>
           </div>
 
-          <div data-field="images">
+          <div id="content-images-wrap" data-field="images">
             <label class="mb-1 block text-sm font-semibold text-slate-700">Hero image</label>
             <div class="editable-view space-y-2">
               <div class="flex flex-wrap items-center gap-2">
@@ -344,6 +580,31 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
                   class="w-full rounded-md border border-slate-300 px-4 py-2 text-sm"
                 />
               </div>
+              <!--
+                Unlike cta_heading/cta_button_text (always editable, on
+                every plan, for everyone), this one field is locked
+                specifically — and only — for a linked-counselor session
+                (client decision, 2026-09-16: the agency writes this one,
+                counselors may suggest a change). See canEditField()'s
+                explicit 'cta_subheading' case and
+                0055_lock_cta_subheading_for_counselors.sql.
+              -->
+              <div data-field="cta_subheading">
+                <label class="mb-1 block text-sm font-semibold text-slate-700">Call-to-action subheading (optional)</label>
+                <textarea
+                  id="content-cta-subheading"
+                  rows="2"
+                  placeholder="A short line reinforcing why now is worth acting on."
+                  class="editable-view w-full rounded-md border border-slate-300 px-4 py-2 text-sm"
+                ></textarea>
+                <p class="locked-view rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700" data-locked-value></p>
+                <p class="mt-1 text-xs text-slate-500">
+                  Shown between the heading and the button — a good place to briefly reiterate why it's worth
+                  reaching out now.
+                </p>
+                <p class="tier-note mt-1 text-xs text-slate-500">Managed by your agency — suggest a change below.</p>
+                <SuggestEdit fieldLabel="Call-to-action subheading" />
+              </div>
               <div>
                 <label class="mb-1 block text-sm font-semibold text-slate-700">Call-to-action button text</label>
                 <input
@@ -353,6 +614,36 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
                   class="w-full rounded-md border border-slate-300 px-4 py-2 text-sm"
                 />
               </div>
+            </div>
+
+            <div id="content-featured-wrap" class="hidden space-y-2">
+              <label class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <input id="content-featured-checkbox" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
+                Feature this service on the homepage
+              </label>
+              <p class="text-xs text-slate-500">
+                Shown as one of the Homepage's up to 3 Featured Services cards.
+              </p>
+              <div id="content-featured-order-wrap" class="hidden">
+                <label class="mb-1 block text-sm font-semibold text-slate-700">Display order</label>
+                <input
+                  id="content-featured-order"
+                  type="number"
+                  min="1"
+                  class="w-24 rounded-md border border-slate-300 px-3 py-2 text-sm"
+                />
+                <p class="mt-1 text-xs text-slate-500">Lower numbers show first. Only the first 3 (by this order) appear.</p>
+              </div>
+            </div>
+
+            <div id="content-footer-column-wrap" class="hidden">
+              <label class="mb-1 block text-sm font-semibold text-slate-700">Footer column</label>
+              <select id="content-footer-column" class="w-full rounded-md border border-slate-300 px-4 py-2 text-sm sm:w-64">
+                <option value="explore">Explore</option>
+                <option value="company">Company</option>
+                <option value="legal">Legal</option>
+              </select>
+              <p class="mt-1 text-xs text-slate-500">Which of the footer's 3 columns this page's link shows in.</p>
             </div>
 
             <button
@@ -423,34 +714,64 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
   import { triggerRebuild } from '../../../lib/publishFunction';
   import { initUnsplashSearchModal, type UnsplashPhoto } from '../../../lib/unsplashSearch';
   import { STORYBRAND_SPLIT_PAGE_TYPES } from '../../../lib/pages';
+  import { getPersonEntityTerms } from '../../../lib/schema';
+  import { VALUE_ADD_ICON_NAMES } from '../../../lib/icons';
 
   type ContentPage = {
     id: string;
     title: string;
     page_type: string;
+    nav_placement: 'primary' | 'footer' | 'utility' | 'none';
     h1: string | null;
     meta_description: string | null;
     focus_keyword: string | null;
     hero_subhead: string | null;
+    hero_headline: string | null;
     copy: string | null;
     storybrand_problem: string | null;
     storybrand_guide_empathy: string | null;
     storybrand_pitch: string | null;
+    storybrand_pitch_label: string | null;
     storybrand_success: string | null;
     storybrand_failure: string | null;
+    value_add_items: { icon: string; label: string }[];
+    guide_authority_stats: { label: string; value: string }[];
+    featured_on_homepage: boolean;
+    homepage_feature_order: number | null;
+    brandscript_one_liner: string | null;
+    brandscript_teaser: string | null;
+    brandscript_full: string | null;
+    brandscript_video_url: string | null;
+    footer_column: 'explore' | 'company' | 'legal' | null;
     plan_steps: { title: string; description: string }[];
     faqs: { question: string; answer: string }[];
     concerns: { title: string; description: string }[];
     cta_heading: string | null;
+    cta_subheading: string | null;
     cta_button_text: string | null;
-    images: { hero?: { url: string; alt: string; creditName?: string; creditUrl?: string } } | null;
+    images: {
+      hero?: { url: string; alt: string; creditName?: string; creditUrl?: string };
+      headshot?: { url: string; alt: string; creditName?: string; creditUrl?: string };
+    } | null;
     author_name: string | null;
     credentials: string | null;
     date_modified: string | null;
+    // Counselor Profile's own quote (CounselorQuote.astro) — shared
+    // columns with Homepage's third-party Testimonial.astro, edited here
+    // only when page_type === 'Counselor Profile' (see the ungated
+    // markup block and loadContentForm()'s own comment on why).
+    testimonial_quote: string | null;
+    testimonial_author: string | null;
     hero_style: 'default' | 'overlay';
     hero_overlay_color: string;
     hero_overlay_opacity: number;
     hero_image_focal_y: 'top' | 'center' | 'bottom';
+    // Not edited on this screen (Counselor settings owns these) — fetched
+    // only so getPersonEntityTerms() can read them for the counselor-
+    // facing guidance panel below.
+    professional_title: string | null;
+    specialties: { label: string; page_slug: string | null }[];
+    modalities: string[];
   };
 
   // Which page types each "Additional page elements" field applies to —
@@ -459,9 +780,22 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
   // have drifted from the actual code on at least one of these). Keep this
   // in sync if a future template starts or stops reading one of these
   // fields.
+  // Only Counselor Profile has a name (page.title) that can stand in for
+  // the heading when this is unset — every other page type's H1 already
+  // falls back to page.title in a way that reads correctly on its own
+  // (a business name, a service name), so this field is scoped narrowly
+  // rather than offered everywhere STORYBRAND_SPLIT_PAGE_TYPES covers.
+  const HERO_HEADLINE_PAGE_TYPES = ['Counselor Profile'];
   const PLAN_STEPS_PAGE_TYPES = ['Counselor Profile', 'Homepage', 'Service Area', 'Service Hub', 'Service Page'];
   const FAQS_PAGE_TYPES = ['Content Pillar', 'Counselor Profile', 'Service Area', 'Service Hub', 'Service Page'];
-  const CONCERNS_PAGE_TYPES = ['Homepage', 'Service Hub'];
+  // 'Homepage' removed 2026-09-16 — the Homepage rebuild dropped the
+  // FeatureGrid/concerns rendering entirely (superseded by the Value Add
+  // strip + Value Proposition + Guide/Authority sections), so this field
+  // was a real "editable but nothing renders it" gap until this fix.
+  const CONCERNS_PAGE_TYPES = ['Service Hub'];
+  // Which page types can be featured on the Homepage's Featured Services
+  // section — see 0049_featured_services.sql.
+  const FEATURED_SERVICE_PAGE_TYPES = ['Service Page', 'Service Hub'];
   const CTA_PAGE_TYPES = [
     'About',
     'Blog Post',
@@ -514,10 +848,14 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
   const contentTierNote = document.getElementById('content-tier-note')!;
   const contentPageSelect = document.getElementById('content-page-select') as HTMLSelectElement;
   const contentFields = document.getElementById('content-fields')!;
+  const contentH1Wrap = document.getElementById('content-h1-wrap')!;
   const contentH1 = document.getElementById('content-h1') as HTMLInputElement;
   const contentMetaDescription = document.getElementById('content-meta-description') as HTMLTextAreaElement;
   const contentFocusKeyword = document.getElementById('content-focus-keyword') as HTMLInputElement;
   const contentHeroSubhead = document.getElementById('content-hero-subhead') as HTMLInputElement;
+  const contentHeroHeadlineWrap = document.getElementById('content-hero-headline-wrap')!;
+  const contentHeroHeadline = document.getElementById('content-hero-headline') as HTMLInputElement;
+  const contentStorybrandPitchLabel = document.getElementById('content-storybrand-pitch-label') as HTMLInputElement;
   const copyEditor = initRichTextEditor('content-copy-editor');
   const contentPlainCopyWrap = document.getElementById('content-plain-copy-wrap')!;
   const contentStorybrandFields = document.getElementById('content-storybrand-fields')!;
@@ -526,6 +864,90 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
   const storybrandPitchEditor = initRichTextEditor('content-storybrand-pitch-editor');
   const storybrandSuccessEditor = initRichTextEditor('content-storybrand-success-editor');
   const storybrandFailureEditor = initRichTextEditor('content-storybrand-failure-editor');
+
+  // Homepage-specific relabeling — same field/column as Service Page/
+  // Counselor Profile's "The Problem"/"The Full Picture", different
+  // admin-facing copy for Homepage rows only (see loadContentForm()).
+  const contentStorybrandProblemFieldLabel = document.getElementById('content-storybrand-problem-field-label')!;
+  const contentStorybrandProblemHelp = document.getElementById('content-storybrand-problem-editor-help')!;
+  const contentStorybrandPitchFieldLabel = document.getElementById('content-storybrand-pitch-field-label')!;
+  const contentStorybrandPitchHelp = document.getElementById('content-storybrand-pitch-editor-help')!;
+  const contentStorybrandPitchLabelFieldLabel = document.getElementById('content-storybrand-pitch-label-field-label')!;
+  const contentStorybrandPitchLabelHelp = document.getElementById('content-storybrand-pitch-label-help')!;
+
+  // Fields shared by Homepage and Counselor Profile from the StoryBrand
+  // rebuild (originally Homepage-only; Counselor Profile joined
+  // 2026-09-16).
+  const contentValueAddWrap = document.getElementById('content-value-add-wrap')!;
+  const contentAuthorityStatsWrap = document.getElementById('content-authority-stats-wrap')!;
+  const contentExplanatoryWrap = document.getElementById('content-explanatory-wrap')!;
+  const contentBrandscriptOneLiner = document.getElementById('content-brandscript-one-liner') as HTMLInputElement;
+  const contentBrandscriptTeaser = document.getElementById('content-brandscript-teaser') as HTMLTextAreaElement;
+  const brandscriptFullEditor = initRichTextEditor('content-brandscript-full-editor');
+  const contentBrandscriptVideoUrl = document.getElementById('content-brandscript-video-url') as HTMLInputElement;
+  const contentVideoFile = document.getElementById('content-video-file') as HTMLInputElement;
+  const contentVideoStatus = document.getElementById('content-video-status')!;
+
+  // The counselor's own quote — Counselor-Profile-only, new 2026-09-16.
+  // Ungated (no data-field wrapper) — see the loadContentForm() comment
+  // on why this matches cta_heading's pattern, not value_add_items'.
+  const contentTestimonialWrap = document.getElementById('content-testimonial-wrap')!;
+  const contentTestimonialQuote = document.getElementById('content-testimonial-quote') as HTMLTextAreaElement;
+  const contentTestimonialAuthor = document.getElementById('content-testimonial-author') as HTMLInputElement;
+
+  // Refs needed to physically reorder fields for a Homepage row's real
+  // page order (see applyHomepageFieldOrder()/restoreDefaultFieldOrder()
+  // below) — Service Page/Counselor Profile keep the static markup order
+  // below untouched, since it already matches their own templates.
+  const contentHeroSubheadWrap = document.getElementById('content-hero-subhead-wrap')!;
+  const contentImagesWrap = document.getElementById('content-images-wrap')!;
+  const contentStorybrandProblemWrap = document.getElementById('content-storybrand-problem-wrap')!;
+  const contentStorybrandPitchLabelWrap = document.getElementById('content-storybrand-pitch-label-wrap')!;
+  const contentStorybrandPitchWrap = document.getElementById('content-storybrand-pitch-wrap')!;
+  const contentStorybrandGuideEmpathyWrap = document.getElementById('content-storybrand-guide-empathy-wrap')!;
+  const contentStorybrandSuccessWrap = document.getElementById('content-storybrand-success-wrap')!;
+  const contentStorybrandFailureWrap = document.getElementById('content-storybrand-failure-wrap')!;
+
+  // Featured Services (Service Page/Service Hub rows) + footer column
+  // (any footer-placed page) — both ungated, live in the "Additional
+  // page elements" section below alongside plan_steps/faqs/concerns.
+  const contentFeaturedWrap = document.getElementById('content-featured-wrap')!;
+  const contentFeaturedCheckbox = document.getElementById('content-featured-checkbox') as HTMLInputElement;
+  const contentFeaturedOrderWrap = document.getElementById('content-featured-order-wrap')!;
+  const contentFeaturedOrder = document.getElementById('content-featured-order') as HTMLInputElement;
+  const contentFooterColumnWrap = document.getElementById('content-footer-column-wrap')!;
+  const contentFooterColumn = document.getElementById('content-footer-column') as HTMLSelectElement;
+
+  // Live, non-blocking count of the focus keyword's exact-match occurrences
+  // across the 5 StoryBrand fields — informational only, never a hard gate.
+  // keyword-usage-rules.md deliberately gives no fixed repetition target
+  // ("do not chase a keyword density target"), so this shows the counselor
+  // the real, current number as they write instead of us inventing one to
+  // enforce. Only meaningful (and only wired up) for a linked-counselor
+  // session — see isLinkedCounselorSession() below.
+  const STORYBRAND_EDITORS_FOR_COUNT = [
+    storybrandProblemEditor,
+    storybrandGuideEmpathyEditor,
+    storybrandPitchEditor,
+    storybrandSuccessEditor,
+    storybrandFailureEditor,
+  ];
+  function updateKeywordCount() {
+    if (!isLinkedCounselorSession() || !selectedContentPage?.focus_keyword) {
+      contentCounselorKeywordCount.textContent = '';
+      return;
+    }
+    const keyword = selectedContentPage.focus_keyword.toLowerCase();
+    const combinedText = STORYBRAND_EDITORS_FOR_COUNT.map((e) => e.editor.textContent ?? '')
+      .join(' ')
+      .toLowerCase();
+    const count = combinedText.split(keyword).length - 1;
+    contentCounselorKeywordCount.textContent =
+      count === 0
+        ? `Your focus keyword doesn't appear yet across these sections.`
+        : `Your focus keyword appears ${count} time${count === 1 ? '' : 's'} across these sections.`;
+  }
+  STORYBRAND_EDITORS_FOR_COUNT.forEach((e) => e.editor.addEventListener('input', updateKeywordCount));
   const contentImageFile = document.getElementById('content-image-file') as HTMLInputElement;
   const contentImageAlt = document.getElementById('content-image-alt') as HTMLInputElement;
   const contentImageStatus = document.getElementById('content-image-status')!;
@@ -539,6 +961,12 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
   const contentHeroOverlayOpacityReadout = document.getElementById('content-hero-overlay-opacity-readout')!;
   const contentSaveButton = document.getElementById('content-save-button')!;
   const contentSaveStatus = document.getElementById('content-save-status')!;
+  const contentPageSelectWrap = document.getElementById('content-page-select-wrap')!;
+  const contentNotLinkedNotice = document.getElementById('content-not-linked-notice')!;
+  const contentCounselorGuidance = document.getElementById('content-counselor-guidance')!;
+  const contentCounselorKeywordTip = document.getElementById('content-counselor-keyword-tip')!;
+  const contentCounselorEntityTip = document.getElementById('content-counselor-entity-tip')!;
+  const contentCounselorKeywordCount = document.getElementById('content-counselor-keyword-count')!;
   const contentBylineSection = document.getElementById('content-byline-section')!;
   const contentBylineName = document.getElementById('content-byline-name') as HTMLInputElement;
   const contentBylineCredential = document.getElementById('content-byline-credential') as HTMLInputElement;
@@ -552,6 +980,7 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
   const contentConcernsWrap = document.getElementById('content-concerns-wrap')!;
   const contentCtaWrap = document.getElementById('content-cta-wrap')!;
   const contentCtaHeading = document.getElementById('content-cta-heading') as HTMLInputElement;
+  const contentCtaSubheading = document.getElementById('content-cta-subheading') as HTMLTextAreaElement;
   const contentCtaButtonText = document.getElementById('content-cta-button-text') as HTMLInputElement;
   const contentDetailsSaveButton = document.getElementById('content-details-save-button')!;
   const contentDetailsSaveStatus = document.getElementById('content-details-save-status')!;
@@ -596,6 +1025,57 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
     };
   }
 
+  // The Value Add strip's items don't fit createItemListEditor()'s plain
+  // text+textarea {a,b} shape — icon is a pick from a fixed set, not free
+  // text. Small variant of the same add/remove/collect pattern.
+  function createIconListEditor(containerId: string, addButtonId: string) {
+    const container = document.getElementById(containerId)!;
+    const addButton = document.getElementById(addButtonId)!;
+    const iconOptions = VALUE_ADD_ICON_NAMES.map((name) => `<option value="${name}">${name}</option>`).join('');
+
+    function addRow(icon: string = VALUE_ADD_ICON_NAMES[0], label = '') {
+      const row = document.createElement('div');
+      row.className = 'item-row flex flex-col gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-center';
+      row.innerHTML = `
+        <select class="item-icon rounded-md border border-slate-300 px-3 py-2 text-sm">${iconOptions}</select>
+        <input type="text" class="item-label flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm" placeholder="Short label (e.g. &quot;Licensed Experts&quot;)" value="${escapeHtml(label)}" />
+        <button type="button" class="remove-item-button shrink-0 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100">Remove</button>
+      `;
+      (row.querySelector('.item-icon') as HTMLSelectElement).value = icon;
+      row.querySelector('.remove-item-button')!.addEventListener('click', () => row.remove());
+      container.appendChild(row);
+    }
+
+    addButton.addEventListener('click', () => {
+      if (container.querySelectorAll('.item-row').length >= 4) return;
+      addRow();
+    });
+
+    return {
+      setItems(items: { icon: string; label: string }[]) {
+        container.innerHTML = '';
+        items.forEach((item) => addRow(item.icon, item.label));
+      },
+      getItems(): { icon: string; label: string }[] {
+        return Array.from(container.querySelectorAll<HTMLElement>('.item-row'))
+          .map((row) => ({
+            icon: (row.querySelector('.item-icon') as HTMLSelectElement).value,
+            label: (row.querySelector('.item-label') as HTMLInputElement).value.trim(),
+          }))
+          .filter((item) => item.label)
+          .slice(0, 4);
+      },
+    };
+  }
+
+  const valueAddEditor = createIconListEditor('content-value-add-list', 'content-value-add-add');
+  const authorityStatsEditor = createItemListEditor(
+    'content-authority-stats-list',
+    'content-authority-stats-add',
+    'Label (e.g. "Experience")',
+    'Value (e.g. "15+ years")'
+  );
+
   const planStepsEditor = createItemListEditor(
     'content-plan-steps-list',
     'content-plan-steps-add',
@@ -612,22 +1092,107 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
 
   const ALWAYS_LOCKED_FIELDS = ['h1', 'meta_description', 'focus_keyword'];
 
+  // What a linked-counselor staff session may directly edit on their own
+  // page — must exactly match enforce_content_permission()'s linked-
+  // counselor allowlist (0054_linked_counselor_full_page_access.sql), or
+  // a save this UI thinks should succeed gets rejected by the trigger
+  // instead. h1/meta_description/focus_keyword stay excluded
+  // (ALWAYS_LOCKED_FIELDS already blocks them) — client decision
+  // (2026-09-16): those three alone stay SEO-strategist-managed, every
+  // other real content field on the page is fully self-service. `copy`/
+  // hero-layout fields stay excluded on their own merits, not as a trust
+  // decision — Counselor Profile pages always use the StoryBrand split,
+  // never the plain `copy` field, and don't render Hero.astro at all
+  // (they have their own header card), so those are simply irrelevant to
+  // this page type. `images` IS included — it's the counselor's own
+  // headshot (see imageKeyFor()), a real, meaningful, counselor-specific
+  // field, unlike the irrelevant ones above.
+  const LINKED_COUNSELOR_EDITABLE_FIELDS = [
+    'hero_subhead',
+    'hero_headline',
+    'storybrand_problem',
+    'storybrand_guide_empathy',
+    'storybrand_pitch',
+    'storybrand_pitch_label',
+    'storybrand_success',
+    'storybrand_failure',
+    'images',
+    // Joined 2026-09-16 once Counselor Profile's own rebuild started
+    // using these columns for real — previously Homepage-only, and
+    // 0052's reasoning for leaving them out ("a Homepage row is
+    // unreachable by a linked-counselor session") no longer holds now
+    // that Counselor Profile — the one page type a linked-counselor
+    // session *can* reach — uses them too. Must exactly match
+    // enforce_content_permission()'s own exclusion list
+    // (0057_counselor_profile_storybrand_fields.sql).
+    'value_add_items',
+    'guide_authority_stats',
+    'brandscript_one_liner',
+    'brandscript_teaser',
+    'brandscript_full',
+    'brandscript_video_url',
+    // testimonial_quote/testimonial_author deliberately do NOT go here —
+    // they're ungated (no data-field wrapper), following cta_heading's
+    // pattern, not this canEditField()-gated one.
+  ];
+
+  // Counselor Profile pages don't render Hero.astro at all — they have
+  // their own header card (CounselorProfile.astro) that reads
+  // images.headshot specifically, not images.hero. This admin field is
+  // the only place a Counselor Profile's own photo gets uploaded, so it
+  // has to read/write the same key the template actually looks at, or an
+  // upload silently never renders. Found live: Luke Burgett's headshot
+  // was uploaded here, saved under images.hero (the key every other page
+  // type actually uses), and never appeared on his page because
+  // CounselorProfile.astro only ever reads images.headshot.
+  function imageKeyFor(pageType: string | undefined): 'headshot' | 'hero' {
+    return pageType === 'Counselor Profile' ? 'headshot' : 'hero';
+  }
+
   function isFullTier(): boolean {
     return business?.content_permission_level === 'full';
+  }
+
+  // A linked-counselor staff session is never also an owner/agency
+  // session — mirrors the exact check enforce_content_permission()'s
+  // trigger makes server-side (role = 'staff' and linked_counselor_page_id
+  // set), so the UI and the database boundary can't disagree about who
+  // this is.
+  function isLinkedCounselorSession(): boolean {
+    return currentAdminUser?.role === 'staff' && !!currentAdminUser?.linked_counselor_page_id;
   }
 
   // Agency is exempt from the content-permission lock entirely (see the
   // enforce_content_permission trigger) — h1/meta_description/
   // focus_keyword are never owner-editable regardless of tier;
-  // hero_subhead/copy/images follow the tier.
+  // hero_subhead/copy/images follow the tier. A linked-counselor session
+  // is its own separate, narrower case: only the fields in
+  // LINKED_COUNSELOR_EDITABLE_FIELDS, full stop, regardless of the
+  // business's own content_permission_level tier — stricter than even a
+  // restricted-tier owner on every field except the ones explicitly
+  // opened up for them.
+  // cta_subheading is the one exception to "ungated, safe on every
+  // plan" (cta_heading/cta_button_text's own category) — client
+  // decision (2026-09-16): the agency writes this one, so it's locked
+  // specifically for a linked-counselor session (handled by the
+  // isLinkedCounselorSession() branch below, since it's simply absent
+  // from LINKED_COUNSELOR_EDITABLE_FIELDS) but stays always-editable,
+  // regardless of content_permission_level, for every other role —
+  // checked here, before the tier fallback, so a restricted-tier owner
+  // isn't accidentally locked out of a field that was never tier-gated
+  // in the first place.
+  const UNGATED_EXCEPT_LINKED_COUNSELOR_FIELDS = ['cta_subheading'];
+
   function canEditField(fieldKey: string): boolean {
     if (currentAdminUser?.role === 'agency') return true;
+    if (isLinkedCounselorSession()) return LINKED_COUNSELOR_EDITABLE_FIELDS.includes(fieldKey);
     if (ALWAYS_LOCKED_FIELDS.includes(fieldKey)) return false;
+    if (UNGATED_EXCEPT_LINKED_COUNSELOR_FIELDS.includes(fieldKey)) return true;
     return isFullTier();
   }
 
   function canEditAnyField(): boolean {
-    return currentAdminUser?.role === 'agency' || isFullTier();
+    return currentAdminUser?.role === 'agency' || isFullTier() || isLinkedCounselorSession();
   }
 
   function getCurrentValueText(fieldKey: string): string {
@@ -641,6 +1206,8 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
         return selectedContentPage.focus_keyword ?? '';
       case 'hero_subhead':
         return selectedContentPage.hero_subhead ?? '';
+      case 'hero_headline':
+        return selectedContentPage.hero_headline ?? '';
       case 'copy':
         return selectedContentPage.copy ?? '';
       case 'storybrand_problem':
@@ -649,14 +1216,30 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
         return selectedContentPage.storybrand_guide_empathy ?? '';
       case 'storybrand_pitch':
         return selectedContentPage.storybrand_pitch ?? '';
+      case 'storybrand_pitch_label':
+        return selectedContentPage.storybrand_pitch_label ?? '';
       case 'storybrand_success':
         return selectedContentPage.storybrand_success ?? '';
       case 'storybrand_failure':
         return selectedContentPage.storybrand_failure ?? '';
-      case 'images':
-        return selectedContentPage.images?.hero
-          ? `${selectedContentPage.images.hero.url} (alt: ${selectedContentPage.images.hero.alt})`
-          : '(no image set)';
+      case 'value_add_items':
+        return selectedContentPage.value_add_items.map((i) => `${i.icon}: ${i.label}`).join(', ') || '(none set)';
+      case 'guide_authority_stats':
+        return selectedContentPage.guide_authority_stats.map((s) => `${s.label}: ${s.value}`).join(', ') || '(none set)';
+      case 'brandscript_one_liner':
+        return selectedContentPage.brandscript_one_liner ?? '';
+      case 'brandscript_teaser':
+        return selectedContentPage.brandscript_teaser ?? '';
+      case 'brandscript_full':
+        return selectedContentPage.brandscript_full ?? '';
+      case 'brandscript_video_url':
+        return selectedContentPage.brandscript_video_url ?? '';
+      case 'cta_subheading':
+        return selectedContentPage.cta_subheading ?? '';
+      case 'images': {
+        const img = selectedContentPage.images?.[imageKeyFor(selectedContentPage.page_type)];
+        return img ? `${img.url} (alt: ${img.alt})` : '(no image set)';
+      }
       default:
         return '';
     }
@@ -711,6 +1294,9 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
   function renderTierUI() {
     if (currentAdminUser?.role === 'agency') {
       contentTierNote.textContent = 'You have full editing access to every field as the agency admin.';
+    } else if (isLinkedCounselorSession()) {
+      contentTierNote.textContent =
+        'You can edit your bio’s tagline and StoryBrand sections directly below. Your page heading, meta description, and focus keyword stay managed by your SEO strategist — suggest a change if one of those needs updating.';
     } else if (isFullTier()) {
       contentTierNote.textContent = 'Your plan includes full editing access to hero text, page copy, and images.';
     } else {
@@ -727,6 +1313,135 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
     contentSaveButton.classList.toggle('hidden', !canEditAnyField());
   }
 
+  // storybrand_problem/storybrand_pitch/storybrand_pitch_label are the
+  // same columns Service Page/Counselor Profile use ("The Problem"/"The
+  // Full Picture"/its link text) — on a Homepage row specifically they
+  // mean something different now (Stakes / Value Proposition / its
+  // heading), so only the admin-facing label/help text changes per page
+  // type, never the underlying field key or stored data.
+  // Counselor Profile joined Homepage in this relabeling (2026-09-16,
+  // client request) once its own rebuild repurposed storybrand_problem/
+  // storybrand_pitch/storybrand_pitch_label into the same Stakes/Value-
+  // Proposition roles Homepage already uses these columns for — Service
+  // Page is the one page type still on the original "Problem"/"Full
+  // Picture" model, so it's the only one left using the `false` branch
+  // below.
+  function applyStorybrandLabelsFor(pageType: string) {
+    const isValuePropStyle = pageType === 'Homepage' || pageType === 'Counselor Profile';
+    contentStorybrandProblemFieldLabel.textContent = isValuePropStyle ? 'Stakes' : 'The Problem';
+    contentStorybrandProblemHelp.textContent = isValuePropStyle
+      ? `StoryBrand's "Stakes" section. What does it cost your visitor to keep living with this problem? Use honest, loss-aversion language — they were made to flourish, not to keep struggling with this. Positioned right after the Hero so it isn't buried.`
+      : `StoryBrand's "Problem" section. Describe the problem your visitor is facing when they land on this page — go beyond the surface issue to how it makes them feel and why it feels unfair. The goal: a visitor reads this and thinks, "they understand exactly what I'm going through."`;
+
+    contentStorybrandPitchFieldLabel.textContent = isValuePropStyle ? 'Value Proposition' : 'The Full Picture';
+    contentStorybrandPitchHelp.textContent = isValuePropStyle
+      ? `The positive flip from Stakes. Benefit-focused language — what your visitor gains once they start counseling. This is a real, visible section (not collapsed) with its own heading and call-to-action.`
+      : `StoryBrand's fuller explanation. For visitors who want more detail before deciding — explain your approach and why it's the right next step. Write like you're personally reassuring someone who still has questions.`;
+
+    contentStorybrandPitchLabelFieldLabel.textContent = isValuePropStyle
+      ? 'Value Proposition heading'
+      : '"The Full Picture" link text';
+    contentStorybrandPitchLabel.placeholder = isValuePropStyle ? 'What You Can Expect' : 'Learn more about our approach';
+    contentStorybrandPitchLabelHelp.textContent = isValuePropStyle
+      ? 'Shown as the visible heading above the Value Proposition section.'
+      : 'Shown as a heading visitors click to expand "The Full Picture" above. Leave blank to use the default, "Learn more about our approach."';
+  }
+
+  // Reorders admin fields to match the Homepage's real, rebuilt page
+  // order (2026-09-16) — Focus keyword/Meta description/H1 already sit
+  // first for every page type (fixed markup order, no reordering
+  // needed). Everything below that is Homepage-specific: Hero subhead →
+  // Hero image → Value Add strip → Stakes → Value Proposition (heading,
+  // then body) → Guide (empathy, then Authority facts) → Plan → Explanatory
+  // Paragraph → the closing CTA (heading/subheading/button). Featured
+  // Services and Counselor cards intentionally have no fields here at
+  // all — Featured Services is set on each Service Page's own edit
+  // screen, Counselor cards derives entirely from existing Counselor
+  // Profile pages. `appendChild` on an already-attached element moves it
+  // (doesn't clone), so calling it in the target sequence is enough to
+  // produce that exact order regardless of each element's current
+  // position — no separate "anchor" bookkeeping needed for the move
+  // itself, only for restoring the default order below.
+  function applyHomepageFieldOrder() {
+    const container = contentStorybrandFields;
+    container.appendChild(contentHeroSubheadWrap);
+    container.appendChild(contentImagesWrap);
+    container.appendChild(contentValueAddWrap);
+    container.appendChild(contentStorybrandProblemWrap);
+    container.appendChild(contentStorybrandPitchLabelWrap);
+    container.appendChild(contentStorybrandPitchWrap);
+    container.appendChild(contentStorybrandGuideEmpathyWrap);
+    container.appendChild(contentAuthorityStatsWrap);
+    container.appendChild(contentPlanStepsWrap);
+    container.appendChild(contentExplanatoryWrap);
+    container.appendChild(contentCtaWrap);
+    // Success/Failure are hidden (not part of Homepage's order at all —
+    // see the isHomepage toggle above), so their exact DOM position has
+    // no visual effect, but parking them at the end keeps the tree
+    // predictable rather than leaving them wherever moving everything
+    // else around happened to strand them.
+    container.appendChild(contentStorybrandSuccessWrap);
+    container.appendChild(contentStorybrandFailureWrap);
+  }
+
+  // Reorders admin fields to match CounselorProfile.astro's real render
+  // order. First built 2026-09-16 as a small reorder (Hero image and
+  // Plan Steps moved to match the then-existing page layout); the same
+  // day, the client asked for a full StoryBrand rebuild matching
+  // Homepage's own structure, so this function now establishes the
+  // complete target sequence — Value Add strip → the counselor's quote
+  // → Stakes → Value Proposition (heading, then body) → We Understand →
+  // Guide Authority → Plan steps → Explanatory Paragraph. FAQs and the
+  // closing CTA both already sit at the end, after everything here,
+  // matching their real end-of-page position — left untouched, still
+  // living in "Additional page elements." Every StoryBrand field's
+  // relative order is fully re-specified here (not just the ones that
+  // moved), for the same round-trip-robustness reason Homepage's own
+  // reorder needs it: this function has to produce the correct order
+  // regardless of whatever a prior Homepage or Service Page visit left
+  // the DOM in during the same admin session.
+  function applyCounselorProfileFieldOrder() {
+    contentFields.insertBefore(contentImagesWrap, contentStorybrandFields);
+    const container = contentStorybrandFields;
+    container.appendChild(contentValueAddWrap);
+    container.appendChild(contentTestimonialWrap);
+    container.appendChild(contentStorybrandProblemWrap);
+    container.appendChild(contentStorybrandPitchLabelWrap);
+    container.appendChild(contentStorybrandPitchWrap);
+    container.appendChild(contentStorybrandGuideEmpathyWrap);
+    container.appendChild(contentAuthorityStatsWrap);
+    container.appendChild(contentPlanStepsWrap);
+    container.appendChild(contentExplanatoryWrap);
+    // Success/Failure no longer render on Counselor Profile at all
+    // (2026-09-16) — parked at the end (hidden either way via
+    // loadContentForm()'s own toggle) to keep the tree predictable,
+    // same reasoning as Homepage's own Success/Failure parking.
+    container.appendChild(contentStorybrandSuccessWrap);
+    container.appendChild(contentStorybrandFailureWrap);
+  }
+
+  // Restores every field moved above back to its original static-markup
+  // position — used for every page type except Homepage, so Service
+  // Page/Counselor Profile's order (already correct for their own
+  // templates, untouched by this rebuild) can't end up scrambled by a
+  // prior Homepage visit in the same admin session.
+  function restoreDefaultFieldOrder() {
+    contentFields.insertBefore(contentHeroSubheadWrap, contentPlainCopyWrap);
+    contentFields.insertBefore(contentImagesWrap, contentSaveButton);
+    contentPageDetailsSection.insertBefore(contentPlanStepsWrap, contentFaqsWrap);
+    contentPageDetailsSection.insertBefore(contentCtaWrap, contentFeaturedWrap);
+    contentStorybrandFields.appendChild(contentValueAddWrap);
+    contentStorybrandFields.appendChild(contentTestimonialWrap);
+    contentStorybrandFields.appendChild(contentStorybrandProblemWrap);
+    contentStorybrandFields.appendChild(contentStorybrandGuideEmpathyWrap);
+    contentStorybrandFields.appendChild(contentAuthorityStatsWrap);
+    contentStorybrandFields.appendChild(contentStorybrandPitchWrap);
+    contentStorybrandFields.appendChild(contentStorybrandPitchLabelWrap);
+    contentStorybrandFields.appendChild(contentStorybrandSuccessWrap);
+    contentStorybrandFields.appendChild(contentStorybrandFailureWrap);
+    contentStorybrandFields.appendChild(contentExplanatoryWrap);
+  }
+
   function loadContentForm() {
     selectedContentPage = pages.find((p) => p.id === contentPageSelect.value) ?? null;
     if (!selectedContentPage) {
@@ -735,6 +1450,11 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
     }
     contentFields.classList.remove('hidden');
 
+    // CounselorProfile.astro never reads page.h1 — its real <h1> comes
+    // from hero_headline ?? title instead (see that field below). A
+    // locked, always-empty field labeled "H1" that has zero effect on
+    // the actual page was real, confirmed confusion, not hypothetical.
+    contentH1Wrap.classList.toggle('hidden', selectedContentPage.page_type === 'Counselor Profile');
     contentH1.value = selectedContentPage.h1 ?? '';
     document.querySelector('[data-field="h1"] [data-locked-value]')!.textContent = selectedContentPage.h1 ?? '(not set)';
     contentMetaDescription.value = selectedContentPage.meta_description ?? '';
@@ -747,6 +1467,11 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
     contentHeroSubhead.value = selectedContentPage.hero_subhead ?? '';
     document.querySelector('[data-field="hero_subhead"] [data-locked-value]')!.textContent =
       selectedContentPage.hero_subhead ?? '(not set)';
+
+    contentHeroHeadlineWrap.classList.toggle('hidden', !HERO_HEADLINE_PAGE_TYPES.includes(selectedContentPage.page_type));
+    contentHeroHeadline.value = selectedContentPage.hero_headline ?? '';
+    document.querySelector('[data-field="hero_headline"] [data-locked-value]')!.textContent =
+      selectedContentPage.hero_headline ?? '(not set — showing your name instead)';
 
     copyEditor.setMarkdown(selectedContentPage.copy);
     document.querySelector('[data-field="copy"] [data-locked-value-html]')!.innerHTML = renderCopy(selectedContentPage.copy);
@@ -770,6 +1495,9 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
     document.querySelector('[data-field="storybrand_pitch"] [data-locked-value-html]')!.innerHTML = renderCopy(
       selectedContentPage.storybrand_pitch
     );
+    contentStorybrandPitchLabel.value = selectedContentPage.storybrand_pitch_label ?? '';
+    document.querySelector('[data-field="storybrand_pitch_label"] [data-locked-value]')!.textContent =
+      selectedContentPage.storybrand_pitch_label ?? '(using default: "Learn more about our approach")';
     storybrandSuccessEditor.setMarkdown(selectedContentPage.storybrand_success);
     document.querySelector('[data-field="storybrand_success"] [data-locked-value-html]')!.innerHTML = renderCopy(
       selectedContentPage.storybrand_success
@@ -779,10 +1507,120 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
       selectedContentPage.storybrand_failure
     );
 
-    uploadedImageUrl = selectedContentPage.images?.hero?.url ?? null;
-    uploadedImageCreditName = selectedContentPage.images?.hero?.creditName ?? null;
-    uploadedImageCreditUrl = selectedContentPage.images?.hero?.creditUrl ?? null;
-    contentImageAlt.value = selectedContentPage.images?.hero?.alt ?? '';
+    applyStorybrandLabelsFor(selectedContentPage.page_type);
+
+    // Value Add strip / Guide — Authority / Explanatory Paragraph were
+    // Homepage-only from the original StoryBrand rebuild; Counselor
+    // Profile joined them (2026-09-16, client request) once its own
+    // rebuild started using these same columns for real. Hidden entirely
+    // (not just left inert) for every other page type, matching this
+    // screen's existing "hide what genuinely doesn't apply" discipline
+    // (see content-h1-wrap/content-hero-style-wrap above).
+    const isHomepage = selectedContentPage.page_type === 'Homepage';
+    const isCounselorProfile = selectedContentPage.page_type === 'Counselor Profile';
+    const usesValuePropSections = isHomepage || isCounselorProfile;
+    contentValueAddWrap.classList.toggle('hidden', !usesValuePropSections);
+    valueAddEditor.setItems(selectedContentPage.value_add_items);
+    document.querySelector('[data-field="value_add_items"] [data-locked-value]')!.textContent =
+      selectedContentPage.value_add_items.map((i) => i.label).join(', ') || '(none set)';
+
+    contentAuthorityStatsWrap.classList.toggle('hidden', !usesValuePropSections);
+    authorityStatsEditor.setItems(selectedContentPage.guide_authority_stats.map((s) => ({ a: s.label, b: s.value })));
+    document.querySelector('[data-field="guide_authority_stats"] [data-locked-value]')!.textContent =
+      selectedContentPage.guide_authority_stats.map((s) => `${s.label}: ${s.value}`).join(', ') || '(none set)';
+
+    contentExplanatoryWrap.classList.toggle('hidden', !usesValuePropSections);
+    contentBrandscriptOneLiner.value = selectedContentPage.brandscript_one_liner ?? '';
+    document.querySelector('[data-field="brandscript_one_liner"] [data-locked-value]')!.textContent =
+      selectedContentPage.brandscript_one_liner ?? '(not set)';
+    contentBrandscriptTeaser.value = selectedContentPage.brandscript_teaser ?? '';
+    document.querySelector('[data-field="brandscript_teaser"] [data-locked-value]')!.textContent =
+      selectedContentPage.brandscript_teaser ?? '(not set)';
+    brandscriptFullEditor.setMarkdown(selectedContentPage.brandscript_full);
+    document.querySelector('[data-field="brandscript_full"] [data-locked-value-html]')!.innerHTML = renderCopy(
+      selectedContentPage.brandscript_full
+    );
+    contentBrandscriptVideoUrl.value = selectedContentPage.brandscript_video_url ?? '';
+    document.querySelector('[data-field="brandscript_video_url"] [data-locked-value]')!.textContent =
+      selectedContentPage.brandscript_video_url ?? '(not set)';
+
+    // The counselor's own quote — Counselor-Profile-only (2026-09-16).
+    // Ungated/no data-field wrapper: matches testimonial_quote/
+    // testimonial_author never being tier-gated for owner/agency either
+    // (see business-info.astro's Testimonials editor, which has no tier
+    // check today) — same "safe on every tier" category as cta_heading.
+    contentTestimonialWrap.classList.toggle('hidden', !isCounselorProfile);
+    contentTestimonialQuote.value = selectedContentPage.testimonial_quote ?? '';
+    contentTestimonialAuthor.value = selectedContentPage.testimonial_author ?? '';
+
+    // Success/Failure no longer render as their own sections on Homepage
+    // or Counselor Profile (Counselor Profile joined 2026-09-16, same
+    // client request/reasoning as Homepage's own rebuild) — both page
+    // types now close with Explanatory Paragraph flowing into FAQs then
+    // the CTA. The columns still exist (Service Page still uses them),
+    // so this only hides the fields here, it doesn't touch the data.
+    contentStorybrandSuccessWrap.classList.toggle('hidden', usesValuePropSections);
+    contentStorybrandFailureWrap.classList.toggle('hidden', usesValuePropSections);
+
+    // Physically reorder the fields above to match each page type's own
+    // real page order — Homepage and Counselor Profile each get their
+    // own reorder function (their real render order genuinely differs
+    // from each other, not just from the default); Service Page falls
+    // through to restoreDefaultFieldOrder(), which is a no-op if nothing
+    // was ever moved (e.g. this is the first page loaded this session)
+    // and a real restore if a prior Homepage/Counselor Profile selection
+    // in this same session moved anything.
+    if (isHomepage) {
+      applyHomepageFieldOrder();
+    } else if (selectedContentPage.page_type === 'Counselor Profile') {
+      applyCounselorProfileFieldOrder();
+    } else {
+      restoreDefaultFieldOrder();
+    }
+
+    // Featured Services — Service Page/Service Hub rows only, ungated.
+    const showFeatured = FEATURED_SERVICE_PAGE_TYPES.includes(selectedContentPage.page_type);
+    contentFeaturedWrap.classList.toggle('hidden', !showFeatured);
+    contentFeaturedCheckbox.checked = selectedContentPage.featured_on_homepage;
+    contentFeaturedOrderWrap.classList.toggle('hidden', !selectedContentPage.featured_on_homepage);
+    contentFeaturedOrder.value = selectedContentPage.homepage_feature_order != null ? String(selectedContentPage.homepage_feature_order) : '';
+
+    // Footer column — any page currently placed in the footer, ungated.
+    const showFooterColumn = selectedContentPage.nav_placement === 'footer';
+    contentFooterColumnWrap.classList.toggle('hidden', !showFooterColumn);
+    contentFooterColumn.value = selectedContentPage.footer_column ?? 'explore';
+
+    contentCounselorGuidance.classList.toggle('hidden', !isLinkedCounselorSession());
+    if (isLinkedCounselorSession()) {
+      const keyword = selectedContentPage.focus_keyword;
+      contentCounselorKeywordTip.textContent = keyword
+        ? `Your focus keyword: "${keyword}" — try to work this in naturally, ideally once within your first paragraph or two. It's fine if it shows up once more later if it genuinely fits — more than that starts to feel forced. Write for the person reading this, not for a search engine.`
+        : '';
+      // getPersonEntityTerms() returns one atomic entry per fact (e.g. one
+      // per specialty, one per modality) so buildPersonSchema() can build
+      // a real knowsAbout array — group them back by label here so the
+      // guidance panel reads as "specialty: Anxiety, Depression, OCD"
+      // instead of repeating "specialty:" once per value.
+      const entityTerms = getPersonEntityTerms(selectedContentPage);
+      const groupedTerms = new Map<string, string[]>();
+      for (const term of entityTerms) {
+        if (!groupedTerms.has(term.label)) groupedTerms.set(term.label, []);
+        groupedTerms.get(term.label)!.push(term.value);
+      }
+      const groupedText = Array.from(groupedTerms.entries())
+        .map(([label, values]) => `${label.toLowerCase()}: ${values.join(', ')}`)
+        .join('; ');
+      contentCounselorEntityTip.textContent = groupedText
+        ? `Already on file: ${groupedText} — feel free to reference this naturally in your bio.`
+        : '';
+      updateKeywordCount();
+    }
+
+    const currentImage = selectedContentPage.images?.[imageKeyFor(selectedContentPage.page_type)];
+    uploadedImageUrl = currentImage?.url ?? null;
+    uploadedImageCreditName = currentImage?.creditName ?? null;
+    uploadedImageCreditUrl = currentImage?.creditUrl ?? null;
+    contentImageAlt.value = currentImage?.alt ?? '';
     contentImageStatus.textContent = uploadedImageUrl ? 'Current image on file — choose a new one to replace it.' : '';
     if (uploadedImageUrl) {
       contentImagePreview.src = uploadedImageUrl;
@@ -792,7 +1630,7 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
       contentImagePreview.classList.add('hidden');
     }
     document.querySelector('[data-field="images"] [data-locked-value]')!.textContent = uploadedImageUrl
-      ? `Current image: ${selectedContentPage.images?.hero?.alt}`
+      ? `Current image: ${currentImage?.alt}`
       : 'No image set.';
 
     // Hero.astro isn't used at all on a Counselor Profile page (it has
@@ -830,12 +1668,39 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
     contentFaqsWrap.classList.toggle('hidden', !showFaqs);
     contentConcernsWrap.classList.toggle('hidden', !showConcerns);
     contentCtaWrap.classList.toggle('hidden', !showCta);
-    contentPageDetailsSection.classList.toggle('hidden', !(showPlanSteps || showFaqs || showConcerns || showCta));
+    // plan_steps/faqs/cta_heading/cta_subheading/cta_button_text are now
+    // in enforce_content_permission()'s linked-counselor allowlist too
+    // (0054_linked_counselor_full_page_access.sql, 2026-09-16 client
+    // decision — every real field except h1/meta_description/
+    // focus_keyword is self-service), so this section is no longer
+    // blanket-hidden for a linked-counselor session — it shows/hides
+    // purely on whether the session's own page type has anything in it,
+    // same as every other role. `concerns`/`featured_on_homepage`/
+    // `homepage_feature_order`/`footer_column` were deliberately left out
+    // of that allowlist — none of CONCERNS_PAGE_TYPES/
+    // FEATURED_SERVICE_PAGE_TYPES ever include 'Counselor Profile', and a
+    // linked-counselor session can only ever be on their own Counselor
+    // Profile page (see the "linked counselor can update own page" RLS
+    // policy), so those fields can never actually reach this session's
+    // save payload regardless.
+    //
+    // For Homepage, plan_steps/cta_wrap are physically relocated into the
+    // narrative flow above (see applyHomepageFieldOrder()) — they don't
+    // count toward whether THIS section has anything left to show, or
+    // Homepage would display an empty "Additional page elements" shell
+    // with nothing actually in it.
+    const detailsSectionHasContent = isHomepage
+      ? showFaqs || showConcerns || showFeatured || showFooterColumn
+      : showPlanSteps || showFaqs || showConcerns || showCta || showFeatured || showFooterColumn;
+    contentPageDetailsSection.classList.toggle('hidden', !detailsSectionHasContent);
     planStepsEditor.setItems(selectedContentPage.plan_steps.map((s) => ({ a: s.title, b: s.description })));
     faqsEditor.setItems(selectedContentPage.faqs.map((f) => ({ a: f.question, b: f.answer })));
     concernsEditor.setItems(selectedContentPage.concerns.map((c) => ({ a: c.title, b: c.description })));
     contentCtaHeading.value = selectedContentPage.cta_heading ?? '';
+    contentCtaSubheading.value = selectedContentPage.cta_subheading ?? '';
     contentCtaButtonText.value = selectedContentPage.cta_button_text ?? '';
+    document.querySelector('[data-field="cta_subheading"] [data-locked-value]')!.textContent =
+      selectedContentPage.cta_subheading || '(not set)';
     contentDetailsSaveStatus.textContent = '';
 
     contentSaveStatus.textContent = '';
@@ -850,6 +1715,10 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
 
   contentHeroOverlayOpacity.addEventListener('input', () => {
     contentHeroOverlayOpacityReadout.textContent = contentHeroOverlayOpacity.value;
+  });
+
+  contentFeaturedCheckbox.addEventListener('change', () => {
+    contentFeaturedOrderWrap.classList.toggle('hidden', !contentFeaturedCheckbox.checked);
   });
 
   contentImageFile.addEventListener('change', async () => {
@@ -871,6 +1740,27 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
     contentImagePreview.src = urlData.publicUrl;
     contentImagePreview.classList.remove('hidden');
     contentImageStatus.textContent = 'Image uploaded.';
+  });
+
+  // Modeled directly on contentImageFile's own handler above — uploads
+  // to the site-videos bucket (0058_video_uploads_bucket.sql, 200MB/
+  // MP4-MOV-WebM limits enforced server-side) and writes the resulting
+  // public URL into the SAME input the external-link path uses, so
+  // brandscript_video_url stays one field regardless of which way it
+  // was populated.
+  contentVideoFile.addEventListener('change', async () => {
+    const file = contentVideoFile.files?.[0];
+    if (!file) return;
+    contentVideoStatus.textContent = 'Uploading...';
+    const path = `content/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const { error } = await supabase.storage.from('site-videos').upload(path, file);
+    if (error) {
+      contentVideoStatus.textContent = 'Upload failed: ' + error.message;
+      return;
+    }
+    const { data: urlData } = supabase.storage.from('site-videos').getPublicUrl(path);
+    contentBrandscriptVideoUrl.value = urlData.publicUrl;
+    contentVideoStatus.textContent = 'Video uploaded.';
   });
 
   initUnsplashSearchModal({
@@ -907,20 +1797,44 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
     if (canEditField('meta_description')) payload.meta_description = contentMetaDescription.value.trim() || null;
     if (canEditField('focus_keyword')) payload.focus_keyword = contentFocusKeyword.value.trim() || null;
     if (canEditField('hero_subhead')) payload.hero_subhead = contentHeroSubhead.value.trim() || null;
+    if (HERO_HEADLINE_PAGE_TYPES.includes(selectedContentPage.page_type) && canEditField('hero_headline')) {
+      payload.hero_headline = contentHeroHeadline.value.trim() || null;
+    }
     if (STORYBRAND_SPLIT_PAGE_TYPES.includes(selectedContentPage.page_type as never)) {
       if (canEditField('storybrand_problem')) payload.storybrand_problem = storybrandProblemEditor.getMarkdown();
       if (canEditField('storybrand_guide_empathy'))
         payload.storybrand_guide_empathy = storybrandGuideEmpathyEditor.getMarkdown();
       if (canEditField('storybrand_pitch')) payload.storybrand_pitch = storybrandPitchEditor.getMarkdown();
+      if (canEditField('storybrand_pitch_label'))
+        payload.storybrand_pitch_label = contentStorybrandPitchLabel.value.trim() || null;
       if (canEditField('storybrand_success')) payload.storybrand_success = storybrandSuccessEditor.getMarkdown();
       if (canEditField('storybrand_failure')) payload.storybrand_failure = storybrandFailureEditor.getMarkdown();
     } else if (canEditField('copy')) {
       payload.copy = copyEditor.getMarkdown();
     }
+    // Fields shared by Homepage and Counselor Profile from the
+    // StoryBrand rebuild — meaningless on any other page type, so only
+    // ever sent for one of these two rows.
+    if (selectedContentPage.page_type === 'Homepage' || selectedContentPage.page_type === 'Counselor Profile') {
+      if (canEditField('value_add_items')) payload.value_add_items = valueAddEditor.getItems();
+      if (canEditField('guide_authority_stats')) {
+        payload.guide_authority_stats = authorityStatsEditor.getItems().map((item) => ({ label: item.a, value: item.b }));
+      }
+      if (canEditField('brandscript_one_liner')) payload.brandscript_one_liner = contentBrandscriptOneLiner.value.trim() || null;
+      if (canEditField('brandscript_teaser')) payload.brandscript_teaser = contentBrandscriptTeaser.value.trim() || null;
+      if (canEditField('brandscript_full')) payload.brandscript_full = brandscriptFullEditor.getMarkdown();
+      if (canEditField('brandscript_video_url')) payload.brandscript_video_url = contentBrandscriptVideoUrl.value.trim() || null;
+    }
+    // The counselor's own quote — ungated, Counselor-Profile-only, no
+    // canEditField() check (matches cta_heading's always-sent pattern).
+    if (selectedContentPage.page_type === 'Counselor Profile') {
+      payload.testimonial_quote = contentTestimonialQuote.value.trim() || null;
+      payload.testimonial_author = contentTestimonialAuthor.value.trim() || null;
+    }
     if (canEditField('images')) {
       payload.images = uploadedImageUrl
         ? {
-            hero: {
+            [imageKeyFor(selectedContentPage.page_type)]: {
               url: uploadedImageUrl,
               alt: contentImageAlt.value.trim(),
               ...(uploadedImageCreditName && uploadedImageCreditUrl
@@ -1009,7 +1923,25 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
     }
     if (CTA_PAGE_TYPES.includes(selectedContentPage.page_type)) {
       payload.cta_heading = contentCtaHeading.value.trim() || null;
+      // Unlike cta_heading/cta_button_text (always sent — ungated for
+      // everyone), cta_subheading is only sent when this session can
+      // actually edit it, so a locked-out linked-counselor save can't
+      // even attempt to touch it — the trigger would reject it anyway,
+      // but this keeps the UI's own behavior honest about what it's
+      // about to do.
+      if (canEditField('cta_subheading')) {
+        payload.cta_subheading = contentCtaSubheading.value.trim() || null;
+      }
       payload.cta_button_text = contentCtaButtonText.value.trim() || null;
+    }
+    if (FEATURED_SERVICE_PAGE_TYPES.includes(selectedContentPage.page_type)) {
+      payload.featured_on_homepage = contentFeaturedCheckbox.checked;
+      payload.homepage_feature_order = contentFeaturedCheckbox.checked && contentFeaturedOrder.value
+        ? Number(contentFeaturedOrder.value)
+        : null;
+    }
+    if (selectedContentPage.nav_placement === 'footer') {
+      payload.footer_column = contentFooterColumn.value;
     }
 
     const { error } = await supabase.from('pages').update(payload).eq('id', selectedContentPage.id);
@@ -1038,12 +1970,20 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
     meta_description: 'Meta description',
     focus_keyword: 'Focus keyword',
     hero_subhead: 'Hero subheading',
+    hero_headline: 'Headline (H1)',
     copy: 'Page copy',
     storybrand_problem: 'The Problem',
     storybrand_guide_empathy: 'We Understand',
     storybrand_pitch: 'The Full Picture',
+    storybrand_pitch_label: '"The Full Picture" link text',
     storybrand_success: "What's Possible",
     storybrand_failure: "Why It's Worth Acting Now",
+    value_add_items: 'Value Add strip',
+    guide_authority_stats: 'Guide — Authority',
+    brandscript_one_liner: 'Explanatory Paragraph one-liner',
+    brandscript_teaser: 'Explanatory Paragraph teaser',
+    brandscript_full: 'Full BrandScript',
+    brandscript_video_url: 'Explanatory Paragraph video',
     images: 'Hero image',
   };
 
@@ -1105,13 +2045,47 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
   // ---------------------------------------------------------------------
   async function onAuthed(adminUser: AdminUser) {
     currentAdminUser = adminUser;
-    const [{ data: userData }, { data: businessData }, { data: pagesData }] = await Promise.all([
+    const [{ data: userData }, { data: businessData }] = await Promise.all([
       supabase.auth.getUser(),
       supabase.from('business').select('id, content_permission_level').single(),
-      supabase.from('pages').select('*').not('page_type', 'in', '("Blog Post","Blog Index")').order('title'),
     ]);
     currentUserId = userData.user?.id ?? null;
     business = businessData as Business;
+
+    // A linked-counselor staff session only ever sees their own page —
+    // no picker, and the page itself is fetched scoped to just that one
+    // row rather than the full site-wide list owner/agency get. This is
+    // UI-layer convenience, not the real boundary: enforce_content_
+    // permission() and the "linked counselor can update own page" RLS
+    // policy both hold regardless of what this screen chooses to show.
+    if (adminUser.role === 'staff') {
+      if (!adminUser.linked_counselor_page_id) {
+        contentNotLinkedNotice.classList.remove('hidden');
+        return;
+      }
+      const { data: pageData } = await supabase
+        .from('pages')
+        .select('*')
+        .eq('id', adminUser.linked_counselor_page_id)
+        .maybeSingle();
+      if (!pageData) {
+        contentNotLinkedNotice.classList.remove('hidden');
+        return;
+      }
+      pages = [pageData as ContentPage];
+      contentPageSelectWrap.classList.add('hidden');
+      contentPageSelect.innerHTML = `<option value="${pageData.id}">${escapeHtml(pageData.title)}</option>`;
+      loadContentForm();
+      wireSuggestButtons();
+      await loadYourSuggestions();
+      return;
+    }
+
+    const { data: pagesData } = await supabase
+      .from('pages')
+      .select('*')
+      .not('page_type', 'in', '("Blog Post","Blog Index")')
+      .order('title');
     pages = (pagesData ?? []) as ContentPage[];
 
     populatePagePicker(contentPageSelect);
@@ -1122,5 +2096,5 @@ import UnsplashSearchModal from '../../../components/UnsplashSearchModal.astro';
     }
   }
 
-  initAdminAuth(onAuthed, { allowedRoles: ['owner', 'agency'] });
+  initAdminAuth(onAuthed, { allowedRoles: ['owner', 'agency', 'staff'] });
 </script>

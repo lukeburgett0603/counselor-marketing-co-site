@@ -2,6 +2,9 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import Section from '../components/Section.astro';
+import Guide from '../components/Guide.astro';
+import CounselorCards from '../components/CounselorCards.astro';
+import PlanSteps from '../components/PlanSteps.astro';
 import CTA from '../components/CTA.astro';
 import LeadGenerator from '../components/LeadGenerator.astro';
 import LeadMagnet from '../components/LeadMagnet.astro';
@@ -29,18 +32,75 @@ const counselors = getCounselorOptions(allPages);
     imageFocalY={page.hero_image_focal_y}
     compact
   />
+  {/*
+    2026-09-18: this page used to render page.copy as one long,
+    undifferentiated prose block from the hero straight through to the
+    CTA band — by far the plainest, least visually varied template on
+    the site (every other page type had already picked up cards, stat
+    grids, and pull-quotes over time; About never did). A design review
+    called this out directly. Restructured into the same rhythm the
+    rest of the site already uses: alternating Section tint, a real
+    Guide authority-stats moment, real counselor photos, and a real
+    PlanSteps card grid for "how to get started" — reusing components
+    already proven elsewhere rather than inventing new ones.
+
+    The content no longer fits in one `copy` field, so it's split
+    across `copy` plus 4 of the generic `storybrand_*` columns, reused
+    here purely as extra free-text slots — this page type was never
+    part of the Homepage/Service Page/Counselor Profile StoryBrand
+    split and still isn't; these columns carry no StoryBrand admin UI
+    for 'About' rows. See CLAUDE.md for the full field-by-field mapping
+    and the reasoning for reusing them instead of a new migration.
+  */}
   <Section>
     <Fragment set:html={renderCopy(page.copy)} />
   </Section>
-  <CTA heading={page.cta_heading ?? 'Get to know how we can help'} buttonText={page.cta_button_text ?? 'Contact Us'} />
-  <LeadMagnet pageId={page.id} />
+
+  {page.storybrand_problem && (
+    <Section tint>
+      <Fragment set:html={renderCopy(page.storybrand_problem)} />
+    </Section>
+  )}
+
+  <Guide body={page.storybrand_guide_empathy} authorityStats={page.guide_authority_stats} />
+
+  <CounselorCards allPages={allPages} />
+
+  {page.storybrand_pitch && (
+    <Section>
+      <Fragment set:html={renderCopy(page.storybrand_pitch)} />
+    </Section>
+  )}
+
+  <PlanSteps
+    steps={page.plan_steps}
+    heading="How to get started"
+    note="If you're worried about cost, we can provide a Superbill so you can seek reimbursement from your insurance provider."
+  />
+
+  {page.storybrand_success && (
+    <Section>
+      <Fragment set:html={renderCopy(page.storybrand_success)} />
+    </Section>
+  )}
+
+  {page.storybrand_failure && (
+    <Section tint>
+      <Fragment set:html={renderCopy(page.storybrand_failure)} />
+    </Section>
+  )}
+
+  <CTA heading={page.cta_heading ?? 'Get to know how we can help'} subheading={page.cta_subheading} buttonText={page.cta_button_text ?? 'Contact Us'} />
+  <LeadMagnet pageId={page.id} turnstileSiteKey={business.cloudflare_turnstile_site_key} />
   <LeadGenerator
     slug={page.slug}
     heading={page.cta_button_text ?? undefined}
     submitText={page.cta_button_text ?? undefined}
     collectWebsiteUrl={business.collect_website_in_leads}
     responseTimeNote={business.lead_response_time_note}
+    turnstileSiteKey={business.cloudflare_turnstile_site_key}
     collectCounselorPreference={business.collect_counselor_preference}
+    collectSessionFormat={business.collect_session_format_preference}
     counselors={counselors}
   />
 </BaseLayout>

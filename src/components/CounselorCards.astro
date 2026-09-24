@@ -1,0 +1,90 @@
+---
+// The Homepage's "Meet the team" section — group-practice only, same
+// self-gating discipline as CounselorsOverview.astro itself (renders
+// nothing for a solo practice, no separate toggle field needed). Card
+// markup started as a direct copy of CounselorsOverview.astro's own
+// grid, plus a "Schedule with [First Name]" CTA that pre-selects this
+// counselor in the bottom LeadGenerator's dropdown before scrolling to
+// it, since Homepage has one shared LeadGenerator instance serving
+// every card (unlike CounselorProfile.astro's own page, which can set a
+// single static defaultCounselorId server-side because the whole page
+// belongs to one counselor already). The two have since diverged on
+// purpose (2026-09-17, client request): both this card and
+// CounselorsOverview.astro's own now omit Training & Modalities
+// entirely — it's exclusive to the counselor's own profile page now —
+// and CounselorsOverview additionally shows Specialty pills, which this
+// card still doesn't (kept minimal to stay compact on the homepage).
+import StatusPill from './StatusPill.astro';
+import TelehealthPill from './TelehealthPill.astro';
+import { withBase } from '../lib/url';
+import type { Page } from '../lib/pages';
+
+interface Props {
+  allPages: Page[];
+  heading?: string;
+}
+
+const { allPages, heading = 'Meet Our Counselors' } = Astro.props;
+
+const counselorPages = allPages
+  .filter((p) => p.page_type === 'Counselor Profile')
+  .sort((a, b) => a.nav_order - b.nav_order);
+
+function firstNameOf(title: string): string {
+  return title.trim().split(/\s+/)[0] || title;
+}
+---
+
+{counselorPages.length > 1 && (
+  <section class="mx-auto max-w-6xl px-6 py-14">
+    <h2 class="mb-8 text-center font-[family-name:var(--font-heading)] text-2xl font-extrabold tracking-tight text-brand-ink">
+      {heading}
+    </h2>
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {counselorPages.map((counselor) => (
+        <div class="rounded-lg border border-slate-200 p-6 text-center">
+          <a href={withBase(`/${counselor.slug}`)} class="block hover:opacity-90">
+            {counselor.images.headshot && (
+              <img
+                src={counselor.images.headshot.url}
+                alt={counselor.images.headshot.alt}
+                class="avatar-crop mx-auto mb-3 h-24 w-24 rounded-full object-cover"
+              />
+            )}
+            <h3 class="font-[family-name:var(--font-heading)] text-lg font-bold text-brand-ink">
+              {counselor.title}
+            </h3>
+            {counselor.credentials && <p class="mt-1 text-sm text-brand-primary">{counselor.credentials}</p>}
+            {(counselor.availability_status || counselor.telehealth_available) && (
+              <div class="mt-2 flex flex-wrap justify-center gap-1.5">
+                <StatusPill status={counselor.availability_status} />
+                <TelehealthPill telehealthAvailable={counselor.telehealth_available} />
+              </div>
+            )}
+            {counselor.meta_description && <p class="mt-2 text-sm text-slate-600">{counselor.meta_description}</p>}
+          </a>
+          <a
+            href="#lead-generator"
+            class="schedule-with-link mt-4 inline-block rounded-md bg-brand-accent px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 hover:shadow-md"
+            data-counselor-id={counselor.id}
+          >
+            Schedule with {firstNameOf(counselor.title)}
+          </a>
+        </div>
+      ))}
+    </div>
+  </section>
+)}
+
+<script>
+  document.querySelectorAll<HTMLAnchorElement>('.schedule-with-link').forEach((link) => {
+    link.addEventListener('click', () => {
+      const select = document.querySelector<HTMLSelectElement>(
+        '#lead-generator select[name="preferred_counselor_page_id"]'
+      );
+      if (select) {
+        select.value = link.dataset.counselorId ?? '';
+      }
+    });
+  });
+</script>

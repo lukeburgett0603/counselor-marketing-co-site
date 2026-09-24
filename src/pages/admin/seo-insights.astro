@@ -1,0 +1,565 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { withBase } from '../../lib/url';
+---
+
+<!--
+  Owner/agency only — never staff, including a linked-counselor staff
+  session (see initAdminAuth's allowedRoles below and ROLE_NAV_ACCESS in
+  adminAuth.ts). This is agency SEO strategy, not counselor
+  self-service. The target-keyword list itself is agency-managed only —
+  the owner sees every section below in view-only form, with zero edit
+  controls anywhere on this page. See CLAUDE.md's "SEO Insights
+  dashboard" section.
+-->
+<AdminLayout title="SEO Insights | Admin" current="seo-insights">
+  <div class="mb-8 grid gap-4 sm:grid-cols-3">
+    <div class="rounded-lg border border-black/5 bg-white p-5 shadow-sm">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Target keywords</p>
+      <p id="stat-total-keywords" class="mt-1 font-[family-name:var(--font-heading)] text-3xl font-extrabold text-brand-ink">—</p>
+    </div>
+    <div class="rounded-lg border border-black/5 bg-white p-5 shadow-sm">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Ranking in top 10</p>
+      <p id="stat-ranking-top10" class="mt-1 font-[family-name:var(--font-heading)] text-3xl font-extrabold text-brand-ink">—</p>
+    </div>
+    <div class="rounded-lg border border-black/5 bg-white p-5 shadow-sm">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Not yet ranking</p>
+      <p id="stat-not-ranking" class="mt-1 font-[family-name:var(--font-heading)] text-3xl font-extrabold text-brand-ink">—</p>
+    </div>
+  </div>
+
+  <div class="mb-8 rounded-lg border border-black/5 bg-white p-5 shadow-sm">
+    <div class="mb-4 flex items-center justify-between">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Target keywords</p>
+      <button
+        id="add-keyword-button"
+        type="button"
+        class="hidden rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+      >
+        + Add keyword
+      </button>
+    </div>
+    <div class="overflow-x-auto rounded-lg border border-slate-200">
+      <table class="w-full text-left text-sm">
+        <thead class="border-b border-slate-200 bg-slate-50">
+          <tr>
+            <th class="px-4 py-3 font-semibold">Keyword</th>
+            <th class="px-4 py-3 font-semibold">Priority</th>
+            <th class="px-4 py-3 font-semibold">Search volume</th>
+            <th class="px-4 py-3 font-semibold">Position</th>
+            <th class="px-4 py-3 font-semibold">Trend</th>
+            <th class="px-4 py-3 font-semibold">Page targeting it</th>
+            <th id="keyword-actions-header" class="hidden px-4 py-3 font-semibold"></th>
+          </tr>
+        </thead>
+        <tbody id="keywords-table-body"></tbody>
+      </table>
+    </div>
+    <p id="keywords-empty" class="hidden px-1 py-4 text-sm text-slate-500">No target keywords yet.</p>
+  </div>
+
+  <div class="mb-8 rounded-lg border border-black/5 bg-white p-5 shadow-sm">
+    <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Content gap — keywords with no page yet</p>
+    <p class="mb-3 text-xs text-slate-400">
+      Target keywords with no page currently written to target them. Click "+ Plan it" to add an idea to the
+      <a href={withBase('/admin/content-plan')} class="text-brand-primary hover:underline">Content Plan</a>.
+    </p>
+    <div id="content-gap-list" class="space-y-2 text-sm"></div>
+    <p id="content-gap-empty" class="hidden text-sm text-slate-500">Every target keyword has a page targeting it.</p>
+  </div>
+
+  <div class="mb-8 rounded-lg border border-black/5 bg-white p-5 shadow-sm">
+    <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Competitor opportunities</p>
+    <p class="mb-3 text-xs text-slate-400">Real keywords a competitor currently ranks for that this site doesn't yet.</p>
+    <div class="overflow-x-auto rounded-lg border border-slate-200">
+      <table class="w-full text-left text-sm">
+        <thead class="border-b border-slate-200 bg-slate-50">
+          <tr>
+            <th class="px-4 py-3 font-semibold">Keyword</th>
+            <th class="px-4 py-3 font-semibold">Search volume</th>
+            <th class="px-4 py-3 font-semibold">Competitor</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="gap-table-body"></tbody>
+      </table>
+    </div>
+    <p id="gap-empty" class="hidden px-1 py-4 text-sm text-slate-500">No competitor gap data yet — this fills in after the first weekly refresh.</p>
+  </div>
+
+  <!--
+    A single shared row-actions menu, same fixed-position/outside-scroll-
+    wrapper pattern as admin/crm.astro's — only ever shown for an agency
+    session (see applyRoleVisibility below).
+  -->
+  <div id="actions-menu" class="fixed z-50 hidden w-32 rounded-md border border-slate-200 bg-white py-1 text-left shadow-lg">
+    <button type="button" id="actions-menu-edit" class="block w-full px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50">
+      Edit
+    </button>
+    <button type="button" id="actions-menu-delete" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-red-50">
+      Delete
+    </button>
+  </div>
+
+  <!-- Add/Edit keyword modal — agency-only, one shared form for both. -->
+  <div id="keyword-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+    <div class="w-full max-w-md rounded-lg bg-white p-6">
+      <div class="mb-4 flex items-center justify-between">
+        <h3 id="keyword-modal-title" class="font-[family-name:var(--font-heading)] text-lg font-bold text-brand-ink">Add keyword</h3>
+        <button id="keyword-modal-close-button" type="button" class="text-sm text-slate-500 hover:text-slate-800">Close</button>
+      </div>
+      <form id="keyword-form" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500">Keyword</label>
+          <input name="keyword" type="text" required class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500">Priority</label>
+            <select name="priority" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+              <option value="high">High</option>
+              <option value="medium" selected>Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500">Status</label>
+            <select name="status" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+              <option value="active" selected>Active</option>
+              <option value="paused">Paused</option>
+              <option value="achieved">Achieved</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500">Search volume (monthly, from Mangools)</label>
+          <input name="search_volume" type="number" min="0" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500">Mangools tracked-keyword ID</label>
+          <input name="mangools_tracked_keyword_id" type="text" placeholder="Set once this keyword is added to the client's SerpWatcher tracking" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500">Notes</label>
+          <textarea name="notes" rows="2" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"></textarea>
+        </div>
+        <p id="keyword-form-status" class="text-sm text-red-600"></p>
+        <button type="submit" class="w-full rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
+          Save
+        </button>
+      </form>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  import { supabase, initAdminAuth } from '../../lib/adminAuth';
+  import {
+    normalizeKeyword,
+    latestSnapshotsByKeyword,
+    computeTrend,
+    keywordsWithNoPage,
+    latestGapBatch,
+    type TargetKeyword,
+    type RankSnapshot,
+    type GapSnapshot,
+  } from '../../lib/seoInsights';
+
+  function escapeHtml(value: string): string {
+    const div = document.createElement('div');
+    div.textContent = value;
+    return div.innerHTML;
+  }
+
+  type PageRow = { id: string; title: string; slug: string; focus_keyword: string | null };
+
+  let isAgency = false;
+  let targetKeywords: TargetKeyword[] = [];
+  let rankSnapshots: RankSnapshot[] = [];
+  let gapSnapshots: GapSnapshot[] = [];
+  let pages: PageRow[] = [];
+  let editingKeywordId: string | null = null;
+  let actionsMenuKeywordId: string | null = null;
+
+  const addKeywordButton = document.getElementById('add-keyword-button')!;
+  const keywordActionsHeader = document.getElementById('keyword-actions-header')!;
+  const keywordsTableBody = document.getElementById('keywords-table-body')!;
+  const keywordsEmpty = document.getElementById('keywords-empty')!;
+  const contentGapList = document.getElementById('content-gap-list')!;
+  const contentGapEmpty = document.getElementById('content-gap-empty')!;
+  const gapTableBody = document.getElementById('gap-table-body')!;
+  const gapEmpty = document.getElementById('gap-empty')!;
+  const actionsMenu = document.getElementById('actions-menu')!;
+  const actionsMenuEditButton = document.getElementById('actions-menu-edit')!;
+  const actionsMenuDeleteButton = document.getElementById('actions-menu-delete')!;
+  const keywordModal = document.getElementById('keyword-modal')!;
+  const keywordModalTitle = document.getElementById('keyword-modal-title')!;
+  const keywordModalCloseButton = document.getElementById('keyword-modal-close-button')!;
+  const keywordForm = document.getElementById('keyword-form') as HTMLFormElement;
+  const keywordFormStatus = document.getElementById('keyword-form-status')!;
+
+  const TREND_ICON: Record<string, string> = {
+    up: '<span class="text-emerald-600">&#9650; better</span>',
+    down: '<span class="text-red-500">&#9660; worse</span>',
+    same: '<span class="text-slate-400">&mdash; same</span>',
+    new: '<span class="text-slate-400">New</span>',
+  };
+
+  function pageForKeyword(keyword: string): PageRow | undefined {
+    const normalized = normalizeKeyword(keyword);
+    return pages.find((p) => p.focus_keyword && normalizeKeyword(p.focus_keyword) === normalized);
+  }
+
+  function renderStats(snapshotsByKeyword: Map<string, RankSnapshot[]>) {
+    const active = targetKeywords.filter((tk) => tk.status !== 'paused');
+    let rankingTop10 = 0;
+    let notRanking = 0;
+    for (const tk of active) {
+      const latest = snapshotsByKeyword.get(tk.id)?.[0];
+      if (latest?.position != null && latest.position <= 10) rankingTop10++;
+      else if (!latest || latest.position == null) notRanking++;
+    }
+    document.getElementById('stat-total-keywords')!.textContent = String(targetKeywords.length);
+    document.getElementById('stat-ranking-top10')!.textContent = String(rankingTop10);
+    document.getElementById('stat-not-ranking')!.textContent = String(notRanking);
+  }
+
+  function renderKeywordsTable() {
+    const snapshotsByKeyword = latestSnapshotsByKeyword(rankSnapshots);
+    renderStats(snapshotsByKeyword);
+
+    keywordsEmpty.classList.toggle('hidden', targetKeywords.length > 0);
+    keywordsTableBody.innerHTML = targetKeywords
+      .map((tk) => {
+        const pair = snapshotsByKeyword.get(tk.id) ?? [];
+        const latest = pair[0];
+        const position = latest?.position != null ? String(latest.position) : '—';
+        const trend = TREND_ICON[computeTrend(pair)];
+        const page = pageForKeyword(tk.keyword);
+        const pageCell = page
+          ? `<a href="/${escapeHtml(page.slug)}" target="_blank" rel="noopener" class="text-brand-primary hover:underline">${escapeHtml(page.title)}</a>`
+          : '<span class="text-slate-400">No page yet</span>';
+        const statusBadge =
+          tk.status === 'achieved'
+            ? ' <span class="ml-1 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-emerald-700">Achieved</span>'
+            : tk.status === 'paused'
+              ? ' <span class="ml-1 rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-600">Paused</span>'
+              : '';
+        return `
+      <tr class="border-b border-slate-100 last:border-0" data-keyword-id="${tk.id}">
+        <td class="px-4 py-3">${escapeHtml(tk.keyword)}${statusBadge}</td>
+        <td class="px-4 py-3 capitalize">${escapeHtml(tk.priority)}</td>
+        <td class="px-4 py-3">${tk.search_volume != null ? tk.search_volume.toLocaleString() : '—'}</td>
+        <td class="px-4 py-3">${position}</td>
+        <td class="px-4 py-3">${trend}</td>
+        <td class="px-4 py-3">${pageCell}</td>
+        <td class="keyword-actions-cell hidden px-4 py-3 text-right">
+          <button type="button" class="actions-toggle rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50" data-keyword-id="${tk.id}">
+            Actions &#9662;
+          </button>
+        </td>
+      </tr>`;
+      })
+      .join('');
+    applyRoleVisibility();
+  }
+
+  // "+ Plan it" button state — which target_keyword_ids and which
+  // normalized gap-keyword titles already have a content_plan_items
+  // row, so a double click shows "Planned" instead of inserting a
+  // duplicate. Populated by loadPlannedState(), refreshed after every
+  // successful insert rather than re-querying the whole table.
+  let plannedTargetKeywordIds = new Set<string>();
+  let plannedGapTitles = new Set<string>();
+
+  function planItButton(kind: 'gap' | 'competitor', opts: { targetKeywordId?: string; keyword: string; searchVolume: number | null; priority?: string; sourceNote?: string }): string {
+    const already =
+      kind === 'gap'
+        ? !!opts.targetKeywordId && plannedTargetKeywordIds.has(opts.targetKeywordId)
+        : plannedGapTitles.has(normalizeKeyword(opts.keyword));
+    if (already) {
+      return '<span class="text-xs text-slate-400">Planned</span>';
+    }
+    return `<button type="button" class="plan-it-button rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+      data-kind="${kind}"
+      data-target-keyword-id="${opts.targetKeywordId ?? ''}"
+      data-keyword="${escapeHtml(opts.keyword)}"
+      data-search-volume="${opts.searchVolume ?? ''}"
+      data-priority="${opts.priority ?? ''}"
+      data-source-note="${escapeHtml(opts.sourceNote ?? '')}"
+    >+ Plan it</button>`;
+  }
+
+  function renderContentGap() {
+    const missing = keywordsWithNoPage(
+      targetKeywords.filter((tk) => tk.status !== 'paused'),
+      pages.map((p) => p.focus_keyword)
+    );
+    contentGapEmpty.classList.toggle('hidden', missing.length > 0);
+    contentGapList.innerHTML = missing
+      .map(
+        (tk) => `
+      <div class="flex items-center justify-between gap-3 rounded-md border border-slate-100 bg-slate-50 px-3 py-2">
+        <span class="font-medium text-brand-ink">${escapeHtml(tk.keyword)}</span>
+        <div class="flex items-center gap-3">
+          <span class="text-xs capitalize text-slate-500">${escapeHtml(tk.priority)} priority</span>
+          ${planItButton('gap', { targetKeywordId: tk.id, keyword: tk.keyword, searchVolume: tk.search_volume, priority: tk.priority })}
+        </div>
+      </div>`
+      )
+      .join('');
+  }
+
+  function renderGapTable() {
+    const latest = latestGapBatch(gapSnapshots);
+    gapEmpty.classList.toggle('hidden', latest.length > 0);
+    gapTableBody.innerHTML = latest
+      .map(
+        (g) => `
+      <tr class="border-b border-slate-100 last:border-0">
+        <td class="px-4 py-3">${escapeHtml(g.keyword)}</td>
+        <td class="px-4 py-3">${g.search_volume != null ? g.search_volume.toLocaleString() : '—'}</td>
+        <td class="px-4 py-3">${escapeHtml(g.competitor_domain)}</td>
+        <td class="px-4 py-3 text-right">${planItButton('competitor', { keyword: g.keyword, searchVolume: g.search_volume, sourceNote: `Competitor gap: ${g.competitor_domain} ranks for this` })}</td>
+      </tr>`
+      )
+      .join('');
+  }
+
+  async function loadPlannedState() {
+    const { data } = await supabase.from('content_plan_items').select('target_keyword_id, title');
+    plannedTargetKeywordIds = new Set((data ?? []).map((r) => r.target_keyword_id).filter((v): v is string => !!v));
+    plannedGapTitles = new Set((data ?? []).map((r) => normalizeKeyword(r.title as string)));
+  }
+
+  async function handlePlanItClick(button: HTMLButtonElement) {
+    const kind = button.dataset.kind as 'gap' | 'competitor';
+    const keyword = button.dataset.keyword!;
+    const targetKeywordId = button.dataset.targetKeywordId || null;
+    const searchVolume = button.dataset.searchVolume ? Number(button.dataset.searchVolume) : null;
+    const priority = button.dataset.priority || null;
+    const sourceNote = button.dataset.sourceNote || null;
+
+    button.disabled = true;
+    const { error } = await supabase.from('content_plan_items').insert({
+      title: keyword,
+      keyword,
+      target_keyword_id: targetKeywordId,
+      search_volume: searchVolume,
+      priority,
+      source_note: sourceNote,
+    });
+    if (error) {
+      window.alert('Could not add to content plan: ' + error.message);
+      button.disabled = false;
+      return;
+    }
+    if (targetKeywordId) plannedTargetKeywordIds.add(targetKeywordId);
+    plannedGapTitles.add(normalizeKeyword(keyword));
+    if (kind === 'gap') renderContentGap();
+    else renderGapTable();
+  }
+
+  contentGapList.addEventListener('click', (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('.plan-it-button');
+    if (button) handlePlanItClick(button);
+  });
+  gapTableBody.addEventListener('click', (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('.plan-it-button');
+    if (button) handlePlanItClick(button);
+  });
+
+  // The owner sees every section above in pure view-only form — no Add
+  // button, no actions column, no row menu — not disabled controls, the
+  // elements never become visible at all. Only an 'agency' session
+  // reveals them.
+  function applyRoleVisibility() {
+    addKeywordButton.classList.toggle('hidden', !isAgency);
+    keywordActionsHeader.classList.toggle('hidden', !isAgency);
+    document.querySelectorAll('.keyword-actions-cell').forEach((el) => el.classList.toggle('hidden', !isAgency));
+  }
+
+  // --- Add/edit keyword ---
+
+  function openAddModal() {
+    editingKeywordId = null;
+    keywordModalTitle.textContent = 'Add keyword';
+    keywordForm.reset();
+    keywordFormStatus.textContent = '';
+    keywordModal.classList.remove('hidden');
+    keywordModal.classList.add('flex');
+  }
+
+  function openEditModal(keywordId: string) {
+    const tk = targetKeywords.find((k) => k.id === keywordId);
+    if (!tk) return;
+    editingKeywordId = keywordId;
+    keywordModalTitle.textContent = 'Edit keyword';
+    keywordForm.reset();
+    (keywordForm.elements.namedItem('keyword') as HTMLInputElement).value = tk.keyword;
+    (keywordForm.elements.namedItem('priority') as HTMLSelectElement).value = tk.priority;
+    (keywordForm.elements.namedItem('status') as HTMLSelectElement).value = tk.status;
+    (keywordForm.elements.namedItem('search_volume') as HTMLInputElement).value =
+      tk.search_volume != null ? String(tk.search_volume) : '';
+    (keywordForm.elements.namedItem('mangools_tracked_keyword_id') as HTMLInputElement).value = tk.mangools_tracked_keyword_id ?? '';
+    (keywordForm.elements.namedItem('notes') as HTMLTextAreaElement).value = tk.notes ?? '';
+    keywordFormStatus.textContent = '';
+    keywordModal.classList.remove('hidden');
+    keywordModal.classList.add('flex');
+  }
+
+  function closeKeywordModal() {
+    keywordModal.classList.add('hidden');
+    keywordModal.classList.remove('flex');
+    editingKeywordId = null;
+  }
+
+  addKeywordButton.addEventListener('click', openAddModal);
+  keywordModalCloseButton.addEventListener('click', closeKeywordModal);
+
+  keywordForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    keywordFormStatus.textContent = '';
+    const formData = new FormData(keywordForm);
+    const keyword = (formData.get('keyword') as string).trim();
+    if (!keyword) return;
+
+    const searchVolumeRaw = (formData.get('search_volume') as string).trim();
+    const payload = {
+      keyword,
+      priority: formData.get('priority') as string,
+      status: formData.get('status') as string,
+      search_volume: searchVolumeRaw ? Number(searchVolumeRaw) : null,
+      mangools_tracked_keyword_id: (formData.get('mangools_tracked_keyword_id') as string).trim() || null,
+      notes: (formData.get('notes') as string).trim() || null,
+    };
+
+    const submitButton = keywordForm.querySelector('button[type="submit"]') as HTMLButtonElement;
+    submitButton.disabled = true;
+    const { error } = editingKeywordId
+      ? await supabase.from('target_keywords').update(payload).eq('id', editingKeywordId)
+      : await supabase.from('target_keywords').insert(payload);
+    submitButton.disabled = false;
+
+    if (error) {
+      keywordFormStatus.textContent = 'Could not save: ' + error.message;
+      return;
+    }
+
+    closeKeywordModal();
+    await loadKeywordsAndSnapshots();
+  });
+
+  // --- Row actions menu (agency-only; never wired up for an owner
+  // session since applyRoleVisibility hides its trigger button) ---
+
+  function closeActionsMenu() {
+    actionsMenu.classList.add('hidden');
+    actionsMenuKeywordId = null;
+  }
+
+  function openActionsMenuFor(button: HTMLElement, keywordId: string) {
+    actionsMenuKeywordId = keywordId;
+    const rect = button.getBoundingClientRect();
+    const estimatedMenuHeight = 80;
+    const openUpward = window.innerHeight - rect.bottom < estimatedMenuHeight;
+    const menuWidth = 128;
+    const left = Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8));
+    actionsMenu.style.left = `${left}px`;
+    if (openUpward) {
+      actionsMenu.style.top = 'auto';
+      actionsMenu.style.bottom = `${window.innerHeight - rect.top + 4}px`;
+    } else {
+      actionsMenu.style.bottom = 'auto';
+      actionsMenu.style.top = `${rect.bottom + 4}px`;
+    }
+    actionsMenu.classList.remove('hidden');
+  }
+
+  document.addEventListener('click', (event) => {
+    if (actionsMenu.classList.contains('hidden')) return;
+    const target = event.target as HTMLElement;
+    if (target.closest('#actions-menu') || target.closest('.actions-toggle')) return;
+    closeActionsMenu();
+  });
+  window.addEventListener('scroll', closeActionsMenu, true);
+  window.addEventListener('resize', closeActionsMenu);
+
+  keywordsTableBody.addEventListener('click', (event) => {
+    const toggleButton = (event.target as HTMLElement).closest<HTMLElement>('.actions-toggle');
+    if (!toggleButton) return;
+    const keywordId = toggleButton.dataset.keywordId!;
+    if (actionsMenuKeywordId === keywordId && !actionsMenu.classList.contains('hidden')) {
+      closeActionsMenu();
+    } else {
+      openActionsMenuFor(toggleButton, keywordId);
+    }
+  });
+
+  actionsMenuEditButton.addEventListener('click', () => {
+    const keywordId = actionsMenuKeywordId;
+    closeActionsMenu();
+    if (keywordId) openEditModal(keywordId);
+  });
+
+  actionsMenuDeleteButton.addEventListener('click', async () => {
+    const keywordId = actionsMenuKeywordId;
+    closeActionsMenu();
+    if (!keywordId) return;
+    const tk = targetKeywords.find((k) => k.id === keywordId);
+    if (!tk) return;
+    if (!window.confirm(`Delete "${tk.keyword}"? This also removes its rank history. This cannot be undone.`)) return;
+    const { error } = await supabase.from('target_keywords').delete().eq('id', keywordId);
+    if (error) {
+      window.alert('Could not delete keyword: ' + error.message);
+      return;
+    }
+    await loadKeywordsAndSnapshots();
+  });
+
+  // --- Loading ---
+
+  async function loadPages() {
+    const { data } = await supabase.from('pages').select('id, title, slug, focus_keyword');
+    pages = (data as PageRow[]) ?? [];
+  }
+
+  async function loadKeywordsAndSnapshots() {
+    const { data: keywordsData, error: keywordsError } = await supabase
+      .from('target_keywords')
+      .select('*')
+      .order('priority', { ascending: true })
+      .order('keyword', { ascending: true });
+    if (keywordsError) {
+      keywordsTableBody.innerHTML = `<tr><td colspan="7" class="px-4 py-3 text-red-600">Could not load target keywords: ${escapeHtml(keywordsError.message)}</td></tr>`;
+      return;
+    }
+    targetKeywords = (keywordsData as TargetKeyword[]) ?? [];
+
+    const { data: snapshotsData } = await supabase
+      .from('keyword_rank_snapshots')
+      .select('*')
+      .order('checked_at', { ascending: false });
+    rankSnapshots = (snapshotsData as RankSnapshot[]) ?? [];
+
+    renderKeywordsTable();
+    renderContentGap();
+  }
+
+  async function loadGapSnapshots() {
+    const { data } = await supabase.from('keyword_gap_snapshots').select('*').order('checked_at', { ascending: false });
+    gapSnapshots = (data as GapSnapshot[]) ?? [];
+    renderGapTable();
+  }
+
+  initAdminAuth(
+    async (adminUser) => {
+      isAgency = adminUser.role === 'agency';
+      await loadPages();
+      await loadPlannedState();
+      await loadKeywordsAndSnapshots();
+      await loadGapSnapshots();
+    },
+    { allowedRoles: ['owner', 'agency'] }
+  );
+</script>

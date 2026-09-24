@@ -1,0 +1,94 @@
+---
+// The Homepage's "Explanatory Paragraph" section — a genuinely separate,
+// freestanding full BrandScript (brandscript_full), not one of the 5
+// short/scannable storybrand_* beats used elsewhere on the page. Visible
+// before expanding: an H2 one-liner + a short teaser paragraph. "Continue
+// reading" reveals the full long-form text via the same native
+// <details>/<summary> pattern as CollapsibleSection.astro (real <h2>
+// nested in <summary> for the a11y/heading-outline reasons documented
+// there). Video supports both a pasted YouTube/Vimeo link (iframe embed)
+// and a directly-uploaded file (site-videos Storage bucket, see
+// 0058_video_uploads_bucket.sql — admin's "Choose File" writes its
+// public URL into this same field) — an uploaded file is detected by
+// its extension and rendered as a native <video> player; anything else
+// that isn't YouTube/Vimeo falls back to a plain "Watch the video" link
+// rather than guessing at an embed format. Renders nothing when
+// brandscript_one_liner is empty.
+import { renderCopy } from '../lib/markdown';
+
+interface Props {
+  oneLiner: string | null;
+  teaser: string | null;
+  full: string | null;
+  videoUrl?: string | null;
+}
+
+const { oneLiner, teaser, full, videoUrl } = Astro.props;
+
+function embedUrlFor(url: string): string | null {
+  const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]{6,})/);
+  if (youtubeMatch) return `https://www.youtube-nocookie.com/embed/${youtubeMatch[1]}`;
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+  return null;
+}
+
+// Matches an uploaded file's own extension (site-videos public URLs
+// always end in one) regardless of any query string — anything else
+// (a bare YouTube/Vimeo link, or some other external URL) falls through
+// to the embed/plain-link branches below instead.
+function isVideoFileUrl(url: string): boolean {
+  return /\.(mp4|webm|mov)(\?.*)?$/i.test(url);
+}
+
+const embedUrl = videoUrl ? embedUrlFor(videoUrl) : null;
+const isUploadedFile = videoUrl ? isVideoFileUrl(videoUrl) : false;
+---
+
+{oneLiner && (
+  <section class="py-14">
+    <div class="mx-auto max-w-3xl px-6">
+      <h2 class="font-[family-name:var(--font-heading)] text-2xl font-extrabold tracking-tight text-brand-ink">
+        {oneLiner}
+      </h2>
+      {teaser && <p class="mt-4 text-slate-600">{teaser}</p>}
+
+      {videoUrl && (
+        <div class="mt-8">
+          {isUploadedFile ? (
+            <video controls preload="metadata" class="aspect-video w-full rounded-lg shadow-md">
+              <source src={videoUrl} />
+            </video>
+          ) : embedUrl ? (
+            <div class="aspect-video overflow-hidden rounded-lg shadow-md">
+              <iframe
+                src={embedUrl}
+                title={oneLiner}
+                class="h-full w-full"
+                loading="lazy"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen
+              ></iframe>
+            </div>
+          ) : (
+            <a href={videoUrl} target="_blank" rel="noopener" class="font-semibold text-brand-primary hover:underline">
+              Watch the video &rarr;
+            </a>
+          )}
+        </div>
+      )}
+
+      {full && (
+        <details class="group mt-8">
+          <summary class="cursor-pointer list-none text-center marker:content-none hover:opacity-80">
+            <span class="inline-flex items-center gap-2 font-semibold text-brand-primary">
+              Continue reading
+              <span aria-hidden="true" class="shrink-0 text-lg leading-none text-brand-accent transition-transform duration-200 group-open:rotate-180">&darr;</span>
+            </span>
+          </summary>
+          <div class="prose mt-6" set:html={renderCopy(full)} />
+        </details>
+      )}
+    </div>
+  </section>
+)}

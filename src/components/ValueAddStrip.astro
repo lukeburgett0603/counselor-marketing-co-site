@@ -1,0 +1,36 @@
+---
+// The icon+label strip directly under the Hero (2-4 items, e.g. "Faith-
+// Integrated Care" / "Licensed Experts") — the quick, scannable first
+// pass at value, distinct from the fuller ValueProposition.astro section
+// further down the page. Only renders when real items exist; never
+// invents placeholders. See 0048_homepage_value_add_and_authority.sql.
+import Icon from './Icon.astro';
+import { ICON_NAMES } from '../lib/icons';
+import type { IconName } from '../lib/icons';
+
+interface Props {
+  items: { icon: string; label: string }[];
+}
+
+const { items } = Astro.props;
+
+// items.icon is stored as plain text (jsonb), not the IconName union —
+// falls back to a generic icon rather than erroring if a stored value
+// ever doesn't match Icon.astro's current set.
+function resolveIcon(name: string): IconName {
+  return (ICON_NAMES as readonly string[]).includes(name) ? (name as IconName) : 'sparkles';
+}
+---
+
+{items.length > 0 && (
+  <section class="bg-brand-neutral py-10">
+    <div class="mx-auto flex max-w-5xl flex-wrap justify-center gap-x-10 gap-y-6 px-6">
+      {items.slice(0, 4).map((item) => (
+        <div class="flex items-center gap-2.5 text-brand-ink">
+          <Icon name={resolveIcon(item.icon)} class="h-5 w-5 shrink-0 text-brand-primary" />
+          <span class="font-semibold">{item.label}</span>
+        </div>
+      ))}
+    </div>
+  </section>
+)}

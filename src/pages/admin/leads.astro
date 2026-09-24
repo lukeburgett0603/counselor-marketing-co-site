@@ -6,11 +6,54 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   <!--
     Real-data proof-of-work dashboard, computed entirely client-side from
     the same `leads` fetch the table below already does — no second
-    query, no new table, no analytics tool wired in yet (see CLAUDE.md's
-    "Outstanding" for the traffic/rankings tiers planned on top of this
-    later). This exists so a client can see their marketing is working
-    without waiting on a monthly report.
+    query, no new table. This exists so a client can see their marketing
+    is working without waiting on a monthly report.
   -->
+  <!--
+    Tier 4 — Google Business Profile, sourced from the get-gbp-insights
+    Edge Function — see CLAUDE.md's "Client dashboard" section. Hidden
+    entirely (not shown empty), not just on a site with no
+    google_business_location_id/OAuth credentials configured but on ANY
+    failure calling the function, same graceful-degrade discipline as
+    the Guide-downloads widget below and Tier 2's own traffic section
+    (Freedom Counseling Services' repo only, since it needs Cloudflare
+    credentials this template intentionally doesn't carry).
+  -->
+  <div id="gbp-section" class="mb-8 hidden">
+    <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Google Business Profile (last 30 days)</p>
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div class="rounded-lg border border-black/5 bg-white p-5 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Map views</p>
+        <p id="gbp-map-views" class="mt-1 font-[family-name:var(--font-heading)] text-2xl font-extrabold text-brand-ink">—</p>
+        <p id="gbp-map-views-last" class="mt-1 text-xs text-slate-500"></p>
+      </div>
+      <div class="rounded-lg border border-black/5 bg-white p-5 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Search views</p>
+        <p id="gbp-search-views" class="mt-1 font-[family-name:var(--font-heading)] text-2xl font-extrabold text-brand-ink">—</p>
+        <p id="gbp-search-views-last" class="mt-1 text-xs text-slate-500"></p>
+      </div>
+      <div class="rounded-lg border border-black/5 bg-white p-5 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Website clicks</p>
+        <p id="gbp-website-clicks" class="mt-1 font-[family-name:var(--font-heading)] text-2xl font-extrabold text-brand-ink">—</p>
+        <p id="gbp-website-clicks-last" class="mt-1 text-xs text-slate-500"></p>
+      </div>
+      <div class="rounded-lg border border-black/5 bg-white p-5 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Calls</p>
+        <p id="gbp-call-clicks" class="mt-1 font-[family-name:var(--font-heading)] text-2xl font-extrabold text-brand-ink">—</p>
+        <p id="gbp-call-clicks-last" class="mt-1 text-xs text-slate-500"></p>
+      </div>
+      <div class="rounded-lg border border-black/5 bg-white p-5 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Direction requests</p>
+        <p id="gbp-direction-requests" class="mt-1 font-[family-name:var(--font-heading)] text-2xl font-extrabold text-brand-ink">—</p>
+        <p id="gbp-direction-requests-last" class="mt-1 text-xs text-slate-500"></p>
+      </div>
+    </div>
+    <div class="mt-4 rounded-lg border border-black/5 bg-white p-5 shadow-sm">
+      <p class="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Map + search views per day</p>
+      <div id="gbp-chart" class="flex h-28 items-end gap-[3px]"></div>
+    </div>
+  </div>
+
   <div class="mb-8 grid gap-4 sm:grid-cols-3">
     <div class="rounded-lg border border-black/5 bg-white p-5 shadow-sm">
       <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Total leads</p>
@@ -80,6 +123,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           <th class="px-4 py-3 font-semibold">Message</th>
           <th class="px-4 py-3 font-semibold">From page</th>
           <th class="px-4 py-3 font-semibold">Counselor</th>
+          <th class="px-4 py-3 font-semibold">Format</th>
           <th class="px-4 py-3 font-semibold">Status</th>
         </tr>
       </thead>
@@ -112,7 +156,13 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     source_page: string | null;
     status: string | null;
     preferred_counselor_page_id: string | null;
+    preferred_session_format: string | null;
     lead_magnet_id: string | null;
+  };
+
+  const SESSION_FORMAT_LABELS: Record<string, string> = {
+    in_person: 'In-Person',
+    telehealth: 'Telehealth',
   };
 
   // Populated in loadLeads() from a live query, not hardcoded — a
@@ -302,11 +352,99 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         <td class="px-4 py-3 max-w-xs truncate" title="${escapeHtml(lead.message ?? '')}">${escapeHtml(lead.message ?? '')}</td>
         <td class="px-4 py-3">${escapeHtml(lead.source_page ?? '')}</td>
         <td class="px-4 py-3">${lead.preferred_counselor_page_id ? escapeHtml(counselorNames.get(lead.preferred_counselor_page_id) ?? 'Unknown') : ''}</td>
+        <td class="px-4 py-3">${lead.preferred_session_format ? escapeHtml(SESSION_FORMAT_LABELS[lead.preferred_session_format] ?? lead.preferred_session_format) : ''}</td>
         <td class="px-4 py-3">${renderStatusSelect(lead.id, lead.status)}</td>
       </tr>`
       )
       .join('');
   }
 
-  initAdminAuth(loadLeads, { allowedRoles: ['owner', 'agency'] });
+  // Tier 4 — Google Business Profile. Same call shape as Tier 2's
+  // loadTrafficStats (Freedom Counseling Services' own leads.astro): a
+  // plain authenticated fetch (apikey + the caller's own session
+  // access_token), matching lib/publishFunction.ts's established
+  // pattern. Any failure (no location id/OAuth credentials configured,
+  // Google's API erroring, no session) just leaves the section hidden —
+  // never a visible error on this page.
+  type GbpMonthSummary = {
+    mapViews: number;
+    searchViews: number;
+    websiteClicks: number;
+    callClicks: number;
+    directionRequests: number;
+  };
+  type GbpInsights = {
+    thisMonth: GbpMonthSummary;
+    lastMonth: GbpMonthSummary;
+    byDay: { date: string; value: number }[];
+  };
+
+  function formatGbpDelta(thisValue: number, lastValue: number): string {
+    if (lastValue > 0) {
+      const pct = Math.round(((thisValue - lastValue) / lastValue) * 100);
+      return `${pct > 0 ? '+' : ''}${pct}% vs last month`;
+    }
+    if (thisValue > 0) return 'None last month';
+    return '';
+  }
+
+  async function loadGbpInsights() {
+    const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
+    const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) return;
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/get-gbp-insights`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${accessToken}` },
+      });
+      if (!response.ok) return;
+      const stats = (await response.json()) as GbpInsights;
+
+      document.getElementById('gbp-map-views')!.textContent = stats.thisMonth.mapViews.toLocaleString();
+      document.getElementById('gbp-map-views-last')!.textContent = formatGbpDelta(stats.thisMonth.mapViews, stats.lastMonth.mapViews);
+      document.getElementById('gbp-search-views')!.textContent = stats.thisMonth.searchViews.toLocaleString();
+      document.getElementById('gbp-search-views-last')!.textContent = formatGbpDelta(
+        stats.thisMonth.searchViews,
+        stats.lastMonth.searchViews
+      );
+      document.getElementById('gbp-website-clicks')!.textContent = stats.thisMonth.websiteClicks.toLocaleString();
+      document.getElementById('gbp-website-clicks-last')!.textContent = formatGbpDelta(
+        stats.thisMonth.websiteClicks,
+        stats.lastMonth.websiteClicks
+      );
+      document.getElementById('gbp-call-clicks')!.textContent = stats.thisMonth.callClicks.toLocaleString();
+      document.getElementById('gbp-call-clicks-last')!.textContent = formatGbpDelta(stats.thisMonth.callClicks, stats.lastMonth.callClicks);
+      document.getElementById('gbp-direction-requests')!.textContent = stats.thisMonth.directionRequests.toLocaleString();
+      document.getElementById('gbp-direction-requests-last')!.textContent = formatGbpDelta(
+        stats.thisMonth.directionRequests,
+        stats.lastMonth.directionRequests
+      );
+
+      const maxDayValue = Math.max(1, ...stats.byDay.map((d) => d.value));
+      const chartEl = document.getElementById('gbp-chart')!;
+      chartEl.innerHTML = stats.byDay
+        .map((d) => {
+          const heightPct = Math.max(Math.round((d.value / maxDayValue) * 100), d.value > 0 ? 4 : 1);
+          const label = d.date
+            ? new Date(d.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+            : '';
+          return `<div class="flex-1 rounded-t bg-brand-accent" style="height: ${heightPct}%" title="${d.value} view${d.value === 1 ? '' : 's'} — ${label}"></div>`;
+        })
+        .join('');
+
+      document.getElementById('gbp-section')!.classList.remove('hidden');
+    } catch {
+      // Network error, malformed response, etc. — section just stays hidden.
+    }
+  }
+
+  async function onAuthed() {
+    await loadLeads();
+    await loadGbpInsights();
+  }
+
+  initAdminAuth(onAuthed, { allowedRoles: ['owner', 'agency'] });
 </script>

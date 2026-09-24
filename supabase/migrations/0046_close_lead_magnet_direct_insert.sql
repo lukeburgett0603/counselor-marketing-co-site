@@ -1,0 +1,21 @@
+-- "public can insert lead magnet downloads" (0044_close_leads_direct_
+-- insert.sql) existed specifically because LeadMagnet.astro was, at the
+-- time, deliberately left on its old direct `POST /rest/v1/leads` path —
+-- the contact-form spam defenses (honeypot + Turnstile) were scoped to
+-- LeadGenerator.astro only, since a guide download was judged a lower-
+-- cost-of-spam signal than a real appointment request.
+--
+-- That reasoning held until real bot traffic actually started hitting
+-- this exact form with randomized names and dot-obfuscated emails (see
+-- CLAUDE.md — found live on Freedom Counseling Services, 10+ bot-shaped
+-- submissions once the form had real content). LeadMagnet.astro now
+-- posts through the same `submit-lead` Edge Function as the contact
+-- form (honeypot + Turnstile enforced there, writes via service_role,
+-- which bypasses RLS regardless of what this policy allows) — so this
+-- policy is no longer needed by any legitimate caller, and leaving it
+-- in place would just be the identical direct-REST bypass 0044 already
+-- closed for the contact form, moved to this one instead: anyone with
+-- the anon key could skip the form (and every check `submit-lead`
+-- enforces) entirely by POSTing to `/rest/v1/leads` directly with a
+-- real, guessable `lead_magnet_id`.
+drop policy if exists "public can insert lead magnet downloads" on leads;

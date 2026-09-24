@@ -47,25 +47,6 @@ const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbChain, siteUrl);
     <meta name="description" content={description} />
     <link rel="canonical" href={canonicalUrl} />
 
-    {/*
-      Safety net for global.css's `.reveal` rule — see that rule's own
-      comment for why this exists as `html.js .reveal` rather than a bare
-      `.reveal` there: this tiny synchronous script is the only thing that
-      ever adds the `js` class, so `.reveal` only hides content when JS is
-      actually confirmed running. If JS is disabled, blocked, or errors out
-      anywhere else on the page, every `.reveal` element just renders in
-      its normal (visible) state — no `<noscript>` needed (a `<noscript>`
-      containing a `<style>` was tried here first and rejected: browsers
-      parse `<noscript>`'s content as raw text whenever scripting is
-      actually enabled, which corrupted this document's own `<head>`
-      parsing and leaked a later `{ogImage && ...}` expression as visible
-      body text — caught live in the browser, not by reading the code).
-      Deliberately not `is:inline` via a .astro directive — a plain inline
-      <script> here is already synchronous and render-blocking by default,
-      which is exactly what's needed before first paint.
-    */}
-    <script>document.documentElement.classList.add('js');</script>
-
     {business.google_fonts_url && (
       <>
         {/* Real brand webfont(s), set per client via business.google_fonts_url
@@ -78,19 +59,6 @@ const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbChain, siteUrl);
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link href={business.google_fonts_url} rel="stylesheet" />
       </>
-    )}
-
-    {/*
-      Outfit (--font-display, global.css) — Homepage-redesign-only, loaded
-      only on that one page_type rather than sitewide, since nothing else
-      references the token yet. Not routed through business.google_fonts_url
-      on purpose: that field is the client's actual brand font (Inter) and
-      governs every other page; this is a page-scoped addition, not a brand
-      change. If a future page adopts --font-display too, move this to an
-      unconditional load instead of copying the gate.
-    */}
-    {page.page_type === 'Homepage' && (
-      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
     )}
 
     <meta property="og:type" content={page.page_type === 'Content Pillar' || page.page_type === 'Service Hub' || page.page_type === 'Blog Post' ? 'article' : 'website'} />
@@ -106,6 +74,21 @@ const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbChain, siteUrl);
     {ogImage && <meta name="twitter:image" content={ogImage} />}
 
     <SchemaScript schemas={[...pageSchemas, breadcrumbSchema]} />
+
+    {business.cloudflare_beacon_token && (
+      // Cloudflare Web Analytics — cookieless, privacy-respecting page-view
+      // tracking (no visitor-level tracking, per Cloudflare's own product
+      // description). Feeds the admin Leads and analytics dashboard's
+      // traffic section. The token itself is public/client-side, not a
+      // secret — same trust level as a GA measurement ID. See
+      // 0043_cloudflare_analytics_token.sql.
+      <script
+        is:inline
+        type="module"
+        src="https://static.cloudflareinsights.com/beacon.min.js"
+        data-cf-beacon={`{"token": "${business.cloudflare_beacon_token}"}`}
+      />
+    )}
   </head>
   <body class="pb-14 md:pb-0">
     <Header
@@ -119,29 +102,5 @@ const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbChain, siteUrl);
     </main>
     <Footer navPages={allPages} business={business} />
     <MobileCTABar telephone={business.telephone} ctaText={page.cta_button_text ?? undefined} />
-    <script>
-      // Shared reveal-on-scroll — see global.css's `.reveal`/`.is-visible`
-      // rules. One observer for the whole page rather than one per
-      // component; `unobserve` once revealed since this never needs to
-      // reverse. No-op (and no import cost) when the browser doesn't
-      // support IntersectionObserver — elements just stay in their
-      // default (visible) state.
-      if ('IntersectionObserver' in window) {
-        const revealObserver = new IntersectionObserver(
-          (entries) => {
-            for (const entry of entries) {
-              if (entry.isIntersecting) {
-                entry.target.classList.add('is-visible');
-                revealObserver.unobserve(entry.target);
-              }
-            }
-          },
-          { threshold: 0.15, rootMargin: '0px 0px -8% 0px' }
-        );
-        document.querySelectorAll('.reveal').forEach((el) => revealObserver.observe(el));
-      } else {
-        document.querySelectorAll('.reveal').forEach((el) => el.classList.add('is-visible'));
-      }
-    </script>
   </body>
 </html>
