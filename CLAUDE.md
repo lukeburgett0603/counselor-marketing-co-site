@@ -2269,13 +2269,19 @@ live contact form would have silently stopped accepting submissions.
   (`/admin/seo-insights`) and Content Plan (`/admin/content-plan`) both
   render correctly with real nav integration and correct empty states —
   genuinely no target keywords or content-plan items exist for this
-  site yet, not an error. `MANGOOLS_API_KEY` is not set as an Edge
-  Function secret on this project yet, so `refresh-seo-rankings` will
-  return a graceful "not configured" until that's set (this project's
-  own Mangools *research* access via MCP is separate from this
-  project-specific secret). Real keyword research + a `target_keywords`
-  seed pass (same shape as Freedom's own "Keyword curation session #1")
-  is genuinely open follow-up work, not done by this sync.
+  site yet, not an error.
+- **Update (2026-09-24, later same evening): `MANGOOLS_API_KEY` set** —
+  pulled from this account's shared Mangools MCP connection (`x-access-
+  token`, the same credential type Mangools uses for both the MCP server
+  and the direct REST API) and confirmed live against the real Mangools
+  API before setting it as this project's Edge Function secret.
+  `refresh-seo-rankings` can now actually reach Mangools — it just has
+  nothing to refresh yet. Real keyword research + a `target_keywords`
+  seed pass, plus setting `business.mangools_location_id`/
+  `website_domain`/`seo_competitor_domains` (all still unset), is
+  genuinely open follow-up work, same shape as Freedom's own "Keyword
+  curation session #1" — not done by this sync or by setting the key
+  alone.
 - **The rebuilt Homepage's real StoryBrand content (Problem/Guide-
   Empathy/Pitch) was already populated from an earlier, separate
   migration** ("StoryBrand section-by-section copy editing," done for
@@ -2293,6 +2299,22 @@ live contact form would have silently stopped accepting submissions.
   end-to-end `submit-lead` call against this project's actual deployed
   function (genuine success, test lead deleted after). All throwaway
   accounts/test data removed afterward.
+
+## Backlog for this repo
+
+- **Blog analytics (pageviews/leads/CTA clicks per post) — planned, not
+  started.** Built and live on Freedom Counseling Services first (see
+  `local-business-site-template`'s CLAUDE.md, "Blog analytics: pageviews,
+  leads, and CTA clicks per post," 2026-09-25, for the full design). This
+  repo already has everything the sync would need — its own Cloudflare
+  Web Analytics account is configured from the Tier 2 traffic-dashboard
+  work, so no new secrets, just the migration + `CTA.astro`/
+  `BlogPost.astro`/new admin page sync + Edge Function deploy.
+- **Real keyword research for SEO Insights** — `MANGOOLS_API_KEY` is set
+  (2026-09-24), but `business.mangools_location_id`/`website_domain`/
+  `seo_competitor_domains` are all still unset and zero `target_keywords`
+  rows exist. Needs its own real research session, same shape as
+  Freedom's "Keyword curation session #1."
 
 ## Where the detailed rules live
 
