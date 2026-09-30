@@ -1,0 +1,216 @@
+---
+// The one conversion on the site (rebuild/cro-review.md): three required
+// fields, then an optional step 2 on the confirmation screen that attaches
+// to the same lead (submit-lead's `details_for` path). Class selectors
+// only: this form can appear twice on a page.
+import { SITE } from '../../lib/site';
+import Ph from './Ph.astro';
+
+interface Props {
+  sourcePage: string;
+  heading?: string;
+  lead?: string;
+}
+const { sourcePage, heading = 'Get your free Caseload Audit', lead = 'A written plan for your practice within 48 hours.' } = Astro.props;
+---
+
+<div class="audit-form rounded-card border border-line bg-surface p-6 shadow-card sm:p-7" data-source-page={sourcePage}>
+  <form class="audit-step1" novalidate>
+    <h2 class="text-xl font-semibold tracking-[-0.02em] text-ink">{heading}</h2>
+    <p class="mt-1 text-[15px] text-muted">{lead}</p>
+    <div class="absolute -left-[9999px] h-px w-px overflow-hidden" aria-hidden="true">
+      <input type="text" name="hp_website" tabindex="-1" autocomplete="off" />
+    </div>
+    <input type="hidden" name="plan" value="" />
+    <div class="mt-5 space-y-4">
+      <label class="block">
+        <span class="mb-1.5 block text-sm font-medium text-ink">Your name</span>
+        <input name="name" required autocomplete="name" class="field" />
+      </label>
+      <label class="block">
+        <span class="mb-1.5 block text-sm font-medium text-ink">Email</span>
+        <input name="email" type="email" required autocomplete="email" class="field" />
+      </label>
+      <label class="block">
+        <span class="mb-1.5 block text-sm font-medium text-ink">Your practice's website, or its name and city</span>
+        <input name="practice" required autocomplete="url" class="field" />
+      </label>
+    </div>
+    <button type="submit" class="btn-primary mt-5 w-full">
+      <span class="label">{SITE.auditCta}</span>
+      <Ph name="arrow-right" class="size-4" />
+    </button>
+    <p class="mt-3 text-[13px] leading-snug text-muted">Free. No obligation. A written plan within 48 hours.</p>
+    <p class="status mt-2 text-sm text-ink" role="status" aria-live="polite"></p>
+  </form>
+
+  <form class="audit-step2" hidden>
+    <div class="flex items-start gap-3">
+      <Ph name="seal-check" class="mt-0.5 size-6 text-accent" />
+      <div>
+        <h2 class="text-xl font-semibold tracking-[-0.02em] text-ink">Thanks. Your audit is on its way.</h2>
+        <p class="mt-1 text-[15px] text-muted">Want it tailored? These are optional.</p>
+      </div>
+    </div>
+    <div class="mt-5 space-y-4">
+      <fieldset>
+        <legend class="mb-1.5 text-sm font-medium text-ink">Practice size</legend>
+        <div class="grid grid-cols-2 gap-2">
+          {['Just me', '2 to 5 clinicians', '6 to 10', '11 or more'].map((size) => (
+            <label class="flex cursor-pointer items-center gap-2 rounded-control border border-line px-3 py-2 text-[15px] text-ink has-[:checked]:border-accent has-[:checked]:bg-accent-soft">
+              <input type="radio" name="size" value={size} class="accent-[var(--accent)]" />
+              {size}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <label class="block">
+        <span class="mb-1.5 block text-sm font-medium text-ink">How many open spots do you have right now?</span>
+        <input name="open" inputmode="numeric" class="field" />
+      </label>
+      <label class="block">
+        <span class="mb-1.5 block text-sm font-medium text-ink">Anything you'd like me to know?</span>
+        <textarea name="notes" rows="3" class="field"></textarea>
+      </label>
+      <label class="block">
+        <span class="mb-1.5 block text-sm font-medium text-ink">Phone, if you'd like a call</span>
+        <input name="phone" type="tel" autocomplete="tel" class="field" />
+      </label>
+    </div>
+    <button type="submit" class="btn-primary mt-5 w-full"><span class="label">Add these details</span></button>
+    <button type="button" class="skip mt-3 w-full text-center text-sm text-muted underline-offset-4 hover:text-ink hover:underline">No thanks, I'm done</button>
+    <p class="status mt-2 text-sm text-ink" role="status" aria-live="polite"></p>
+  </form>
+
+  <div class="audit-done" hidden>
+    <div class="flex items-start gap-3">
+      <Ph name="seal-check" class="mt-0.5 size-6 text-accent" />
+      <div>
+        <h2 class="text-xl font-semibold tracking-[-0.02em] text-ink">You're all set.</h2>
+        <p class="mt-1 text-[15px] text-muted">Your written plan will reach your inbox within 48 hours. If you don't see it, check your spam folder.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .field {
+    width: 100%;
+    font: inherit;
+    font-size: 16px;
+    color: var(--ink);
+    background: var(--page);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    padding: 10px 12px;
+  }
+  .field:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-color: transparent;
+  }
+  .field[aria-invalid='true'] {
+    border-color: #dc2626;
+  }
+</style>
+
+<script>
+  const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
+  const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+  const PLAN_LABELS: Record<string, string> = {
+    'self-guided': 'Self-Guided',
+    'done-for-you': 'Done for You',
+    group: 'Group Practice',
+  };
+
+  async function post(payload: Record<string, unknown>) {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/submit-lead`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, data };
+  }
+
+  const plan = new URLSearchParams(location.search).get('plan') ?? '';
+
+  document.querySelectorAll<HTMLElement>('.audit-form').forEach((root) => {
+    const step1 = root.querySelector<HTMLFormElement>('.audit-step1')!;
+    const step2 = root.querySelector<HTMLFormElement>('.audit-step2')!;
+    const done = root.querySelector<HTMLElement>('.audit-done')!;
+    const planInput = step1.querySelector<HTMLInputElement>('[name="plan"]')!;
+    if (PLAN_LABELS[plan]) planInput.value = PLAN_LABELS[plan];
+    let leadId = '';
+    let leadEmail = '';
+
+    step1.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const status = step1.querySelector<HTMLElement>('.status')!;
+      const fields = ['name', 'email', 'practice'].map((n) => step1.querySelector<HTMLInputElement>(`[name="${n}"]`)!);
+      let firstBad: HTMLInputElement | null = null;
+      for (const f of fields) {
+        const bad = !f.value.trim() || (f.type === 'email' && !f.checkValidity());
+        f.setAttribute('aria-invalid', String(bad));
+        if (bad && !firstBad) firstBad = f;
+      }
+      if (firstBad) {
+        status.textContent = firstBad.type === 'email' && firstBad.value.trim() ? 'Please check your email address.' : 'Please fill in all three fields.';
+        firstBad.focus();
+        return;
+      }
+      const fd = new FormData(step1);
+      const button = step1.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+      button.disabled = true;
+      status.textContent = 'Sending...';
+      const { ok, data } = await post({
+        name: fd.get('name'),
+        email: fd.get('email'),
+        existing_website_url: fd.get('practice'),
+        message: fd.get('plan') ? `Plan interest: ${fd.get('plan')}` : null,
+        source_page: root.dataset.sourcePage,
+        hp_website: fd.get('hp_website') || '',
+      });
+      button.disabled = false;
+      if (!ok) {
+        status.textContent = 'Something went wrong. Please try again, or call (303) 594-3897.';
+        return;
+      }
+      leadId = data.id ?? '';
+      leadEmail = String(fd.get('email'));
+      step1.hidden = true;
+      if (leadId) {
+        step2.hidden = false;
+        step2.querySelector<HTMLElement>('h2')?.setAttribute('tabindex', '-1');
+        step2.querySelector<HTMLElement>('h2')?.focus();
+      } else {
+        done.hidden = false;
+      }
+    });
+
+    const finish = () => {
+      step2.hidden = true;
+      done.hidden = false;
+    };
+    step2.querySelector('.skip')?.addEventListener('click', finish);
+    step2.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(step2);
+      const lines = [
+        fd.get('size') && `Practice size: ${fd.get('size')}`,
+        String(fd.get('open') ?? '').trim() && `Open spots right now: ${fd.get('open')}`,
+        String(fd.get('notes') ?? '').trim() && `Notes: ${fd.get('notes')}`,
+      ].filter(Boolean);
+      const phone = String(fd.get('phone') ?? '').trim();
+      if (!lines.length && !phone) return finish();
+      const status = step2.querySelector<HTMLElement>('.status')!;
+      status.textContent = 'Saving...';
+      const { ok } = await post({ details_for: leadId, email: leadEmail, details: lines.join('\n'), phone });
+      if (!ok) {
+        status.textContent = "That didn't save, but your audit request did. You can reply to your audit email with these details.";
+        return;
+      }
+      finish();
+    });
+  });
+</script>

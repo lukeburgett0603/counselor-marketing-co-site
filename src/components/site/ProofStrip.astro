@@ -1,0 +1,21 @@
+---
+import { SITE } from '../../lib/site';
+import Ph from './Ph.astro';
+---
+
+<section class="border-y border-line bg-surface">
+  <ul class="wrap grid md:grid-cols-3">
+    <li class="flex gap-3 border-line py-5 text-[15px] text-muted md:border-r md:pr-6">
+      <Ph name="certificate" class="mt-0.5 size-5 text-accent" />
+      <span><b class="font-medium text-ink">Built by {SITE.founder}, {SITE.credential},</b> a {SITE.credentialLong} in {SITE.licenseState}.</span>
+    </li>
+    <li class="flex gap-3 border-t border-line py-5 text-[15px] text-muted md:border-r md:border-t-0 md:px-6">
+      <Ph name="star" class="mt-0.5 size-5 text-accent" />
+      <span><b class="font-medium text-ink">Freedom Counseling Services:</b> 3.5 to 4.0 Google stars in three weeks.</span>
+    </li>
+    <li class="flex gap-3 border-t border-line py-5 text-[15px] text-muted md:border-t-0 md:pl-6">
+      <Ph name="download-simple" class="mt-0.5 size-5 text-accent" />
+      <span><b class="font-medium text-ink">Month-to-month.</b> Your data is always yours.</span>
+    </li>
+  </ul>
+</section>

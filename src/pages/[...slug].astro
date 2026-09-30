@@ -1,62 +1,31 @@
 ---
-import { getPublishedPages, getBusiness } from '../lib/pages';
-import type { Page, PageType } from '../lib/pages';
-import Homepage from '../templates/Homepage.astro';
-import About from '../templates/About.astro';
-import ServicesOverview from '../templates/ServicesOverview.astro';
-import ServicePage from '../templates/ServicePage.astro';
-import ContentPillar from '../templates/ContentPillar.astro';
-import CounselorProfile from '../templates/CounselorProfile.astro';
-import ServiceArea from '../templates/ServiceArea.astro';
-import Contact from '../templates/Contact.astro';
-import Other from '../templates/Other.astro';
-import BlogPost from '../templates/BlogPost.astro';
-import BlogIndex from '../templates/BlogIndex.astro';
-import WhoWeServe from '../templates/WhoWeServe.astro';
-import ServiceAreasOverview from '../templates/ServiceAreasOverview.astro';
-import ServiceHub from '../templates/ServiceHub.astro';
-import CounselorsOverview from '../templates/CounselorsOverview.astro';
-// Client-repo-only — not part of the shared template (CMC's own pricing
-// page). Re-add after syncing any future template change to this file.
-import Pricing from '../templates/Pricing.astro';
+// 2026-09-30 rebuild: most public pages are now authored in src/pages/
+// (see rebuild/site-architecture.md). Supabase still owns the content
+// that's edited from the admin: topic hubs (Content Pillar rows with a
+// category), blog posts, the blog index, and the legal pages. Every other
+// `pages` row is superseded by a code-authored page or a redirect, and is
+// deliberately not built here (it would collide with those routes).
+import { getPublishedPages } from '../lib/pages';
+import type { Page } from '../lib/pages';
+import SupabasePage from '../templates/SupabasePage.astro';
 
-// Homepage renders at "/" via index.astro instead, so it's excluded here
-// even though it's still part of allPages (needed for nav/breadcrumbs).
 export async function getStaticPaths() {
   const pages = await getPublishedPages();
   return pages
-    .filter((p) => p.page_type !== 'Homepage')
-    .map((p) => ({ params: { slug: p.slug }, props: { page: p } }));
+    .filter(
+      (p: Page) =>
+        p.page_type === 'Blog Post' ||
+        p.page_type === 'Blog Index' ||
+        p.page_type === 'Other' ||
+        (p.page_type === 'Content Pillar' && !!p.category),
+    ).map((p) => ({ params: { slug: p.slug }, props: { page: p } }));
 }
 
 interface Props {
   page: Page;
 }
-
 const { page } = Astro.props as Props;
 const allPages = await getPublishedPages();
-const business = await getBusiness();
-
-const templateByType: Record<PageType, unknown> = {
-  Homepage: Homepage,
-  About: About,
-  'Services Overview': ServicesOverview,
-  'Service Page': ServicePage,
-  'Content Pillar': ContentPillar,
-  'Counselor Profile': CounselorProfile,
-  'Service Area': ServiceArea,
-  Contact: Contact,
-  Other: Other,
-  'Blog Post': BlogPost,
-  'Blog Index': BlogIndex,
-  'Who We Serve': WhoWeServe,
-  'Service Areas Overview': ServiceAreasOverview,
-  'Service Hub': ServiceHub,
-  'Counselors Overview': CounselorsOverview,
-  Pricing: Pricing,
-};
-
-const Template = templateByType[page.page_type] as typeof Homepage;
 ---
 
-<Template page={page} allPages={allPages} business={business} />
+<SupabasePage page={page} allPages={allPages} />

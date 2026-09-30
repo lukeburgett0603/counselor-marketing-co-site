@@ -1,0 +1,9 @@
+---
+// The whole brand mark: the name in Geist, "Co." in the accent color.
+interface Props {
+  class?: string;
+}
+const { class: className = 'text-[17px] sm:text-lg' } = Astro.props;
+---
+
+<span class={`whitespace-nowrap font-bold tracking-[-0.02em] text-ink ${className}`}>Counselor Marketing <span class="text-accent">Co.</span></span>

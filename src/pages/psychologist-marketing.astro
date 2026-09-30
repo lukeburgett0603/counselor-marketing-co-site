@@ -1,0 +1,74 @@
+---
+// rebuild/copy/15-psychologists.md. Target: digital marketing services for psychologists.
+import SiteLayout from '../layouts/SiteLayout.astro';
+import PageHero from '../components/site/PageHero.astro';
+import Section from '../components/site/Section.astro';
+import StepsGrid from '../components/site/StepsGrid.astro';
+import PlansLine from '../components/site/PlansLine.astro';
+import CtaBand from '../components/site/CtaBand.astro';
+import Ph from '../components/site/Ph.astro';
+import { rootUrl, service } from '../lib/siteSchema';
+
+const path = '/psychologist-marketing';
+const description =
+  'Digital marketing services for psychologists in private practice: therapy, testing, and evaluations, each found by the right people and referral sources, and tracked to booked clients.';
+const crumbs = [{ name: 'Who We Serve', path: '/who-we-serve' }, { name: 'Psychologists', path }];
+const siteUrl = rootUrl(Astro.site, Astro.url);
+---
+
+<SiteLayout
+  title="Digital Marketing Services for Psychologists | Counselor Marketing Co."
+  description={description}
+  path={path}
+  crumbs={crumbs}
+  schema={[service(siteUrl, { name: 'Digital Marketing Services for Psychologists', description, path, serviceType: 'Marketing for psychology practices' })]}
+>
+  <PageHero
+    eyebrow="For psychologists in private practice"
+    title="Therapy, testing, and evaluations each need their own path to you."
+    sub="Our digital marketing services for psychologists treat each part of your practice separately, because each is found differently."
+    crumbs={crumbs}
+  />
+
+  <Section>
+    <div class="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
+      <h2 class="h2">One website page can't sell everything you do.</h2>
+      <div class="space-y-4 text-[17px] text-muted">
+        <p>
+          The parent looking for an ADHD evaluation and the adult looking for therapy search differently and come from different
+          referral sources.
+        </p>
+        <p>
+          Psychologists often offer services with very different clients: therapy, psychological testing, and evaluations. A single
+          "services" page serves none of them well. Testing referrals often come from pediatricians, schools, and physicians. Therapy
+          clients more often come from search. Each needs its own page, its own search terms, and its own referral partners.
+        </p>
+      </div>
+    </div>
+  </Section>
+
+  <Section title="How the system works for psychologists">
+    <StepsGrid
+      details={[
+        'A page for each service and population ("ADHD testing for children in [city]," "therapy for anxiety"), built from real search data for your area.',
+        'Clear answers about process, timelines, and cost, which matter even more for testing and evaluations.',
+        'Outreach to the pediatricians, schools, and physicians who send testing and evaluation referrals.',
+        'Leads by service and response times, so every inquiry gets a fast reply.',
+        'New clients by source and by service, so you can see which part of the practice is growing.',
+      ]}
+    />
+  </Section>
+
+  <Section narrow>
+    <div class="flex gap-4 rounded-card border border-line p-6">
+      <Ph name="scales" class="mt-0.5 size-6 text-accent" />
+      <p class="text-muted">
+        <span class="font-medium text-ink">Ethics:</span> built around the APA's Ethical Principles, including its guidance on
+        testimonials, by a licensed counselor who practices under a similar code.
+      </p>
+    </div>
+  </Section>
+
+  <PlansLine />
+  <CtaBand title="Find out which part of your practice has the most room to grow." />
+</SiteLayout>

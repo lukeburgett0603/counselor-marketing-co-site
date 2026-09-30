@@ -1,0 +1,16 @@
+---
+// "What you'll see in your dashboard" callout, used on every service page.
+import Ph from './Ph.astro';
+interface Props {
+  title?: string;
+}
+const { title = "What you'll see in your dashboard" } = Astro.props;
+---
+
+<div class="flex gap-4 rounded-card bg-accent-soft p-6">
+  <Ph name="chart-line-up" class="mt-0.5 size-6 text-accent" />
+  <div>
+    <p class="font-semibold text-ink">{title}</p>
+    <p class="mt-1 text-ink/80"><slot /></p>
+  </div>
+</div>

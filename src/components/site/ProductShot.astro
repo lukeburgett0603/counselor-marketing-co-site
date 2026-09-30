@@ -1,0 +1,37 @@
+---
+// A real screenshot of the product (or of a client site), never a
+// drawn-with-divs mockup. Dashboard shots use illustrative data only,
+// never a real client's leads, and say so in the caption.
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+
+interface Props {
+  shot: string;
+  alt?: string;
+  caption?: string | false;
+  class?: string;
+}
+const SHOTS: Record<string, { alt: string; caption: string | false }> = {
+  overview: { alt: 'The Overview dashboard: new clients, lead sources, response time, and caseload for each counselor', caption: 'The Overview dashboard. Illustrative data.' },
+  crm: { alt: 'The lead CRM with a due-this-week list of follow-ups', caption: 'The lead CRM. Illustrative data.' },
+  caseload: { alt: 'The caseload meter for each counselor in a group practice', caption: 'Caseload for each counselor. Illustrative data.' },
+  referrals: { alt: 'The referral partner tracker listing local partners and their status', caption: 'The referral partner tracker. Illustrative data.' },
+  'review-program': { alt: 'The review program page with the waiting-room sign and review log', caption: 'The review program. Illustrative data.' },
+  'seo-insights': { alt: 'SEO Insights: tracked searches and ranking positions over time', caption: 'SEO Insights. Illustrative data.' },
+  'freedom-home': { alt: "Freedom Counseling Services' homepage, built by Counselor Marketing Co.", caption: "Freedom Counseling Services' live homepage." },
+};
+const files = import.meta.glob<{ default: ImageMetadata }>('../../assets/shots/*.{png,webp,jpg}', { eager: true });
+const match = Object.entries(files).find(([path]) => path.split('/').pop()!.replace(/\.\w+$/, '') === Astro.props.shot);
+const meta = SHOTS[Astro.props.shot] ?? { alt: '', caption: false };
+const alt = Astro.props.alt ?? meta.alt;
+const caption = Astro.props.caption ?? meta.caption;
+---
+
+{match && (
+  <figure class={Astro.props.class}>
+    <div class="overflow-hidden rounded-card border border-line bg-surface shadow-card">
+      <Image src={match[1].default} alt={alt} widths={[640, 960, 1400]} sizes="(min-width: 1024px) 700px, 100vw" class="block h-auto w-full" />
+    </div>
+    {caption && <figcaption class="mt-3 text-sm text-muted">{caption}</figcaption>}
+  </figure>
+)}

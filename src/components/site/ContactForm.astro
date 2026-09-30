@@ -1,0 +1,78 @@
+---
+// Short message form for /contact. Same submit-lead endpoint and spam
+// honeypot as the audit form.
+---
+
+<form class="contact-form card space-y-4 p-6 sm:p-7" novalidate>
+  <h2 class="text-xl font-semibold tracking-[-0.02em] text-ink">Send a note</h2>
+  <div class="absolute -left-[9999px] h-px w-px overflow-hidden" aria-hidden="true">
+    <input type="text" name="hp_website" tabindex="-1" autocomplete="off" />
+  </div>
+  <label class="block">
+    <span class="mb-1.5 block text-sm font-medium text-ink">Your name</span>
+    <input name="name" required autocomplete="name" class="cf-field" />
+  </label>
+  <label class="block">
+    <span class="mb-1.5 block text-sm font-medium text-ink">Email</span>
+    <input name="email" type="email" required autocomplete="email" class="cf-field" />
+  </label>
+  <label class="block">
+    <span class="mb-1.5 block text-sm font-medium text-ink">Message</span>
+    <textarea name="message" rows="5" required class="cf-field"></textarea>
+  </label>
+  <button type="submit" class="btn-primary w-full">Send</button>
+  <p class="text-[13px] text-muted">I'll reply within one business day.</p>
+  <p class="status text-sm text-ink" role="status" aria-live="polite"></p>
+</form>
+
+<style>
+  .cf-field {
+    width: 100%;
+    font: inherit;
+    font-size: 16px;
+    color: var(--ink);
+    background: var(--page);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    padding: 10px 12px;
+  }
+  .cf-field:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-color: transparent;
+  }
+</style>
+
+<script>
+  const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
+  const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+  document.querySelectorAll<HTMLFormElement>('.contact-form').forEach((form) => {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const status = form.querySelector<HTMLElement>('.status')!;
+      const fd = new FormData(form);
+      if (!String(fd.get('name')).trim() || !String(fd.get('email')).trim() || !String(fd.get('message')).trim()) {
+        status.textContent = 'Please fill in your name, email, and message.';
+        return;
+      }
+      status.textContent = 'Sending...';
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/submit-lead`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({
+          name: fd.get('name'),
+          email: fd.get('email'),
+          message: fd.get('message'),
+          source_page: 'contact',
+          hp_website: fd.get('hp_website') || '',
+        }),
+      });
+      if (res.ok) {
+        form.reset();
+        status.textContent = "Thanks. I'll reply within one business day.";
+      } else {
+        status.textContent = 'Something went wrong. Please try again, or call (303) 594-3897.';
+      }
+    });
+  });
+</script>

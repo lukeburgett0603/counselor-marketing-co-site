@@ -1,0 +1,107 @@
+---
+// rebuild/copy/11-platform.md. Steps 4 and 5. Proof page: real screenshots,
+// illustrative data only.
+import SiteLayout from '../layouts/SiteLayout.astro';
+import PageHero from '../components/site/PageHero.astro';
+import Section from '../components/site/Section.astro';
+import FeatureList from '../components/site/FeatureList.astro';
+import ProductShot from '../components/site/ProductShot.astro';
+import SystemFit from '../components/site/SystemFit.astro';
+import Faq from '../components/site/Faq.astro';
+import CtaBand from '../components/site/CtaBand.astro';
+import Ph from '../components/site/Ph.astro';
+import { HIPAA_ANSWER } from '../lib/site';
+import { withBase } from '../lib/url';
+import { rootUrl, service } from '../lib/siteSchema';
+
+const path = '/platform';
+const description =
+  "Instant lead alerts, automatic replies, a CRM that won't let a lead slip, and one dashboard showing new clients, their sources, and how full your caseload is. Included on every plan.";
+const crumbs = [{ name: 'Services', path: '/services' }, { name: 'The Platform', path }];
+const faqs = [
+  { q: 'Is the platform included?', a: 'Yes, on every plan, from Self-Guided at $149/mo.' },
+  { q: 'Can my whole team use it?', a: 'Yes. Counselors can manage their own settings and caseload; owners see everything.' },
+  { q: 'Is it HIPAA compliant?', a: HIPAA_ANSWER },
+  { q: 'Does it replace my EHR?', a: 'No. It handles everything before someone becomes a client. Your EHR handles everything after.' },
+];
+const siteUrl = rootUrl(Astro.site, Astro.url);
+---
+
+<SiteLayout
+  title="The Counseling Practice Growth Platform | Counselor Marketing Co."
+  description={description}
+  path={path}
+  crumbs={crumbs}
+  faqs={faqs}
+  schema={[service(siteUrl, { name: 'The Counselor Marketing Co. Platform', description, path, serviceType: 'Lead management and reporting for counseling practices' })]}
+>
+  <PageHero
+    eyebrow="Steps 4 and 5 of the Full Caseload System: Get Booked, Watch It Work"
+    title="See every new client coming, and never miss one."
+    sub="The platform answers every inquiry fast, reminds you until each one is handled, and shows how full your caseload is."
+    crumbs={crumbs}
+  />
+
+  <Section>
+    <div class="grid items-center gap-10 lg:grid-cols-[1fr_1.3fr] lg:gap-16">
+      <div>
+        <p class="text-sm font-medium text-accent">Get Booked</p>
+        <h2 class="h2 mt-2">Answer first. Follow up every time.</h2>
+        <p class="mt-5 text-[17px] text-muted">
+          Someone reaching out for counseling may contact more than one practice. The platform makes sure yours answers first and
+          nothing gets missed.
+        </p>
+      </div>
+      <ProductShot shot="crm" />
+    </div>
+    <div class="mt-10">
+      <FeatureList
+        items={[
+          { t: 'An instant confirmation', d: 'To every person who reaches out, with what happens next (never repeating what they wrote, for their privacy).', icon: 'envelope-simple' },
+          { t: 'An instant alert', d: 'To you or your front desk.', icon: 'bell' },
+          { t: 'A CRM with a "due this week" list', d: 'So every lead gets a reply and a follow-up.', icon: 'calendar-check' },
+          { t: 'Speed to lead, measured', d: 'Your median response time and how many leads you reach within 24 hours.', icon: 'clock' },
+        ]}
+      />
+    </div>
+  </Section>
+
+  <Section>
+    <p class="text-sm font-medium text-accent">Watch It Work</p>
+    <h2 class="h2 mt-2 max-w-3xl">One screen that shows the whole system working.</h2>
+    <ProductShot shot="overview" class="mt-10" />
+    <div class="mt-10">
+      <FeatureList
+        items={[
+          { t: 'New clients this month', d: 'And where they came from: search, Maps, referrals, or ads.', icon: 'users-three' },
+          { t: 'Your caseload meter', d: 'Current clients against a full caseload, for the practice and for each counselor.', icon: 'gauge' },
+          { t: 'Every step at a glance', d: 'Visits, rankings, reviews, referral partners, and response times.', icon: 'squares-four' },
+          { t: 'Needs attention', d: 'Leads waiting too long, follow-ups overdue, and anything else to act on this week.', icon: 'warning-circle' },
+          { t: 'A printable monthly report', d: "So you never wait on an agency's summary.", icon: 'printer' },
+        ]}
+      />
+    </div>
+    <ProductShot shot="caseload" class="mt-10" />
+  </Section>
+
+  <Section>
+    <div class="grid gap-10 lg:grid-cols-2 lg:gap-16">
+      <div>
+        <h2 class="h3">And the rest of the toolkit</h2>
+        <p class="mt-2 text-muted">The review program, referral partner tracker and outreach kit, content plan, rank tracking, and Google Ads tracking all live here too.</p>
+      </div>
+      <div>
+        <h2 class="h3">Your data, always yours</h2>
+        <p class="mt-2 text-muted">
+          Download everything any time: leads, notes, partners, reviews, all of it. If you ever leave, your website and your data go
+          with you. The platform stays with us.
+        </p>
+        <a href={withBase('/your-data')} class="link-arrow mt-3 text-[15px]">Your Data Is Yours <Ph name="arrow-right" class="size-3.5" /></a>
+      </div>
+    </div>
+  </Section>
+
+  <SystemFit current="booked" />
+  <Faq faqs={faqs} />
+  <CtaBand title="See what the platform would show for your practice." />
+</SiteLayout>

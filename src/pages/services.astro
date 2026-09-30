@@ -1,0 +1,95 @@
+---
+// rebuild/copy/05-services.md. Target: marketing services for counseling practices.
+import SiteLayout from '../layouts/SiteLayout.astro';
+import PageHero from '../components/site/PageHero.astro';
+import Section from '../components/site/Section.astro';
+import CtaBand from '../components/site/CtaBand.astro';
+import Ph from '../components/site/Ph.astro';
+import { withBase } from '../lib/url';
+import { rootUrl, itemList } from '../lib/siteSchema';
+
+const path = '/services';
+const groups = [
+  {
+    step: 'Get Found',
+    icon: 'magnifying-glass',
+    items: [
+      { t: 'Website Design', h: '/website-design', d: "A fast site built for your specialties and location, so the right people recognize you're the counselor for them." },
+      { t: 'SEO & Google Maps', h: '/seo', d: 'Show up when people in your area search for a counselor, including the map results most people click first.' },
+      { t: 'Google Ads', h: '/google-ads-for-therapists', d: 'Inquiries in weeks, while your search rankings build. $300/mo add-on; your ad budget goes directly to Google.' },
+    ],
+  },
+  {
+    step: 'Get Chosen',
+    icon: 'star',
+    items: [{ t: 'Ethical Reviews', h: '/ethical-reviews', d: 'Grow your Google rating without ever asking a client for a review. Freedom Counseling Services went from 3.5 to 4.0 stars in three weeks.' }],
+  },
+  {
+    step: 'Get Referred',
+    icon: 'handshake',
+    items: [{ t: 'Referral Marketing', h: '/referral-marketing', d: 'Become the counselor local doctors, attorneys, pastors, and school counselors think of first.' }],
+  },
+  {
+    step: 'Get Booked and Watch It Work',
+    icon: 'lightning',
+    items: [{ t: 'The Platform', h: '/platform', d: "Instant alerts, automatic replies, and a CRM that won't let a lead slip. Then one dashboard showing new clients, where they came from, and how full your caseload is." }],
+  },
+];
+const siteUrl = rootUrl(Astro.site, Astro.url);
+---
+
+<SiteLayout
+  title="Marketing Services for Counseling Practices | Counselor Marketing Co."
+  description="Website design, SEO and Google Maps, Google Ads, ethical reviews, referral marketing, and a platform that tracks new clients. Every service is one step of the Full Caseload System."
+  path={path}
+  crumbs={[{ name: 'Services', path }]}
+  schema={[itemList(siteUrl, groups.flatMap((g) => g.items.map((i) => ({ name: i.t, path: i.h }))))]}
+>
+  <PageHero
+    title="Every service we offer does one job: fill your caseload."
+    sub="Our marketing services for counseling practices follow the path a new client takes to reach you. Each one shows up in your dashboard."
+    crumbs={[{ name: 'Services', path }]}
+  />
+
+  <section class="wrap">
+    <div class="border-t border-line">
+      {groups.map((g) => (
+        <div class="grid gap-6 border-b border-line py-8 lg:grid-cols-[260px_1fr] lg:gap-12">
+          <div class="flex items-center gap-3 self-start">
+            <span class="grid size-9 place-items-center rounded-control bg-accent-soft text-accent"><Ph name={g.icon} class="size-5" /></span>
+            <h2 class="h3">{g.step}</h2>
+          </div>
+          <ul class:list={['grid gap-4', g.items.length > 1 && 'md:grid-cols-3']}>
+            {g.items.map((i) => (
+              <li>
+                <a href={withBase(i.h)} class="card group flex h-full flex-col p-6 transition-colors hover:border-accent">
+                  <span class="flex items-center justify-between gap-4 text-lg font-semibold tracking-[-0.015em] text-ink">
+                    {i.t}
+                    <Ph name="arrow-right" class="size-4 text-accent transition-transform group-hover:translate-x-0.5" />
+                  </span>
+                  <span class="mt-2 text-[15px] text-muted">{i.d}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Section>
+    <div class="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
+      <h2 class="h2">Why you don't pick services one at a time</h2>
+      <div>
+        <p class="text-[17px] text-muted">
+          An open caseload rarely has one cause. A beautiful website with no referral partners, or great rankings with slow
+          follow-up, still leaves spots empty. That's why every plan includes all five steps. You choose who runs them, not which
+          ones you get.
+        </p>
+        <a href={withBase('/pricing')} class="link-arrow mt-5">See pricing <Ph name="arrow-right" class="size-4" /></a>
+      </div>
+    </div>
+  </Section>
+
+  <CtaBand title="Not sure where you're losing clients?" body="Your free audit checks all five steps and shows which one to fix first." />
+</SiteLayout>

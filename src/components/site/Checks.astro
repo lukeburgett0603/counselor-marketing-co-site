@@ -1,0 +1,20 @@
+---
+// A plain checklist. Items may contain inline HTML (bold, links written
+// with withBase already applied by the caller).
+import Ph from './Ph.astro';
+interface Props {
+  items: string[];
+  icon?: string;
+  class?: string;
+}
+const { items, icon = 'check', class: className = '' } = Astro.props;
+---
+
+<ul class={`space-y-3 ${className}`}>
+  {items.map((item) => (
+    <li class="flex gap-3 text-[17px] text-muted">
+      <Ph name={icon} class="mt-1 size-4 text-accent" />
+      <span set:html={item} />
+    </li>
+  ))}
+</ul>

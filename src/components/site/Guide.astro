@@ -1,0 +1,41 @@
+---
+// "I'm a counselor too." The founder's real photo and credential.
+import { Image } from 'astro:assets';
+import headshot from '../../assets/luke-burgett.webp';
+import { withBase } from '../../lib/url';
+import Ph from './Ph.astro';
+
+interface Props {
+  title?: string;
+  link?: boolean;
+}
+const { title = "I'm a counselor too.", link = true } = Astro.props;
+---
+
+<section class="wrap py-14 lg:py-20">
+  <div class="grid items-center gap-10 md:grid-cols-[280px_1fr] lg:gap-16">
+    <Image
+      src={headshot}
+      alt="Luke Burgett, LPCA, founder of Counselor Marketing Co."
+      widths={[280, 560]}
+      sizes="(min-width: 768px) 280px, 100vw"
+      class="aspect-[4/5] w-full max-w-[280px] rounded-card object-cover"
+    />
+    <div class="max-w-2xl">
+      <h2 class="h2">{title}</h2>
+      <div class="mt-5 space-y-4 text-[17px] text-muted">
+        <slot>
+          <p>
+            I'm Luke Burgett, a Licensed Professional Counselor Associate (LPCA) in Kentucky, with my own private practice. I know
+            what an open spot on the calendar feels like, and I'm bound by the same ethics codes you are.
+          </p>
+          <p>
+            I built Counselor Marketing Co. because the counselors I know are excellent at the work and have no idea how clients
+            are supposed to find them. You shouldn't have to become a marketer to keep your practice full.
+          </p>
+        </slot>
+      </div>
+      {link && <a href={withBase('/about')} class="link-arrow mt-6">More about Luke <Ph name="arrow-right" class="size-4" /></a>}
+    </div>
+  </div>
+</section>

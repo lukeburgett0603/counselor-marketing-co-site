@@ -1,0 +1,25 @@
+---
+// A page section with an optional heading block. `narrow` caps the width
+// for reading; `id` makes it linkable. No background changes between
+// sections (a standing brand decision): contrast comes from the cards.
+interface Props {
+  title?: string;
+  intro?: string;
+  id?: string;
+  narrow?: boolean;
+  class?: string;
+}
+const { title, intro, id, narrow = false, class: className = '' } = Astro.props;
+---
+
+<section id={id} class={`wrap py-14 lg:py-20 ${className}`}>
+  <div class:list={[narrow && 'max-w-3xl']}>
+    {(title || intro) && (
+      <div class="mb-10 max-w-3xl">
+        {title && <h2 class="h2">{title}</h2>}
+        {intro && <p class="lede mt-4">{intro}</p>}
+      </div>
+    )}
+    <slot />
+  </div>
+</section>

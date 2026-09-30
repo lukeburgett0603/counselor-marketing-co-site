@@ -1,0 +1,74 @@
+---
+// rebuild/copy/18-about-contact-your-data.md (About). Target: counselor marketing agency.
+import SiteLayout from '../layouts/SiteLayout.astro';
+import PageHero from '../components/site/PageHero.astro';
+import Section from '../components/site/Section.astro';
+import FeatureList from '../components/site/FeatureList.astro';
+import CtaBand from '../components/site/CtaBand.astro';
+import { Image } from 'astro:assets';
+import headshot from '../assets/luke-burgett.webp';
+import { SITE } from '../lib/site';
+import { rootUrl, webPage } from '../lib/siteSchema';
+
+const path = '/about';
+const description =
+  'Counselor Marketing Co. was built by Luke Burgett, a licensed counselor, to give counseling practices a client-getting system that respects their ethics code.';
+const siteUrl = rootUrl(Astro.site, Astro.url);
+const aboutPage = { ...webPage(siteUrl, { name: 'About Counselor Marketing Co.', description, path }), '@type': 'AboutPage', mainEntity: { '@id': `${siteUrl}/about#luke-burgett` } };
+---
+
+<SiteLayout title="About Counselor Marketing Co. | Built by a Licensed Counselor" description={description} path={path} crumbs={[{ name: 'About', path }]} schema={[aboutPage]}>
+  <PageHero
+    title="A counselor marketing agency, built by a counselor."
+    sub="Counselor Marketing Co. exists because excellent counselors shouldn't lose clients to practices that are simply better at marketing."
+    crumbs={[{ name: 'About', path }]}
+    cta={false}
+  />
+
+  <section class="wrap">
+    <div class="grid items-start gap-10 md:grid-cols-[320px_1fr] lg:gap-16">
+      <figure>
+        <Image
+          src={headshot}
+          alt="Luke Burgett, LPCA, founder of Counselor Marketing Co."
+          widths={[320, 640]}
+          sizes="(min-width: 768px) 320px, 100vw"
+          class="aspect-[4/5] w-full rounded-card object-cover"
+        />
+        <figcaption class="mt-3 text-sm text-muted">
+          <span class="font-medium text-ink">{SITE.founder}, {SITE.credential}</span><br />{SITE.credentialLong}, {SITE.licenseState}
+        </figcaption>
+      </figure>
+      <div class="max-w-2xl space-y-5 text-[17px] text-muted">
+        <p>
+          I'm Luke Burgett, a Licensed Professional Counselor Associate (LPCA) in Kentucky. I run my own private practice, working with
+          men and with leaders facing burnout. I know the weight of an open spot on the calendar, and I'm bound by the same ethics codes
+          you are.
+        </p>
+        <p>
+          When I looked at how counselors were being marketed, I saw two options. Cheap website builders that give you a site and leave
+          the rest to you. And agencies that don't know the difference between marketing a dentist and marketing a therapist, and whose
+          playbook (testimonials, outcome promises, gifts for referrals) can put a license at risk.
+        </p>
+        <p class="text-ink">
+          So I built a third option: the Full Caseload System. It's a website plus everything that brings clients to it, done ethically,
+          and measured in the thing you care about: a full caseload.
+        </p>
+        <p><a href={SITE.linkedin} class="font-medium text-accent hover:underline" rel="me noopener">Luke on LinkedIn</a></p>
+      </div>
+    </div>
+  </section>
+
+  <Section title="What we believe">
+    <FeatureList
+      items={[
+        { t: "You shouldn't have to become a marketer", d: 'To keep your practice full.', icon: 'hand-heart' },
+        { t: 'Marketing a counseling practice is different', d: 'It has to respect confidentiality, your ethics code, and the person on the other side of the search.', icon: 'scales' },
+        { t: 'You should see it working', d: 'In clients and caseload, not clicks.', icon: 'chart-line-up' },
+        { t: 'Your data is yours', d: 'Always.', icon: 'download-simple' },
+      ]}
+    />
+  </Section>
+
+  <CtaBand />
+</SiteLayout>

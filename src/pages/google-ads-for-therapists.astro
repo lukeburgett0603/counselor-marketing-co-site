@@ -1,0 +1,82 @@
+---
+// rebuild/copy/08-google-ads.md. Target: google ads for therapists.
+import SiteLayout from '../layouts/SiteLayout.astro';
+import PageHero from '../components/site/PageHero.astro';
+import Section from '../components/site/Section.astro';
+import FeatureList from '../components/site/FeatureList.astro';
+import SystemFit from '../components/site/SystemFit.astro';
+import Faq from '../components/site/Faq.astro';
+import CtaBand from '../components/site/CtaBand.astro';
+import { rootUrl, service } from '../lib/siteSchema';
+
+const path = '/google-ads-for-therapists';
+const description =
+  'Google Ads for therapists and counselors: inquiries in weeks while SEO builds, tracked through to booked clients, with your ad budget paid directly to Google from your own account.';
+const crumbs = [{ name: 'Services', path: '/services' }, { name: 'Google Ads', path }];
+const faqs = [
+  { q: 'How much should I spend on ads?', a: 'It depends on how competitive your area is. Your audit includes a suggested starting budget.' },
+  { q: 'Do you mark up my ad spend?', a: 'No. You pay Google directly from your own account.' },
+  { q: 'Will I know if ads are working?', a: 'Yes. Your dashboard shows leads and clients from ads, by campaign and keyword.' },
+  { q: 'Can I stop anytime?', a: "Yes. It's month-to-month." },
+];
+const siteUrl = rootUrl(Astro.site, Astro.url);
+const svc = service(siteUrl, { name: 'Google Ads Management for Therapists', description, path, serviceType: 'Pay-per-click advertising management' });
+svc.offers = {
+  '@type': 'Offer',
+  price: 300,
+  priceCurrency: 'USD',
+  priceSpecification: { '@type': 'UnitPriceSpecification', price: 300, priceCurrency: 'USD', unitCode: 'MON' },
+};
+---
+
+<SiteLayout
+  title="Google Ads for Therapists | $300/mo Management, No Tracking Pixels"
+  description={description}
+  path={path}
+  crumbs={crumbs}
+  faqs={faqs}
+  schema={[svc]}
+>
+  <PageHero
+    eyebrow="Step 1 of the Full Caseload System: Get Found"
+    title="Inquiries in weeks, while your rankings build."
+    sub="Google Ads for therapists bridges the months before SEO pays off, and your dashboard shows which clicks became real clients."
+    crumbs={crumbs}
+  />
+
+  <Section>
+    <div class="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
+      <h2 class="h2">Ads are a bridge, not a foundation.</h2>
+      <p class="text-[17px] text-muted">
+        Search rankings take months. If you have open spots now, ads put you at the top of Google this week for the searches that
+        matter in your area. As your rankings grow, you can spend less on ads, or stop. Your audit will tell you whether ads make
+        sense for your practice yet.
+      </p>
+    </div>
+  </Section>
+
+  <Section title="What we do">
+    <FeatureList
+      items={[
+        { t: 'Campaign setup and management', d: 'The searches worth paying for, ads that speak to someone nervous about reaching out, and landing on the right page of your site.' },
+        { t: 'Tracking through to booked clients', d: 'Your dashboard shows leads and clients from each campaign and keyword, not just clicks.' },
+        { t: 'Ethical by design', d: "No ad-tracking scripts on your site. Clicks are remembered only in the visitor's own browser, and nothing about your clients goes to Google unless you choose to send it." },
+        { t: 'You own the account', d: 'Your ad budget is paid directly to Google from your own account, so there are no markups on spend, and your data stays yours.' },
+      ]}
+    />
+  </Section>
+
+  <Section>
+    <div class="card grid gap-6 p-8 md:grid-cols-[auto_1fr] md:items-center md:gap-12">
+      <p class="font-mono text-5xl font-medium tracking-tight text-ink">$300<span class="text-xl text-muted">/mo</span></p>
+      <p class="text-[17px] text-muted">
+        Management, on any plan, plus your ad budget paid directly to Google. Cancel anytime. We'll suggest a starting budget for
+        your market in your audit.
+      </p>
+    </div>
+  </Section>
+
+  <SystemFit current="found" />
+  <Faq faqs={faqs} />
+  <CtaBand title="Need clients sooner?" />
+</SiteLayout>

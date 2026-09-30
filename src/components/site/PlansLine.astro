@@ -1,0 +1,23 @@
+---
+// The one-line plan summary used on audience pages. Prices from site.ts.
+import { TIERS, BUILD_FEE, money } from '../../lib/site';
+import { withBase } from '../../lib/url';
+import Ph from './Ph.astro';
+---
+
+<section class="wrap py-10">
+  <div class="card flex flex-col gap-5 p-6 lg:flex-row lg:items-center lg:justify-between">
+    <ul class="flex flex-col gap-3 sm:flex-row sm:gap-8">
+      {TIERS.map((t) => (
+        <li>
+          <span class="text-sm text-muted">{t.name}</span>
+          <span class="block font-mono text-xl font-medium text-ink">{t.key === 'group' ? 'from ' : ''}{t.priceLabel}<span class="text-sm text-muted">/mo</span></span>
+        </li>
+      ))}
+    </ul>
+    <p class="text-[15px] text-muted">
+      All start with a {money(BUILD_FEE)} build.
+      <a href={withBase('/pricing')} class="link-arrow ml-2">Compare plans <Ph name="arrow-right" class="size-4" /></a>
+    </p>
+  </div>
+</section>

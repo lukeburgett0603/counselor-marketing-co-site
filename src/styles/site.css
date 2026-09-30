@@ -1,0 +1,267 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@import "@fontsource-variable/geist";
+@import "@fontsource/geist-mono/500.css";
+
+/*
+ * Public-site design system (2026-09-30 rebuild, approved direction in
+ * rebuild/design/). Calm, confident software for counselors: zinc
+ * neutrals, ONE cobalt accent used for every action and link and nothing
+ * else, Geist for everything, Geist Mono only for numbers. Admin pages
+ * keep their own global.css; nothing here leaks into /admin.
+ *
+ * Colors are CSS variables so dark mode is a variable swap, not a second
+ * set of classes: automatic via prefers-color-scheme, overridable with
+ * <html data-theme="light|dark"> (the footer's theme switch).
+ */
+:root {
+  --page: #fafafa;
+  --surface: #ffffff;
+  --line: #e4e4e7;
+  --ink: #18181b;
+  --muted: #52525b;
+  --accent: #2447d6;
+  --accent-hover: #1c39b0;
+  --accent-ink: #ffffff;
+  --accent-soft: #e9eefc;
+  --shadow: 0 1px 2px rgb(24 24 27 / 0.04), 0 8px 24px -12px rgb(24 24 27 / 0.12);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #0c0c0e;
+    --surface: #151518;
+    --line: #27272a;
+    --ink: #f4f4f5;
+    --muted: #a1a1aa;
+    --accent: #7390ff;
+    --accent-hover: #93aaff;
+    --accent-ink: #0c0c0e;
+    --accent-soft: #172150;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px -12px rgb(0 0 0 / 0.6);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --page: #0c0c0e;
+  --surface: #151518;
+  --line: #27272a;
+  --ink: #f4f4f5;
+  --muted: #a1a1aa;
+  --accent: #7390ff;
+  --accent-hover: #93aaff;
+  --accent-ink: #0c0c0e;
+  --accent-soft: #172150;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px -12px rgb(0 0 0 / 0.6);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --shadow-card: var(--shadow);
+  --radius-control: 8px;
+  --radius-card: 14px;
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-padding-top: 88px;
+}
+body {
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, h4 {
+  text-wrap: balance;
+}
+::selection {
+  background: var(--accent-soft);
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Long-form body copy (pillar, legal, blog, case study). */
+.prose-site {
+  --tw-prose-body: var(--muted);
+  --tw-prose-headings: var(--ink);
+  --tw-prose-lead: var(--muted);
+  --tw-prose-links: var(--accent);
+  --tw-prose-bold: var(--ink);
+  --tw-prose-counters: var(--muted);
+  --tw-prose-bullets: var(--accent);
+  --tw-prose-hr: var(--line);
+  --tw-prose-quotes: var(--ink);
+  --tw-prose-quote-borders: var(--accent);
+  --tw-prose-captions: var(--muted);
+  --tw-prose-code: var(--ink);
+  --tw-prose-th-borders: var(--line);
+  --tw-prose-td-borders: var(--line);
+}
+.prose-site :where(h2) {
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+.prose-site :where(h3) {
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+.prose-site :where(a) {
+  font-weight: 500;
+  text-underline-offset: 3px;
+}
+.prose-site blockquote p:first-of-type::before,
+.prose-site blockquote p:last-of-type::after {
+  content: none;
+}
+
+/* Tables in comparison and pricing content: HTML, never images, so AI
+   search and screen readers can read them. Scroll inside their own box on
+   phones instead of widening the page. */
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+.table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+  margin: 0;
+}
+.table-wrap th,
+.table-wrap td {
+  text-align: left;
+  vertical-align: top;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.table-wrap thead th {
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.table-wrap tbody tr:last-child td {
+  border-bottom: 0;
+}
+.table-wrap td {
+  color: var(--muted);
+}
+.table-wrap td:first-child {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+@layer components {
+  .wrap {
+    margin-inline: auto;
+    max-width: 1200px;
+    padding-inline: 16px;
+  }
+  @media (min-width: 640px) {
+    .wrap {
+      padding-inline: 24px;
+    }
+  }
+  .btn-primary,
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 1.25;
+    border-radius: var(--radius-control);
+    padding: 13px 20px;
+    transition: background-color 0.15s, border-color 0.15s, transform 0.15s;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .btn-primary:hover {
+    background: var(--accent-hover);
+  }
+  .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: wait;
+  }
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--line);
+  }
+  .btn-secondary:hover {
+    border-color: var(--muted);
+  }
+  .btn-primary:active,
+  .btn-secondary:active {
+    transform: translateY(1px);
+  }
+  .link-arrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+    color: var(--accent);
+  }
+  .link-arrow:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+  }
+  .h2 {
+    font-size: clamp(28px, 3.2vw, 38px);
+    line-height: 1.12;
+    letter-spacing: -0.03em;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .h3 {
+    font-size: 20px;
+    line-height: 1.3;
+    letter-spacing: -0.015em;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .lede {
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--muted);
+  }
+}

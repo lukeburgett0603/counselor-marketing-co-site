@@ -1,0 +1,45 @@
+---
+// rebuild/copy/18-about-contact-your-data.md (Contact). The phone number is
+// temporary until a business line exists.
+import SiteLayout from '../layouts/SiteLayout.astro';
+import PageHero from '../components/site/PageHero.astro';
+import ContactForm from '../components/site/ContactForm.astro';
+import Ph from '../components/site/Ph.astro';
+import { SITE } from '../lib/site';
+import { withBase } from '../lib/url';
+import { rootUrl } from '../lib/siteSchema';
+
+const path = '/contact';
+const description = 'Talk with a licensed counselor about filling your practice\'s caseload. Call, or request your free Caseload Audit.';
+const siteUrl = rootUrl(Astro.site, Astro.url);
+const contactPage = { '@type': 'ContactPage', name: 'Contact Counselor Marketing Co.', url: `${siteUrl}${path}`, description };
+---
+
+<SiteLayout title="Contact Counselor Marketing Co." description={description} path={path} crumbs={[{ name: 'Contact', path }]} schema={[contactPage]}>
+  <PageHero
+    title="Let's talk about your practice."
+    sub="The fastest way to a real answer is a free Caseload Audit. If you'd rather just talk, call or send a note."
+    crumbs={[{ name: 'Contact', path }]}
+    cta={false}
+  />
+  <section class="wrap">
+    <div class="grid items-start gap-6 lg:grid-cols-[1fr_1fr]">
+      <div class="space-y-6">
+        <div class="card border-accent p-7">
+          <Ph name="file-text" class="size-7 text-accent" />
+          <h2 class="mt-4 text-xl font-semibold tracking-[-0.02em] text-ink">Free Caseload Audit</h2>
+          <p class="mt-2 text-muted">A written plan for your practice within 48 hours. Free, and no obligation.</p>
+          <a href={withBase(SITE.auditPath)} class="btn-primary mt-6">{SITE.auditCta} <Ph name="arrow-right" class="size-4" /></a>
+        </div>
+        <div class="card flex items-center gap-4 p-7">
+          <Ph name="phone" class="size-7 text-accent" />
+          <div>
+            <p class="text-sm text-muted">Call</p>
+            <a href="tel:+13035943897" class="text-xl font-semibold text-ink hover:text-accent">(303) 594-3897</a>
+          </div>
+        </div>
+      </div>
+      <ContactForm />
+    </div>
+  </section>
+</SiteLayout>

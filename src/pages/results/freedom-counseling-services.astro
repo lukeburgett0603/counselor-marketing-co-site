@@ -1,0 +1,103 @@
+---
+// rebuild/copy/17-results-and-freedom.md (case study). Freedom's site
+// screenshots approved 2026-09-30. Only the result Freedom has approved
+// sharing (3.5 to 4.0 stars) is published; the 74% lead-to-client rate
+// stays internal until they say otherwise.
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import PageHero from '../../components/site/PageHero.astro';
+import Section from '../../components/site/Section.astro';
+import StepsGrid from '../../components/site/StepsGrid.astro';
+import ProductShot from '../../components/site/ProductShot.astro';
+import TestimonialSlot from '../../components/site/TestimonialSlot.astro';
+import CtaBand from '../../components/site/CtaBand.astro';
+import { rootUrl, article } from '../../lib/siteSchema';
+
+const path = '/results/freedom-counseling-services';
+const description =
+  'How a five-counselor Christian counseling practice in Louisville moved to the Full Caseload System and went from 3.5 to 4.0 Google stars in three weeks.';
+const crumbs = [{ name: 'Results', path: '/results' }, { name: 'Freedom Counseling Services', path }];
+const siteUrl = rootUrl(Astro.site, Astro.url);
+---
+
+<SiteLayout
+  title="Freedom Counseling Services Case Study | Counselor Marketing Co."
+  description={description}
+  path={path}
+  crumbs={crumbs}
+  ogType="article"
+  schema={[
+    article(siteUrl, {
+      headline: 'Freedom Counseling Services: from a template website to the Full Caseload System',
+      description,
+      path,
+      datePublished: '2026-09-30',
+    }),
+  ]}
+>
+  <PageHero
+    eyebrow="Case study"
+    title="Freedom Counseling Services: from a template website to the Full Caseload System."
+    crumbs={crumbs}
+    cta={false}
+  />
+
+  <section class="wrap">
+    <dl class="card grid divide-y divide-line md:grid-cols-3 md:divide-x md:divide-y-0">
+      <div class="p-6">
+        <dt class="text-sm text-muted">Google rating, in three weeks</dt>
+        <dd class="mt-1 font-mono text-3xl font-medium tracking-tight text-ink">3.5 → 4.0</dd>
+      </div>
+      <div class="p-6">
+        <dt class="text-sm text-muted">Counselors, each with a page and caseload meter</dt>
+        <dd class="mt-1 font-mono text-3xl font-medium tracking-tight text-ink">5</dd>
+      </div>
+      <div class="p-6">
+        <dt class="text-sm text-muted">Live on the platform since</dt>
+        <dd class="mt-1 font-mono text-3xl font-medium tracking-tight text-ink">Sep 2026</dd>
+      </div>
+    </dl>
+  </section>
+
+  <Section>
+    <div class="grid gap-12 lg:grid-cols-2 lg:gap-16">
+      <div>
+        <h2 class="h3">The practice</h2>
+        <p class="mt-3 text-[17px] text-muted">
+          Freedom Counseling Services is a Christian counseling practice in Louisville, Kentucky, with five counselors across
+          specialties including anxiety, grief, couples and family counseling, EMDR and trauma, and work with teens.
+        </p>
+      </div>
+      <div>
+        <h2 class="h3">Where they started</h2>
+        <p class="mt-3 text-[17px] text-muted">
+          The practice ran on a Squarespace website. It looked fine, but it wasn't built to help the right clients find each counselor,
+          and there was no way to see where inquiries came from or whether they turned into clients.
+        </p>
+      </div>
+    </div>
+    <ProductShot shot="freedom-home" class="mt-12" />
+  </Section>
+
+  <Section title="What we did, step by step">
+    <StepsGrid
+      details={[
+        'Migrated them to a new site with a page for each counselor and specialty, their domain kept, and redirects in place. Set up rank tracking for the searches that matter in Louisville.',
+        "Rebuilt every counselor's page around the questions a first-time client asks. Put the ethical review strategy in place: a simple invitation in the waiting room, no client ever asked directly.",
+        'Set up their referral partner tracker and outreach kit, with a practice handout and church-specific outreach.',
+        'Instant alerts to their office, a CRM with a "due this week" list, and speed-to-lead tracking.',
+        'An Overview dashboard with a caseload meter for each of the five counselors.',
+      ]}
+    />
+  </Section>
+
+  <Section title="The result so far" narrow>
+    <p class="text-[17px] text-muted">
+      <strong class="font-medium text-ink">Their Google rating went from 3.5 to 4.0 stars in three weeks.</strong> That's the first
+      number we're ready to share. The rest of the system has only been live since September 2026, and we'll add results here as they
+      mature, with Freedom's permission.
+    </p>
+    <TestimonialSlot slot="results" class="mt-8" />
+  </Section>
+
+  <CtaBand title="See what the Full Caseload System would do for your practice." />
+</SiteLayout>

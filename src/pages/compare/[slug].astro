@@ -1,0 +1,84 @@
+---
+// The five comparison pages, from src/lib/compare.ts.
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import PageHero from '../../components/site/PageHero.astro';
+import Section from '../../components/site/Section.astro';
+import DataTable from '../../components/site/DataTable.astro';
+import CtaBand from '../../components/site/CtaBand.astro';
+import Ph from '../../components/site/Ph.astro';
+import { COMPARISONS, type Comparison } from '../../lib/compare';
+import { withBase } from '../../lib/url';
+import { rootUrl, article } from '../../lib/siteSchema';
+
+export function getStaticPaths() {
+  return COMPARISONS.map((c) => ({ params: { slug: c.slug }, props: { c } }));
+}
+const { c } = Astro.props as { c: Comparison };
+const path = `/compare/${c.slug}`;
+const crumbs = [{ name: 'Compare', path: '/compare' }, { name: c.name, path }];
+const siteUrl = rootUrl(Astro.site, Astro.url);
+---
+
+<SiteLayout
+  title={c.metaTitle}
+  description={c.description}
+  path={path}
+  crumbs={crumbs}
+  ogType="article"
+  schema={[article(siteUrl, { headline: c.title, description: c.description, path, datePublished: '2026-09-30' })]}
+>
+  <PageHero title={c.title} crumbs={crumbs} cta={false} />
+
+  <section class="wrap">
+    <div class="max-w-3xl rounded-card border border-line bg-surface p-7">
+      <p class="text-sm font-medium text-accent">The short version</p>
+      <p class="mt-3 text-[17px] text-ink">{c.tldr}</p>
+    </div>
+  </section>
+
+  {c.table && (
+    <Section title="At a glance">
+      <DataTable caption={c.title} head={c.table.head} rows={c.table.rows} highlight={2} />
+    </Section>
+  )}
+
+  {c.sections.length > 0 && (
+    <Section>
+      <div class="grid gap-10 md:grid-cols-2 md:gap-x-16">
+        {c.sections.map((s) => (
+          <div>
+            <h2 class="h3">{s.h}</h2>
+            <p class="mt-2 text-muted">{s.p}</p>
+          </div>
+        ))}
+      </div>
+    </Section>
+  )}
+
+  <Section>
+    <div class="grid gap-5 md:grid-cols-2">
+      <div class="card p-7">
+        <p class="text-sm font-medium text-muted">Who {c.name} is best for</p>
+        <p class="mt-2 text-[17px] text-ink">{c.theirFit}</p>
+      </div>
+      <div class="card border-accent p-7">
+        <p class="text-sm font-medium text-accent">Who we're best for</p>
+        <p class="mt-2 text-[17px] text-ink">{c.ourFit}</p>
+      </div>
+    </div>
+    {c.extra && (
+      <p class="mt-8 max-w-3xl text-muted"><span class="font-medium text-ink">{c.extra.h}:</span> {c.extra.p}</p>
+    )}
+    <p class="mt-8 flex max-w-3xl gap-2 text-sm text-muted">
+      <Ph name="calendar-check" class="mt-0.5 size-4" />
+      <span>{c.note ?? `Prices checked ${c.checked} from ${c.name}'s own website (${c.source}). Check their site for current pricing.`}</span>
+    </p>
+    <div class="mt-8 flex flex-wrap gap-x-6 gap-y-2">
+      <a href={withBase('/pricing')} class="link-arrow">Our pricing <Ph name="arrow-right" class="size-4" /></a>
+      <a href={withBase('/how-it-works')} class="link-arrow">How it works <Ph name="arrow-right" class="size-4" /></a>
+      <a href={withBase('/your-data')} class="link-arrow">Your Data Is Yours <Ph name="arrow-right" class="size-4" /></a>
+    </div>
+  </Section>
+
+  <CtaBand title="Not sure which option fits?" body="Your free audit tells you honestly, even if the answer isn't us." />
+</SiteLayout>

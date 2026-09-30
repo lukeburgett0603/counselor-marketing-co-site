@@ -1,0 +1,95 @@
+---
+// rebuild/copy/10-referral-marketing.md. Conversion page.
+import SiteLayout from '../layouts/SiteLayout.astro';
+import PageHero from '../components/site/PageHero.astro';
+import Section from '../components/site/Section.astro';
+import FeatureList from '../components/site/FeatureList.astro';
+import SystemFit from '../components/site/SystemFit.astro';
+import ProductShot from '../components/site/ProductShot.astro';
+import Faq from '../components/site/Faq.astro';
+import CtaBand from '../components/site/CtaBand.astro';
+import Ph from '../components/site/Ph.astro';
+import { ADDONS } from '../lib/site';
+import { rootUrl, service } from '../lib/siteSchema';
+
+const path = '/referral-marketing';
+const description =
+  'Become the counselor local doctors, attorneys, pastors, and schools think of first. A referral partner tracker, ready-to-send outreach kit, and coaching, with an optional done-for-you launch.';
+const crumbs = [{ name: 'Services', path: '/services' }, { name: 'Referral Marketing', path }];
+const faqs = [
+  { q: 'Who should I reach out to first?', a: 'Your audit suggests the kinds of partners worth starting with in your area.' },
+  { q: 'How long until referrals come in?', a: 'It takes a few conversations to build trust. First referrals can come within weeks, depending on the partner.' },
+  { q: 'Can I send the emails from my own address?', a: 'Yes. Everything opens in your own email, so partners hear from you.' },
+];
+const referralAddons = ADDONS.filter((a) => a.name.startsWith('Referral'));
+const siteUrl = rootUrl(Astro.site, Astro.url);
+---
+
+<SiteLayout
+  title="Referral Marketing for Therapists | Build a Local Referral Network"
+  description={description}
+  path={path}
+  crumbs={crumbs}
+  faqs={faqs}
+  schema={[service(siteUrl, { name: 'Referral Marketing for Therapists', description, path, serviceType: 'Referral network development' })]}
+>
+  <PageHero
+    eyebrow="Step 3 of the Full Caseload System: Get Referred"
+    title="Become the counselor your community refers to."
+    sub="Doctors, attorneys, pastors, and school counselors refer people every week. We help you become the name they think of first."
+    crumbs={crumbs}
+  />
+
+  <Section>
+    <div class="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
+      <h2 class="h2">The fastest clients often come from people who already know you.</h2>
+      <p class="text-[17px] text-muted">
+        Search takes months. A pediatrician who trusts you can send a family next week. Most counselors know referral relationships
+        matter, but never have the time, the words, or a system to build them. That's the gap this step fills.
+      </p>
+    </div>
+  </Section>
+
+  <Section title="What you get, on every plan">
+    <FeatureList
+      items={[
+        { t: 'A referral partner tracker', d: "Every doctor's office, attorney, church, and school you're building a relationship with, their stage, your next follow-up, and every touch logged." },
+        { t: 'A ready-to-send outreach kit', d: "Intro emails, follow-ups, drop-off notes, and thank-you notes written for each kind of partner and personalized with your practice's details." },
+        { t: 'A printable practice handout', d: 'A one-page overview of your counselors, specialties, and how to refer, with a QR code to your appointment page.' },
+        { t: "Credit where it's due", d: "When a new lead names a partner, it's linked automatically, so you see which relationships send clients." },
+      ]}
+    />
+    <p class="mt-6 text-muted">On <span class="font-medium text-ink">Done for You</span> and <span class="font-medium text-ink">Group Practice</span>, referral coaching is part of your monthly call.</p>
+    <ProductShot shot="referrals" class="mt-10" />
+  </Section>
+
+  <Section title="Want us to do the legwork?">
+    <div class="card divide-y divide-line">
+      {referralAddons.map((a) => (
+        <div class="grid gap-2 p-6 md:grid-cols-[260px_180px_1fr] md:gap-6">
+          <h3 class="h3">{a.name}</h3>
+          <p class="font-mono text-lg font-medium text-ink">{a.priceLabel}</p>
+          <p class="text-muted">{a.text}</p>
+        </div>
+      ))}
+    </div>
+    <p class="mt-6 max-w-3xl text-muted">You still show up for the coffee. Referral relationships are personal, and that part can't be handed off.</p>
+  </Section>
+
+  <Section narrow>
+    <div class="flex gap-4 rounded-card border border-line p-6">
+      <Ph name="scales" class="mt-0.5 size-6 text-accent" />
+      <div>
+        <h2 class="h3">The ethics</h2>
+        <p class="mt-2 text-muted">
+          Nothing of value is ever offered in exchange for referrals (ACA A.10.b). A thank-you note is always fine. And nothing we
+          send ever names a client or confirms someone became one without their signed release.
+        </p>
+      </div>
+    </div>
+  </Section>
+
+  <SystemFit current="referred" />
+  <Faq faqs={faqs} />
+  <CtaBand title="Find the referral partners you're missing." />
+</SiteLayout>

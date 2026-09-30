@@ -1,0 +1,83 @@
+---
+// rebuild/copy/07-seo.md. Target: SEO for therapists.
+import SiteLayout from '../layouts/SiteLayout.astro';
+import PageHero from '../components/site/PageHero.astro';
+import Section from '../components/site/Section.astro';
+import FeatureList from '../components/site/FeatureList.astro';
+import SeeNote from '../components/site/SeeNote.astro';
+import SystemFit from '../components/site/SystemFit.astro';
+import ProductShot from '../components/site/ProductShot.astro';
+import Faq from '../components/site/Faq.astro';
+import CtaBand from '../components/site/CtaBand.astro';
+import { rootUrl, service } from '../lib/siteSchema';
+
+const path = '/seo';
+const description =
+  'Local SEO for therapists: rank in your area, show up in the Google Maps results, and publish content people (and AI assistants) actually find. Tracked in your dashboard.';
+const crumbs = [{ name: 'Services', path: '/services' }, { name: 'SEO & Google Maps', path }];
+const faqs = [
+  { q: 'Is SEO worth it for a counseling practice?', a: "Most clients still find counselors through Google and Maps, so for most practices, yes. It's the step that keeps working after you stop paying for ads." },
+  { q: "What's the difference between SEO and my Google Business Profile?", a: 'Your profile is what shows in the map results. SEO is everything that helps you rank, on the map and in the listings below it. We handle both.' },
+  { q: 'Do I have to write the articles?', a: 'Not on Done for You or Group Practice. We write, and you approve. On Self-Guided, your content plan tells you what to write.' },
+  { q: 'Can you guarantee rankings?', a: "No one honestly can. We can show you exactly what we're doing and where you rank, every week." },
+];
+const siteUrl = rootUrl(Astro.site, Astro.url);
+---
+
+<SiteLayout
+  title="SEO for Therapists and Google Maps | Counselor Marketing Co."
+  description={description}
+  path={path}
+  crumbs={crumbs}
+  faqs={faqs}
+  schema={[service(siteUrl, { name: 'SEO for Therapists and Google Maps', description, path, serviceType: 'Local SEO' })]}
+>
+  <PageHero
+    eyebrow="Step 1 of the Full Caseload System: Get Found"
+    title="Be the counselor people find when they search in your area."
+    sub="Our SEO for therapists puts your practice ahead of others nearby for the searches that matter, and tracks it every week."
+    crumbs={crumbs}
+  />
+
+  <Section>
+    <div class="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
+      <h2 class="h2">If you're not on the map, you're not in the running.</h2>
+      <div class="space-y-4 text-[17px] text-muted">
+        <p>Most people still find a counselor the same way: a Google search, or the map results right under it.</p>
+        <p>
+          When someone searches "anxiety counselor near me," Google usually shows a map with three practices above the regular
+          results. Many people choose from those three and never scroll further. Practices that rank there aren't always better
+          clinicians. They've just told Google clearly what they do, where, and for whom, and kept telling it.
+        </p>
+      </div>
+    </div>
+  </Section>
+
+  <Section title="What SEO and Google Maps work includes">
+    <FeatureList
+      items={[
+        { t: 'Google Business Profile, managed', d: "Claimed, completed, and kept active with posts, photos, and answers to common questions. Google's own guidance is that complete, accurate, active profiles help you show up." },
+        { t: 'Local SEO', d: 'Your practice name, address, and phone the same everywhere online, specialty and location pages, and the structured data that tells Google what you offer.' },
+        { t: 'Content people actually search for', d: 'Articles built from real search data for your specialties and area: 2 a month on Done for You, 4 on Group Practice. Your content plan shows what to write next on any plan.' },
+        { t: 'Written for AI search too', d: "Clear answers, your real credentials, and structured data give ChatGPT, Perplexity, and Google's AI answers reasons to mention your practice." },
+        { t: 'Rank tracking', d: 'We track your position for the searches that matter: 10 on Self-Guided, 30 on Done for You, 60 on Group Practice.' },
+      ]}
+    />
+    <div class="mt-10 grid items-center gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
+      <SeeNote>Where you rank for each tracked search, what's moving, and which leads told you they found you on Google or Maps.</SeeNote>
+      <ProductShot shot="seo-insights" />
+    </div>
+  </Section>
+
+  <Section title="How long SEO takes" narrow>
+    <p class="text-[17px] text-muted">
+      Search is the slowest step and the one that builds on itself. Google Business Profile fixes can show up within weeks; articles
+      and rankings build over months. Anyone promising page one in 30 days is guessing. That's why the system never relies on search
+      alone: referrals and (if you choose) Google Ads bring inquiries while rankings grow.
+    </p>
+  </Section>
+
+  <SystemFit current="found" />
+  <Faq faqs={faqs} />
+  <CtaBand title="See where you rank today." body="Your free audit shows your real rankings and map position for the searches that matter in your area." />
+</SiteLayout>

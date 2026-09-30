@@ -1,0 +1,225 @@
+---
+// rebuild/copy/20-caseload-calculator.md. Free tool; the math matches the
+// platform's caseload meter (CASELOAD_MULTIPLIER = 1.5) exactly. Results
+// are ungated; the email capture below is optional.
+import SiteLayout from '../layouts/SiteLayout.astro';
+import PageHero from '../components/site/PageHero.astro';
+import Section from '../components/site/Section.astro';
+import Faq from '../components/site/Faq.astro';
+import CtaBand from '../components/site/CtaBand.astro';
+import Ph from '../components/site/Ph.astro';
+import { SITE } from '../lib/site';
+import { withBase } from '../lib/url';
+import { rootUrl, webApplication } from '../lib/siteSchema';
+
+const path = '/caseload-calculator';
+const description =
+  'How many open spots do you really have, and what are they worth? A free calculator for counselors and therapists, using the same caseload math our platform uses.';
+const faqs = [
+  {
+    q: 'Why multiply by 1.5?',
+    a: "Not every client comes weekly. Some come every other week or monthly, so a counselor seeing 20 clients a week usually has closer to 30 on their caseload. It's a rule of thumb, not an exact figure.",
+  },
+  { q: 'Is the 20-session default realistic?', a: "It's a rough estimate. If you know your own average from your EHR, use it." },
+  { q: 'Does this include no-shows?', a: "No. It's a simple estimate. Your actual numbers will be a bit lower." },
+];
+const inputs = [
+  { name: 'weekly', label: 'How many clients do you want to see each week?', help: 'Most full-time counselors see 16 to 30; 20 is typical.', value: 20, min: 1, max: 60, prefix: '' },
+  { name: 'current', label: 'How many active clients do you have right now?', help: "Everyone you're seeing, however often.", value: 18, min: 0, max: 200, prefix: '' },
+  { name: 'fee', label: 'Your average fee per session', help: '', value: 130, min: 0, max: 1000, prefix: '$' },
+  { name: 'sessions', label: 'Average sessions per client', help: '20 is a common estimate for a course of treatment; use your own if you know it.', value: 20, min: 1, max: 200, prefix: '' },
+];
+const siteUrl = rootUrl(Astro.site, Astro.url);
+---
+
+<SiteLayout
+  title="Caseload Calculator for Counselors and Therapists | Free"
+  description={description}
+  path={path}
+  crumbs={[{ name: 'Resources', path: '/blog' }, { name: 'Caseload Calculator', path }]}
+  faqs={faqs}
+  schema={[webApplication(siteUrl, { name: 'Caseload Calculator', description, path })]}
+>
+  <PageHero
+    title="What are your open spots really worth?"
+    sub="Four numbers, ten seconds. See your full caseload, your open spots, and what filling them means for your practice."
+    crumbs={[{ name: 'Resources', path: '/blog' }, { name: 'Caseload Calculator', path }]}
+    cta={false}
+  />
+
+  <section class="wrap">
+    <div class="calc grid items-start gap-6 lg:grid-cols-[1fr_1.1fr]">
+      <form class="card space-y-6 p-6 sm:p-8" onsubmit="return false">
+        {inputs.map((i) => (
+          <label class="block">
+            <span class="block font-medium text-ink">{i.label}</span>
+            {i.help && <span class="mt-0.5 block text-sm text-muted">{i.help}</span>}
+            <span class="relative mt-2 block">
+              {i.prefix && <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-muted">{i.prefix}</span>}
+              <input
+                name={i.name}
+                type="number"
+                inputmode="numeric"
+                value={i.value}
+                min={i.min}
+                max={i.max}
+                class:list={['calc-input w-full rounded-control border border-line bg-page py-2.5 pr-3 font-mono text-lg text-ink', i.prefix ? 'pl-7' : 'pl-3']}
+              />
+            </span>
+          </label>
+        ))}
+      </form>
+
+      <div class="space-y-6 lg:sticky lg:top-24" aria-live="polite">
+        <div class="card divide-y divide-line">
+          <div class="grid grid-cols-2 divide-x divide-line">
+            <div class="p-6">
+              <p class="text-sm text-muted">Your full caseload</p>
+              <p class="mt-1 font-mono text-4xl font-medium tracking-tight text-ink"><span data-out="full">30</span></p>
+              <p class="mt-1 text-xs text-muted">Clients per week × 1.5</p>
+            </div>
+            <div class="p-6">
+              <p class="text-sm text-muted">Open spots</p>
+              <p class="mt-1 font-mono text-4xl font-medium tracking-tight text-accent"><span data-out="open">12</span></p>
+            </div>
+          </div>
+          <div class="p-6">
+            <p class="text-sm text-muted">Each new client is worth about</p>
+            <p class="mt-1 font-mono text-3xl font-medium tracking-tight text-ink" data-out="clientValue">$2,600</p>
+            <p class="mt-1 text-sm text-muted">over their course of treatment</p>
+          </div>
+          <div class="p-6" data-when="open">
+            <p class="text-sm text-muted">Filling your open spots</p>
+            <p class="mt-1 font-mono text-3xl font-medium tracking-tight text-ink"><span data-out="monthlyGap">$4,500</span><span class="text-lg text-muted"> a month</span></p>
+          </div>
+          <div class="hidden p-6" data-when="full">
+            <p class="text-lg font-semibold text-ink">You're full. Nice work.</p>
+            <p class="mt-1 text-muted">Our Self-Guided plan helps keep it that way.</p>
+          </div>
+          <div class="p-6">
+            <p class="text-muted">About <span class="font-mono font-medium text-ink" data-out="coverDFY">4</span> new clients a year would cover our Done for You plan.</p>
+            <p class="mt-2 text-xs text-muted">Estimates only, based on the numbers you entered. Your results will vary.</p>
+          </div>
+        </div>
+
+        <form class="calc-capture card p-6" novalidate>
+          <p class="font-semibold text-ink">Want a plan to fill those <span data-out="open">12</span> spots?</p>
+          <div class="absolute -left-[9999px] h-px w-px overflow-hidden" aria-hidden="true">
+            <input type="text" name="hp_website" tabindex="-1" autocomplete="off" />
+          </div>
+          <div class="mt-4 flex flex-col gap-3 sm:flex-row">
+            <label class="flex-1">
+              <span class="sr-only">Email</span>
+              <input name="email" type="email" required autocomplete="email" placeholder="you@yourpractice.com" class="w-full rounded-control border border-line bg-page px-3 py-3 text-ink" />
+            </label>
+            <button type="submit" class="btn-primary">Email Me My Results and a Plan</button>
+          </div>
+          <p class="mt-3 text-[13px] text-muted">We'll send your numbers and one follow-up. That's it.</p>
+          <p class="status mt-2 text-sm text-ink" role="status"></p>
+        </form>
+
+        <a href={withBase(SITE.auditPath)} class="btn-secondary w-full">{SITE.auditCta} <Ph name="arrow-right" class="size-4" /></a>
+      </div>
+    </div>
+  </section>
+
+  <Section title="How the calculator works" narrow>
+    <div class="space-y-4 text-[17px] text-muted">
+      <p>
+        Your full caseload is the number of clients you want to see each week, times 1.5, because some clients come every other week
+        or monthly. Open spots are your full caseload minus your current clients.
+      </p>
+      <p>
+        One new client's value is your fee times the average number of sessions in a course of treatment. The monthly figure assumes
+        each client on a full caseload averages about 2.9 sessions a month (4.33 weeks divided by 1.5).
+      </p>
+      <p>It's the same formula our dashboard uses for each counselor's caseload meter.</p>
+    </div>
+  </Section>
+
+  <Faq faqs={faqs} />
+  <CtaBand secondary={false} />
+</SiteLayout>
+
+<style>
+  .calc-input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-color: transparent;
+  }
+</style>
+
+<script>
+  // Same rule as the platform's CASELOAD_MULTIPLIER (src/lib/caseload.ts on
+  // client sites). Round money to the nearest $10.
+  const MULTIPLIER = 1.5;
+  const DONE_FOR_YOU_YEAR = 800 * 12;
+  const money = (n: number) => '$' + (Math.round(n / 10) * 10).toLocaleString('en-US');
+  const root = document.querySelector<HTMLElement>('.calc');
+  let latest = { weekly: 20, current: 18, fee: 130, sessions: 20, full: 30, open: 12, clientValue: 2600, monthlyGap: 0 };
+
+  function num(name: string, min: number, max: number) {
+    const el = root?.querySelector<HTMLInputElement>(`[name="${name}"]`);
+    const v = Number(el?.value);
+    return Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : min;
+  }
+  function set(key: string, value: string) {
+    document.querySelectorAll(`[data-out="${key}"]`).forEach((el) => (el.textContent = value));
+  }
+  function update() {
+    const weekly = num('weekly', 1, 60);
+    const current = num('current', 0, 200);
+    const fee = num('fee', 0, 1000);
+    const sessions = num('sessions', 1, 200);
+    const full = Math.round(weekly * MULTIPLIER);
+    const open = Math.max(0, full - current);
+    const clientValue = fee * sessions;
+    const monthlyGap = open * fee * (4.33 / MULTIPLIER);
+    const coverDFY = clientValue > 0 ? Math.ceil(DONE_FOR_YOU_YEAR / clientValue) : 0;
+    latest = { weekly, current, fee, sessions, full, open, clientValue, monthlyGap };
+    set('full', String(full));
+    set('open', String(open));
+    set('clientValue', money(clientValue));
+    set('monthlyGap', money(monthlyGap));
+    set('coverDFY', coverDFY ? String(coverDFY) : 'a few');
+    document.querySelector('[data-when="open"]')?.classList.toggle('hidden', open === 0);
+    document.querySelector('[data-when="full"]')?.classList.toggle('hidden', open !== 0);
+  }
+  root?.querySelectorAll('input[type="number"]').forEach((el) => el.addEventListener('input', update));
+  update();
+
+  const capture = document.querySelector<HTMLFormElement>('.calc-capture');
+  capture?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const status = capture.querySelector<HTMLElement>('.status')!;
+    const fd = new FormData(capture);
+    const email = String(fd.get('email') ?? '').trim();
+    const input = capture.querySelector<HTMLInputElement>('[name="email"]')!;
+    if (!email || !input.checkValidity()) {
+      status.textContent = 'Please enter a valid email address.';
+      return;
+    }
+    status.textContent = 'Sending...';
+    const l = latest;
+    const message = [
+      'Caseload Calculator results:',
+      `Clients per week wanted: ${l.weekly}`,
+      `Current active clients: ${l.current}`,
+      `Average fee: $${l.fee}`,
+      `Average sessions per client: ${l.sessions}`,
+      `Full caseload: ${l.full}; open spots: ${l.open}`,
+      `Client value: ${money(l.clientValue)}; monthly from open spots: ${money(l.monthlyGap)}`,
+    ].join('\n');
+    const res = await fetch(`${import.meta.env.PUBLIC_SUPABASE_URL}/functions/v1/submit-lead`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${import.meta.env.PUBLIC_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ name: email, email, message, source_page: 'caseload-calculator', hp_website: fd.get('hp_website') || '' }),
+    });
+    status.textContent = res.ok ? "Sent. Watch your inbox for your numbers and a plan." : 'Something went wrong. Please try again.';
+    if (res.ok) capture.reset();
+  });
+</script>

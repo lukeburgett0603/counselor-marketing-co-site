@@ -86,6 +86,36 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: 'Invalid JSON body' }, 400);
   }
 
+  // Optional follow-up details for a lead this visitor just created (the
+  // audit form's step 2, 2026-09-30 rebuild). Appends to that lead's
+  // message instead of inserting a duplicate. Requires the id returned by
+  // the first call AND the same email, and only within 2 hours, so a
+  // guessed id alone can't write to someone else's lead.
+  if (typeof body.details_for === 'string') {
+    const detailEmail = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+    const details = typeof body.details === 'string' ? body.details.trim().slice(0, 4000) : '';
+    const detailPhone = typeof body.phone === 'string' ? body.phone.trim().slice(0, 40) : '';
+    if (!detailEmail || (!details && !detailPhone)) {
+      return jsonResponse({ error: 'Nothing to add' }, 400);
+    }
+    const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    const { data: existing } = await admin
+      .from('leads')
+      .select('id, email, message, phone, created_at')
+      .eq('id', body.details_for)
+      .maybeSingle();
+    const fresh = existing && Date.now() - new Date(existing.created_at).getTime() < 2 * 60 * 60 * 1000;
+    if (!existing || !fresh || String(existing.email).trim().toLowerCase() !== detailEmail) {
+      return jsonResponse({ error: 'Could not add details' }, 400);
+    }
+    const update: Record<string, unknown> = {};
+    if (details) update.message = existing.message ? `${existing.message}\n\n${details}` : details;
+    if (detailPhone && !existing.phone) update.phone = detailPhone;
+    const { error: updateError } = await admin.from('leads').update(update).eq('id', existing.id);
+    if (updateError) return jsonResponse({ error: 'Could not add details' }, 500);
+    return jsonResponse({ ok: true });
+  }
+
   const name = typeof body.name === 'string' ? body.name.trim() : '';
   const email = typeof body.email === 'string' ? body.email.trim() : '';
   if (!name || !email) {
@@ -250,7 +280,7 @@ Deno.serve(async (req: Request) => {
           from: fromHeader,
           to: notificationRecipients,
           reply_to: email,
-          subject: `New appointment request from ${name}`,
+          subject: `${insertPayload.source_page === "caseload-calculator" ? "Caseload Calculator results" : "New audit request"} from ${name}`,
           html: `${rowsHtml}\n${messageHtml}\n<hr style="border:none;border-top:1px solid #ddd;margin:20px 0;">\n<p style="font-size:12px;color:#888;">Reply directly to this email to respond to ${escapeHtml(name)}.</p>`,
         }),
       });

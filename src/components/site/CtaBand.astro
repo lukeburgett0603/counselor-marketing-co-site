@@ -1,0 +1,34 @@
+---
+// Every page ends here: the audit, with the calculator as the softer option.
+import { SITE } from '../../lib/site';
+import { withBase } from '../../lib/url';
+import Ph from './Ph.astro';
+
+interface Props {
+  title?: string;
+  body?: string;
+  button?: string;
+  href?: string;
+  secondary?: { label: string; href: string } | false;
+}
+const {
+  title = 'You should be thinking about your clients, not where the next one is coming from.',
+  body = 'Free, personal, and a written plan within 48 hours. No obligation.',
+  button = SITE.auditCta,
+  href = SITE.auditPath,
+  secondary = { label: 'Or run your numbers in the Caseload Calculator', href: '/caseload-calculator' },
+} = Astro.props;
+---
+
+<section class="wrap py-10 lg:py-14">
+  <div class="rounded-card bg-ink px-6 py-12 text-page sm:px-12 lg:flex lg:items-end lg:justify-between lg:gap-12 lg:py-16">
+    <div class="max-w-2xl">
+      <h2 class="text-[clamp(28px,3.2vw,40px)] font-semibold leading-[1.12] tracking-[-0.03em]">{title}</h2>
+      {body && <p class="mt-4 text-[17px] opacity-75">{body}</p>}
+    </div>
+    <div class="mt-8 flex shrink-0 flex-col items-start gap-4 lg:mt-0 lg:items-end">
+      <a href={withBase(href)} class="btn-primary">{button} <Ph name="arrow-right" class="size-4" /></a>
+      {secondary && <a href={withBase(secondary.href)} class="text-[15px] underline-offset-4 opacity-75 hover:opacity-100 hover:underline">{secondary.label}</a>}
+    </div>
+  </div>
+</section>

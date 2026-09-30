@@ -1,0 +1,74 @@
+---
+// rebuild/copy/18-about-contact-your-data.md (Your Data Is Yours). The
+// promise the pricing and sales materials must state before anyone asks.
+import SiteLayout from '../layouts/SiteLayout.astro';
+import PageHero from '../components/site/PageHero.astro';
+import Section from '../components/site/Section.astro';
+import CtaBand from '../components/site/CtaBand.astro';
+import Ph from '../components/site/Ph.astro';
+import { rootUrl, webPage } from '../lib/siteSchema';
+
+const path = '/your-data';
+const description = "Download all of your practice's data any time. If you ever leave, your website, domain, and data go with you. Here's exactly what you keep.";
+const siteUrl = rootUrl(Astro.site, Astro.url);
+const steps = [
+  "Tell us, any month. There's no contract.",
+  "Download your data (or we'll do it for you).",
+  'We prepare your website files, with your contact form pointed wherever you choose, or showing your phone and email.',
+  'We help you point your domain to your new host.',
+  "Thirty days after you've confirmed you have everything, we delete your account, and we'll tell you the date in writing.",
+];
+---
+
+<SiteLayout title="Your Data Is Yours | Counselor Marketing Co." description={description} path={path} crumbs={[{ name: 'Your Data Is Yours', path }]} schema={[webPage(siteUrl, { name: 'Your Data Is Yours', description, path })]}>
+  <PageHero
+    title="Your data is yours. Always."
+    sub="You should never feel trapped with a marketing company. Here's exactly what's yours, before you ever have to ask."
+    crumbs={[{ name: 'Your Data Is Yours', path }]}
+    cta={false}
+  />
+
+  <Section>
+    <div class="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
+      <h2 class="h2">Any time, not just when you leave</h2>
+      <p class="text-[17px] text-muted">
+        One button in your dashboard downloads everything your practice has in the system: leads, notes, referral partners, reviews,
+        caseload settings, your website content, and your uploaded files. It comes as spreadsheet-ready CSV files and JSON, with a
+        readme listing everything included.
+      </p>
+    </div>
+  </Section>
+
+  <Section title="If you ever leave">
+    <div class="grid gap-5 md:grid-cols-[1.3fr_1fr]">
+      <div class="card p-7">
+        <p class="font-semibold text-ink">You keep</p>
+        <ul class="mt-4 space-y-3">
+          {['Your website, as complete files you can host anywhere', 'Your domain, registered in your name from day one', 'All of your data and uploaded files'].map((k) => (
+            <li class="flex gap-3 text-muted"><Ph name="check-circle" class="mt-0.5 size-5 text-accent" />{k}</li>
+          ))}
+        </ul>
+      </div>
+      <div class="card p-7">
+        <p class="font-semibold text-ink">We keep</p>
+        <ul class="mt-4 space-y-3">
+          <li class="flex gap-3 text-muted"><Ph name="lock-simple" class="mt-0.5 size-5 text-muted" />The dashboard, CRM, and automations (the software itself)</li>
+        </ul>
+      </div>
+    </div>
+  </Section>
+
+  <Section title="How leaving works" narrow>
+    <ol class="space-y-6">
+      {steps.map((s, i) => (
+        <li class="grid grid-cols-[40px_1fr] gap-4">
+          <span class="grid size-9 place-items-center rounded-full border border-accent font-mono text-sm text-accent">{i + 1}</span>
+          <p class="pt-1.5 text-[17px] text-muted">{s}</p>
+        </li>
+      ))}
+    </ol>
+    <p class="mt-10 text-[17px] text-ink">Why we do it this way: because we'd rather keep you by being worth it.</p>
+  </Section>
+
+  <CtaBand />
+</SiteLayout>

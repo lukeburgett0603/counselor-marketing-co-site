@@ -1,0 +1,22 @@
+---
+// "Bold lead. Explanation." items in two columns on wide screens, split by
+// hairlines (not a grid of equal cards). `d` may contain inline HTML.
+import Ph from './Ph.astro';
+interface Props {
+  items: { t: string; d: string; icon?: string }[];
+  cols?: 1 | 2;
+}
+const { items, cols = 2 } = Astro.props;
+---
+
+<ul class:list={['grid border-t border-line', cols === 2 && 'md:grid-cols-2 md:gap-x-12']}>
+  {items.map((it) => (
+    <li class="flex gap-4 border-b border-line py-6">
+      <Ph name={it.icon ?? 'check-circle'} class="mt-0.5 size-5 text-accent" />
+      <div>
+        <h3 class="text-[17px] font-semibold tracking-[-0.01em] text-ink">{it.t}</h3>
+        <p class="mt-1.5 text-muted" set:html={it.d} />
+      </div>
+    </li>
+  ))}
+</ul>

@@ -1,0 +1,187 @@
+---
+// rebuild/copy/03-pricing.md; structure approved in rebuild/pricing-structure.md.
+// Every price comes from src/lib/site.ts.
+import SiteLayout from '../layouts/SiteLayout.astro';
+import PageHero from '../components/site/PageHero.astro';
+import Section from '../components/site/Section.astro';
+import DataTable from '../components/site/DataTable.astro';
+import Checks from '../components/site/Checks.astro';
+import Faq from '../components/site/Faq.astro';
+import CtaBand from '../components/site/CtaBand.astro';
+import TestimonialSlot from '../components/site/TestimonialSlot.astro';
+import Ph from '../components/site/Ph.astro';
+import { TIERS, ADDONS, BUILD_FEE, BUILD_INCLUDES, TIER_MATRIX, SITE, HIPAA_ANSWER, money } from '../lib/site';
+import { withBase } from '../lib/url';
+import { rootUrl, pricingService } from '../lib/siteSchema';
+
+const path = '/pricing';
+const description =
+  'Transparent pricing for counseling practices. Self-Guided $149/mo, Done for You $800/mo, Group Practice from $1,200/mo, plus a $1,500 website build. Month-to-month, and your data is yours.';
+
+const faqs = [
+  {
+    q: 'Why is there a $1,500 build fee?',
+    a: 'Your website is built for your practice, your specialties, and your area, not dropped into a template. The fee covers the build, your Google Business Profile, your domain setup and migration, and setting up your platform. You pay it once.',
+  },
+  {
+    q: 'What happens if I cancel?',
+    a: 'You keep your website (as files you can host anywhere), your domain, and a full export of your data: leads, notes, referral partners, reviews, everything. The dashboard software stays with us. You can download your data any time, not only when you leave.',
+  },
+  { q: 'Is there a contract?', a: 'No. Every plan is month-to-month.' },
+  {
+    q: 'How long until I get new clients?',
+    a: 'Referrals and Google Ads can bring inquiries within weeks. Search builds over months. Your audit shows which to lean on first.',
+  },
+  { q: 'Can I switch plans?', a: 'Yes, up or down, any month.' },
+  {
+    q: 'How is Group Practice pricing set?',
+    a: 'By the number of clinicians: $1,200/mo for 3 to 5, $1,500/mo for 6 to 10, and a custom quote for 11 or more.',
+  },
+  { q: 'Is Self-Guided only for solo counselors?', a: 'No. Any practice size can run the system themselves at $149/mo.' },
+  {
+    q: 'Do I have to write anything?',
+    a: 'Not on Done for You or Group Practice; we write, and you approve. On Self-Guided, your content plan tells you exactly what to write.',
+  },
+  { q: 'Who pays for Google Ads?', a: 'You pay Google directly for your ad budget, from your own account. Our $300/mo covers managing it.' },
+  {
+    q: 'Is this ethical for a licensed counselor?',
+    a: "Yes. It's built around the ACA, APA, and NASW codes and state board advertising rules, by a counselor who practices under them.",
+  },
+  { q: 'Is this HIPAA compliant?', a: HIPAA_ANSWER },
+];
+
+const siteUrl = rootUrl(Astro.site, Astro.url);
+---
+
+<SiteLayout
+  title="Pricing | Counselor Marketing Co."
+  description={description}
+  path={path}
+  crumbs={[{ name: 'Pricing', path }]}
+  faqs={faqs}
+  schema={[pricingService(siteUrl, description)]}
+>
+  <PageHero
+    title="Straightforward pricing for a full caseload."
+    sub="Every plan includes the whole Full Caseload System. The only question is who runs it: you, us, or us for your whole team."
+    crumbs={[{ name: 'Pricing', path }]}
+    cta={false}
+  />
+
+  <section class="wrap">
+    <div class="grid gap-5 lg:grid-cols-3">
+      {TIERS.map((t) => (
+        <article class:list={['card flex flex-col p-7', t.recommended && 'border-accent ring-1 ring-accent']}>
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="text-xl font-semibold tracking-[-0.02em] text-ink">{t.name}</h2>
+            {t.recommended && <span class="rounded-full bg-accent px-2.5 py-0.5 text-xs font-medium text-accent-ink">Recommended</span>}
+          </div>
+          <p class="mt-2 text-[15px] text-muted">{t.forWho}</p>
+          <p class="mt-6 font-mono text-4xl font-medium tracking-tight text-ink">
+            {t.priceLabel}<span class="text-lg text-muted">/mo</span>
+          </p>
+          <p class="mt-1 text-sm text-muted">{t.priceNote ?? `+ ${money(BUILD_FEE)} website build`}</p>
+          {t.priceNote && <p class="text-sm text-muted">+ {money(BUILD_FEE)} website build</p>}
+          <a href={withBase(`${SITE.auditPath}?plan=${t.key}`)} class:list={['mt-6', t.recommended ? 'btn-primary' : 'btn-secondary']}>{t.cta}</a>
+          <div class="mt-7 border-t border-line pt-6">
+            {t.lead && <p class="mb-3 text-sm font-medium text-ink">{t.lead}</p>}
+            <ul class="space-y-2.5">
+              {t.features.map((f) => (
+                <li class="flex gap-2.5 text-[15px] text-muted"><Ph name="check" class="mt-1 size-4 text-accent" />{f}</li>
+              ))}
+            </ul>
+          </div>
+        </article>
+      ))}
+    </div>
+    <p class="mt-6 flex flex-wrap items-center gap-x-2 text-muted">
+      Month-to-month. Cancel anytime. Your website, domain, and data always go with you.
+      <a href={withBase('/your-data')} class="link-arrow">Your Data Is Yours <Ph name="arrow-right" class="size-4" /></a>
+    </p>
+    <ul class="mt-8 flex flex-col gap-3 border-y border-line py-5 text-[15px] text-muted md:flex-row md:gap-10">
+      <li class="flex gap-2"><Ph name="certificate" class="mt-0.5 size-5 text-accent" />Built by a licensed counselor.</li>
+      <li class="flex gap-2"><Ph name="star" class="mt-0.5 size-5 text-accent" />Freedom Counseling Services: 3.5 to 4.0 Google stars in three weeks.</li>
+      <li class="flex gap-2"><Ph name="download-simple" class="mt-0.5 size-5 text-accent" />Month-to-month, and your data is yours.</li>
+    </ul>
+    <TestimonialSlot slot="pricing" class="mt-8 max-w-2xl" />
+  </section>
+
+  <Section>
+    <div class="grid gap-10 lg:grid-cols-[1fr_1fr] lg:gap-16">
+      <div>
+        <h2 class="h2">What one new client is worth</h2>
+        <p class="mt-5 text-[17px] text-muted">
+          <em>Illustrative example, not a promise:</em> at $130 a session and 20 sessions over a course of treatment, one new client
+          is worth about $2,600. Done for You costs $9,600 a year, so about four new clients covers it. Most practices with open
+          spots need far more than four.
+        </p>
+        <a href={withBase('/caseload-calculator')} class="link-arrow mt-5">Run your own numbers in the Caseload Calculator <Ph name="arrow-right" class="size-4" /></a>
+      </div>
+      <dl class="card grid grid-cols-2 divide-x divide-line self-start">
+        <div class="p-6">
+          <dt class="text-sm text-muted">One new client (illustrative)</dt>
+          <dd class="mt-1 font-mono text-3xl font-medium tracking-tight text-ink">$2,600</dd>
+        </div>
+        <div class="p-6">
+          <dt class="text-sm text-muted">Done for You, per year</dt>
+          <dd class="mt-1 font-mono text-3xl font-medium tracking-tight text-ink">$9,600</dd>
+        </div>
+      </dl>
+    </div>
+  </Section>
+
+  <Section title={`What's in the ${money(BUILD_FEE)} website build (every plan)`}>
+    <Checks items={BUILD_INCLUDES} class="max-w-3xl" />
+  </Section>
+
+  <Section title="Everything each plan includes, by step">
+    <DataTable
+      caption="Plan comparison grouped by the five steps"
+      head={['', 'Self-Guided ($149)', 'Done for You ($800)', 'Group Practice ($1,200+)']}
+      highlight={2}
+      rows={TIER_MATRIX.map((r) => [r.step, ...r.cells])}
+    />
+    <p class="mt-6 max-w-3xl border-l-2 border-accent pl-4 text-muted">
+      <span class="font-medium text-ink">Want to publish more?</span> Your content plan lists the next topics to write, researched
+      from real search data for your specialties and area. You or your team can publish as many extra articles as you like on top
+      of the ones we write.
+    </p>
+  </Section>
+
+  <Section title="Add-ons, for any plan">
+    <div class="card divide-y divide-line">
+      {ADDONS.map((a) => (
+        <div class="grid gap-2 p-6 md:grid-cols-[260px_180px_1fr] md:gap-6">
+          <h3 class="h3">{a.name}</h3>
+          <p class="font-mono text-lg font-medium text-ink">{a.priceLabel}</p>
+          <p class="text-muted">{a.text}</p>
+        </div>
+      ))}
+    </div>
+  </Section>
+
+  <Section title="How we compare">
+    <DataTable
+      caption="Counselor Marketing Co. compared with website platforms and general agencies"
+      head={['', 'Therapist website platforms', 'Counselor Marketing Co.', 'General marketing agencies']}
+      highlight={2}
+      rows={[
+        ['Typical price', '$69 to $336/mo', '$149 to $1,500/mo', '$500 to $5,000+/mo'],
+        ['What you get', 'A website', 'A website plus the whole system to fill your caseload', 'Usually SEO or ads'],
+        ['Measured in', 'Visits', 'New clients and caseload', 'Traffic and clicks'],
+        ['Knows counseling ethics', 'Varies', 'Built by a licensed counselor', 'Varies'],
+        ['Referral network', 'No', 'Yes', 'No'],
+        ['Your data if you leave', 'Varies', 'Always yours', 'Varies'],
+      ]}
+    />
+    <a href={withBase('/compare')} class="link-arrow mt-6">See detailed comparisons <Ph name="arrow-right" class="size-4" /></a>
+  </Section>
+
+  <Faq faqs={faqs} />
+
+  <CtaBand
+    title="Not sure which plan fits?"
+    body="Your free audit ends with a recommendation for your practice, and why."
+    secondary={{ label: 'Prefer plain text? Read pricing.md', href: '/pricing.md' }}
+  />
+</SiteLayout>

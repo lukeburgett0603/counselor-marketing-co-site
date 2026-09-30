@@ -1,0 +1,27 @@
+---
+// Phosphor icon (regular weight), inlined as SVG at build time: no icon
+// font, no runtime JS. `name` is the Phosphor file name, e.g. "arrow-right".
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+
+interface Props {
+  name: string;
+  class?: string;
+  label?: string;
+}
+const { name, class: className = 'size-5', label } = Astro.props;
+const require = createRequire(import.meta.url);
+const raw = readFileSync(require.resolve(`@phosphor-icons/core/assets/regular/${name}.svg`), 'utf8');
+const inner = raw.replace(/^<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '');
+---
+
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 256 256"
+  fill="currentColor"
+  class={`shrink-0 ${className}`}
+  aria-hidden={label ? undefined : 'true'}
+  role={label ? 'img' : undefined}
+  aria-label={label}
+  set:html={inner}
+/>

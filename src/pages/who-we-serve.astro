@@ -1,0 +1,52 @@
+---
+// rebuild/copy/12-who-we-serve.md. Target: counseling practice marketing.
+import SiteLayout from '../layouts/SiteLayout.astro';
+import PageHero from '../components/site/PageHero.astro';
+import CtaBand from '../components/site/CtaBand.astro';
+import Ph from '../components/site/Ph.astro';
+import { withBase } from '../lib/url';
+import { rootUrl, itemList } from '../lib/siteSchema';
+
+const path = '/who-we-serve';
+const cards = [
+  { t: 'Solo practices', h: '/solo-practice-marketing', i: 'user', d: "You're the clinician, the owner, and often the front desk. We make getting clients the part you don't have to think about." },
+  { t: 'Group practices', h: '/group-practice-marketing', i: 'users-three', d: "Every clinician's caseload full, not just yours, with leads routed to the right person and a caseload meter for each counselor." },
+  { t: 'Psychologists', h: '/psychologist-marketing', i: 'brain', d: 'Testing, evaluations, and therapy each draw different clients and different referral sources. We market each one.' },
+  { t: 'Christian counselors', h: '/christian-counseling-marketing', i: 'church', d: 'Faith-integrated care, presented with the same clinical credibility as everything else you do.' },
+];
+const siteUrl = rootUrl(Astro.site, Astro.url);
+---
+
+<SiteLayout
+  title="Counseling Practice Marketing for Every Kind of Practice | Counselor Marketing Co."
+  description="Counseling practice marketing for solo counselors, group practices, psychologists, and Christian counselors. One system, shaped to how your practice works."
+  path={path}
+  crumbs={[{ name: 'Who We Serve', path }]}
+  schema={[itemList(siteUrl, cards.map((c) => ({ name: c.t, path: c.h })))]}
+>
+  <PageHero
+    title="Built for the way your practice actually works."
+    sub="Counseling practice marketing for counselors, therapists, and psychologists in private practice. The system stays the same; where your next clients come from changes."
+    crumbs={[{ name: 'Who We Serve', path }]}
+  />
+
+  <section class="wrap">
+    <ul class="grid gap-5 md:grid-cols-2">
+      {cards.map((c) => (
+        <li>
+          <a href={withBase(c.h)} class="card group flex h-full gap-5 p-7 transition-colors hover:border-accent">
+            <span class="grid size-11 shrink-0 place-items-center rounded-control bg-accent-soft text-accent"><Ph name={c.i} class="size-6" /></span>
+            <span>
+              <span class="flex items-center gap-2 text-xl font-semibold tracking-[-0.02em] text-ink">
+                {c.t} <Ph name="arrow-right" class="size-4 text-accent transition-transform group-hover:translate-x-0.5" />
+              </span>
+              <span class="mt-2 block text-muted">{c.d}</span>
+            </span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <CtaBand title="Whatever your practice looks like, the audit starts with it." />
+</SiteLayout>

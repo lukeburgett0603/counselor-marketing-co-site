@@ -1,0 +1,29 @@
+---
+// An HTML comparison table (never an image), scrolling inside its own box
+// on phones. First column is the row label.
+interface Props {
+  head: string[];
+  rows: string[][];
+  caption?: string;
+  highlight?: number;
+}
+const { head, rows, caption, highlight } = Astro.props;
+---
+
+<div class="table-wrap">
+  <table>
+    {caption && <caption class="sr-only">{caption}</caption>}
+    <thead>
+      <tr>
+        {head.map((h, i) => <th scope="col" class:list={[i === highlight && 'bg-accent-soft']}>{h}</th>)}
+      </tr>
+    </thead>
+    <tbody>
+      {rows.map((row) => (
+        <tr>
+          {row.map((cell, i) => (i === 0 ? <th scope="row" class="font-medium text-ink" set:html={cell} /> : <td class:list={[i === highlight && 'bg-accent-soft/50 text-ink']} set:html={cell} />))}
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>

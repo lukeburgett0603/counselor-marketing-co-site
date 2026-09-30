@@ -1,0 +1,197 @@
+---
+// rebuild/copy/02-how-it-works.md. Target: digital marketing agency for therapists.
+import SiteLayout from '../layouts/SiteLayout.astro';
+import PageHero from '../components/site/PageHero.astro';
+import Section from '../components/site/Section.astro';
+import DataTable from '../components/site/DataTable.astro';
+import Checks from '../components/site/Checks.astro';
+import Faq from '../components/site/Faq.astro';
+import CtaBand from '../components/site/CtaBand.astro';
+import ProductShot from '../components/site/ProductShot.astro';
+import Ph from '../components/site/Ph.astro';
+import { STEPS } from '../lib/site';
+import { withBase } from '../lib/url';
+import { rootUrl, service } from '../lib/siteSchema';
+
+const path = '/how-it-works';
+const description =
+  "Five steps that fill a counseling practice's caseload: get found, get chosen, get referred, get booked, and watch it work in one dashboard. See exactly what we do, and what you'll see.";
+
+const detail = [
+  {
+    do: [
+      'Build a fast website with a page for each of your specialties.',
+      'Fix and manage your Google Business Profile so you show up on Google Maps.',
+      'Handle local SEO and citations.',
+      'Write articles people are really searching for, written so AI assistants can cite them.',
+      'Run Google Ads when you need inquiries sooner.',
+    ],
+    see: 'Website visits, your rankings for the searches that matter, and which leads found you on Google or Maps.',
+    note: ['How fast', 'Ads can bring inquiries within days of launch. Rankings build over months.'],
+    shot: 'seo-insights',
+  },
+  {
+    do: [
+      "Write every page to answer a first-time client's real questions: fit, cost, what happens first.",
+      'Make reaching out easy on any phone.',
+      'Run an ethical review program that grows your Google rating without ever asking a client for a review.',
+    ],
+    see: 'How many visits turn into inquiries, and your Google rating over time.',
+    note: ['Proof', 'Freedom Counseling Services went from 3.5 to 4.0 stars in three weeks.'],
+    shot: 'review-program',
+  },
+  {
+    do: [
+      'Give you a referral partner tracker and a ready-to-send outreach kit for doctors, attorneys, churches, and schools: personalized emails, a printable practice handout, and follow-up reminders.',
+      'Coaching on Done for You and Group Practice, and an optional Referral Network Launch if you would like us to do the legwork.',
+    ],
+    see: 'Active partners, outreach this month, and the leads and clients each partner sends.',
+    note: ['How fast', 'Relationships take a few conversations. First referrals can come within weeks, depending on the partner.'],
+    shot: 'referrals',
+  },
+  {
+    do: [
+      'Send every inquiry an instant confirmation.',
+      'Alert you the moment someone reaches out.',
+      'Remind you until every lead has a reply.',
+    ],
+    see: 'Your median response time, the share of leads contacted within 24 hours, and anyone still waiting.',
+    note: ['Why it matters', 'Someone reaching out for counseling may contact more than one practice. The first thoughtful reply has the advantage.'],
+    shot: 'crm',
+  },
+  {
+    do: [
+      'Put it all in one Overview: new clients, where they came from, and how full your caseload is, counselor by counselor.',
+      'On Done for You and Group Practice, Luke walks through it with you every month.',
+    ],
+    see: 'Everything above, on one screen, as a printable monthly report.',
+    note: null,
+    shot: 'overview',
+  },
+];
+
+const faqs = [
+  {
+    q: 'Do I need all five steps?',
+    a: 'They work best together, which is why every plan includes them. Your audit shows which step is costing you the most clients right now.',
+  },
+  {
+    q: 'What do I have to do?',
+    a: 'On Self-Guided, you follow your content plan and outreach kit. On Done for You and Group Practice, you approve content, show up for referral conversations, and reply to your leads. We handle the rest.',
+  },
+  {
+    q: 'What if I already have a website?',
+    a: "We migrate your content, keep your domain, and set up redirects so you don't lose what you've built.",
+  },
+  {
+    q: 'How is this different from an SEO agency?',
+    a: 'SEO is one part of step 1. Most clients still find counselors through Google and Maps, so it matters, but an open caseload rarely has only one cause.',
+  },
+];
+
+const siteUrl = rootUrl(Astro.site, Astro.url);
+---
+
+<SiteLayout
+  title="How the Full Caseload System Works | Digital Marketing Agency for Therapists"
+  description={description}
+  path={path}
+  crumbs={[{ name: 'How It Works', path }]}
+  faqs={faqs}
+  schema={[service(siteUrl, { name: 'The Full Caseload System', description, path, serviceType: 'Digital marketing for counseling practices' })]}
+>
+  <PageHero
+    eyebrow="The Full Caseload System"
+    title="Five steps between an open spot and a new client."
+    sub="Most digital marketing agencies for therapists sell one piece. We run the whole path a new client takes to reach you."
+    crumbs={[{ name: 'How It Works', path }]}
+  />
+
+  <Section>
+    <div class="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
+      <h2 class="h2">How a new client actually reaches you</h2>
+      <div class="space-y-4 text-[17px] text-muted">
+        <p>
+          Someone decides it's time to talk to someone. They search Google or Maps, ask ChatGPT, or ask their doctor or pastor. They
+          look at two or three counselors. They reach out to the one who feels right and answers first.
+        </p>
+        <p class="font-medium text-ink">Every one of those moments is a place a client can slip away. The Full Caseload System covers all of them.</p>
+      </div>
+    </div>
+  </Section>
+
+  <section class="wrap py-6">
+    <p class="mb-10 max-w-3xl text-muted">Each step has three parts: what we do, what you'll see in your dashboard, and how fast it moves.</p>
+    <div class="space-y-6">
+      {STEPS.map((step, i) => {
+        const d = detail[i];
+        return (
+          <article id={step.key} class="card grid gap-8 p-6 sm:p-8 lg:grid-cols-[1fr_1fr] lg:gap-12">
+            <div>
+              <div class="flex items-center gap-3">
+                <span class="grid size-10 place-items-center rounded-control bg-accent-soft text-accent"><Ph name={step.icon} class="size-5" /></span>
+                <h2 class="text-2xl font-semibold tracking-[-0.025em] text-ink">{step.name}</h2>
+              </div>
+              <p class="mt-6 text-sm font-medium text-ink">What we do</p>
+              <Checks items={d.do} class="mt-3" />
+              <p class="mt-6 text-sm font-medium text-ink">What you'll see</p>
+              <p class="mt-2 text-muted">{d.see}</p>
+              {d.note && (
+                <p class="mt-6 border-l-2 border-accent pl-4 text-muted"><span class="font-medium text-ink">{d.note[0]}:</span> {d.note[1]}</p>
+              )}
+              <div class="mt-6 flex flex-wrap gap-x-5 gap-y-1">
+                {step.links.map((l) => <a href={withBase(l.href)} class="link-arrow text-[15px]">{l.label} <Ph name="arrow-right" class="size-3.5" /></a>)}
+              </div>
+            </div>
+            <ProductShot shot={d.shot} class="self-center" />
+          </article>
+        );
+      })}
+    </div>
+  </section>
+
+  <Section title="Same system on every plan. You choose who runs it.">
+    <DataTable
+      caption="What each plan includes, by step"
+      head={['', 'Self-Guided', 'Done for You', 'Group Practice']}
+      highlight={2}
+      rows={[
+        ['Get Found', 'Your content plan shows what to publish; we host and maintain your site', 'We write 2 articles a month and manage your Google profile', 'We write 4 articles a month, plus a page for each clinician'],
+        ['Get Chosen', 'Review program tools', 'We run the review program', 'Practice-wide'],
+        ['Get Referred', 'Tracker and outreach kit', 'Plus coaching', 'Coaching for your team'],
+        ['Get Booked', 'Alerts, CRM, automatic reply', 'Plus a monthly response-time review', 'Plus lead routing to each clinician'],
+        ['Watch It Work', 'Your Overview dashboard', 'Plus a monthly call with Luke', 'Plus a caseload meter for each clinician'],
+      ]}
+    />
+    <a href={withBase('/pricing')} class="link-arrow mt-6">See pricing <Ph name="arrow-right" class="size-4" /></a>
+  </Section>
+
+  <Section>
+    <div class="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
+      <div>
+        <h2 class="h2">Built around your ethics code, not around it.</h2>
+        <p class="mt-5 text-[17px] text-muted">
+          A generic agency's playbook can put a counselor's license at risk: testimonials from clients, outcome promises, gifts to
+          referral sources, and ad tracking that can expose who your clients are. The Full Caseload System was designed by a
+          licensed counselor to avoid all of it.
+        </p>
+      </div>
+      <Checks
+        icon="shield-check"
+        items={[
+          'We never solicit reviews or testimonials from clients (ACA C.3.b).',
+          'We never offer anything of value for referrals (ACA A.10.b).',
+          'We never add ad-tracking scripts to your site, and nothing about your clients goes to an ad platform unless you choose to send it.',
+          `Your data is yours, always. <a class="font-medium text-accent hover:underline" href="${withBase('/your-data')}">Your Data Is Yours</a>`,
+        ]}
+      />
+    </div>
+  </Section>
+
+  <Faq faqs={faqs} />
+
+  <CtaBand
+    title="Find out which step is costing you clients."
+    body="Your free audit looks at all five steps for your practice and shows where the next clients will come from."
+  />
+</SiteLayout>

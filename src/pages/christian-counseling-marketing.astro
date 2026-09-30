@@ -1,0 +1,87 @@
+---
+// rebuild/copy/16-christian-counselors.md. Dedicated audience landing page.
+// Christian positioning lives here and in the Freedom case study, never on
+// the homepage or brand (decision 2026-09-30).
+import SiteLayout from '../layouts/SiteLayout.astro';
+import PageHero from '../components/site/PageHero.astro';
+import Section from '../components/site/Section.astro';
+import StepsGrid from '../components/site/StepsGrid.astro';
+import PlansLine from '../components/site/PlansLine.astro';
+import ProductShot from '../components/site/ProductShot.astro';
+import CtaBand from '../components/site/CtaBand.astro';
+import Ph from '../components/site/Ph.astro';
+import { withBase } from '../lib/url';
+import { rootUrl, service } from '../lib/siteSchema';
+
+const path = '/christian-counseling-marketing';
+const description =
+  "Christian counseling marketing that presents faith-integrated care with full clinical credibility, reaches churches and pastors ethically, and fills your caseload. See Freedom Counseling Services' results.";
+const crumbs = [{ name: 'Who We Serve', path: '/who-we-serve' }, { name: 'Christian Counselors', path }];
+const siteUrl = rootUrl(Astro.site, Astro.url);
+---
+
+<SiteLayout
+  title="Christian Counseling Marketing | Faith-Integrated, Clinically Credible"
+  description={description}
+  path={path}
+  crumbs={crumbs}
+  schema={[service(siteUrl, { name: 'Christian Counseling Marketing', description, path, serviceType: 'Marketing for Christian counseling practices' })]}
+>
+  <PageHero
+    eyebrow="For Christian counselors and faith-based practices"
+    title="Faith-integrated care, presented with the credibility it deserves."
+    sub="Christian counseling marketing has two jobs: honor clients who want their faith respected, and show everyone you're clinically trained."
+    crumbs={crumbs}
+  />
+
+  <Section>
+    <div class="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
+      <h2 class="h2">Two audiences, one website.</h2>
+      <p class="text-[17px] text-muted">
+        Some people search specifically for a Christian counselor. Many more want a good counselor and would welcome faith being
+        respected. Physicians and schools want to see licensure and clinical training first. A site that leans too far one way loses
+        the others. And generic agencies rarely understand how to talk about faith integration, or how to reach churches ethically.
+      </p>
+    </div>
+  </Section>
+
+  <Section title="How the system works for Christian counselors">
+    <StepsGrid
+      details={[
+        'Pages for "Christian counseling in [city]" and your clinical specialties, so you\'re found both ways.',
+        'Clear language about how faith is integrated (always following the client\'s lead), next to your credentials.',
+        'Churches and pastors are some of the strongest referral partners a Christian practice can have. Your outreach kit includes church-specific intros and a handout that says you offer faith-integrated care.',
+        'Fast replies to every inquiry, so no one waits to hear back.',
+        'A dashboard showing which churches and partners send clients.',
+      ]}
+    />
+  </Section>
+
+  <Section>
+    <div class="grid items-center gap-10 lg:grid-cols-[1fr_1.3fr] lg:gap-16">
+      <div>
+        <h2 class="h2">Freedom Counseling Services</h2>
+        <p class="mt-5 text-[17px] text-muted">
+          A Christian counseling practice in Louisville with five counselors. Their new site presents faith-integrated care alongside
+          each counselor's clinical specialties, and they went from 3.5 to 4.0 Google stars in three weeks with our ethical review
+          strategy.
+        </p>
+        <a href={withBase('/results/freedom-counseling-services')} class="link-arrow mt-5">Read Freedom's story <Ph name="arrow-right" class="size-4" /></a>
+      </div>
+      <ProductShot shot="freedom-home" />
+    </div>
+  </Section>
+
+  <Section narrow>
+    <div class="flex gap-4 rounded-card border border-line p-6">
+      <Ph name="scales" class="mt-0.5 size-6 text-accent" />
+      <p class="text-muted">
+        <span class="font-medium text-ink">The ethics:</span> never offering anything in exchange for referrals applies to churches
+        too (ACA A.10.b). A thank-you note is always right. A gift for a referral never is.
+      </p>
+    </div>
+  </Section>
+
+  <PlansLine />
+  <CtaBand title="See how your practice looks to clients, and to the churches near you." />
+</SiteLayout>

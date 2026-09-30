@@ -1,0 +1,28 @@
+---
+// Visible FAQ. Pass the same array to SiteLayout's `faqs` prop so the
+// FAQPage schema always matches what's on the page word for word.
+interface Props {
+  faqs: { q: string; a: string }[];
+  title?: string;
+}
+const { faqs, title = 'Common questions' } = Astro.props;
+---
+
+<section class="wrap py-14 lg:py-20">
+  <div class="grid gap-10 lg:grid-cols-[1fr_2fr]">
+    <h2 class="h2">{title}</h2>
+    <div class="divide-y divide-line border-y border-line">
+      {faqs.map((f) => (
+        <details class="group py-5">
+          <summary class="flex cursor-pointer list-none items-start justify-between gap-6 text-[17px] font-medium text-ink [&::-webkit-details-marker]:hidden">
+            {f.q}
+            <span class="mt-1 grid size-5 shrink-0 place-items-center text-accent transition-transform group-open:rotate-45" aria-hidden="true">
+              <svg viewBox="0 0 16 16" class="size-4" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M8 2v12M2 8h12" /></svg>
+            </span>
+          </summary>
+          <p class="mt-3 max-w-[65ch] text-muted">{f.a}</p>
+        </details>
+      ))}
+    </div>
+  </div>
+</section>

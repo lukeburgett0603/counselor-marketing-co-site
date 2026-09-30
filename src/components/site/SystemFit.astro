@@ -1,0 +1,17 @@
+---
+// "How it fits the system": the five steps with this page's step marked.
+import StepsGrid from './StepsGrid.astro';
+interface Props {
+  current: string;
+  text?: string;
+}
+const { current, text } = Astro.props;
+---
+
+<section class="wrap py-14 lg:py-20">
+  <div class="mb-10 max-w-3xl">
+    <h2 class="h2">How it fits the system</h2>
+    {text && <p class="lede mt-4">{text}</p>}
+  </div>
+  <StepsGrid current={current} />
+</section>

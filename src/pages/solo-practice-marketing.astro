@@ -1,0 +1,99 @@
+---
+// rebuild/copy/13-solo-practice.md. Target: private practice marketing.
+import SiteLayout from '../layouts/SiteLayout.astro';
+import PageHero from '../components/site/PageHero.astro';
+import Section from '../components/site/Section.astro';
+import StepsGrid from '../components/site/StepsGrid.astro';
+import Faq from '../components/site/Faq.astro';
+import CtaBand from '../components/site/CtaBand.astro';
+import Ph from '../components/site/Ph.astro';
+import { TIERS, BUILD_FEE, SITE, money } from '../lib/site';
+import { withBase } from '../lib/url';
+import { rootUrl, service } from '../lib/siteSchema';
+
+const path = '/solo-practice-marketing';
+const description =
+  'Private practice marketing for solo counselors and therapists: a website, local search, referrals, and fast follow-up, run for you or by you, from $149/mo.';
+const crumbs = [{ name: 'Who We Serve', path: '/who-we-serve' }, { name: 'Solo Practices', path }];
+const faqs = [
+  { q: "I'm almost full. Is this for me?", a: 'Maybe not yet. Self-Guided keeps your site and inquiries in good shape without a big monthly cost.' },
+  { q: "I'm just starting my practice.", a: "That's a great time: you build it right from day one. Your audit covers what a new practice needs first." },
+  { q: 'Will I have to be on social media?', a: "No. The system doesn't depend on it." },
+];
+const soloTiers = TIERS.filter((t) => t.key !== 'group');
+const soloFit = {
+  'self-guided': 'You run it, with the platform showing you what to do next. Good if you like the work and have a few hours a month.',
+  'done-for-you': 'We run it, and you see the clients. Good if you have open spots and would rather spend your hours with clients. Includes 2 articles a month and a monthly call with Luke.',
+} as Record<string, string>;
+const siteUrl = rootUrl(Astro.site, Astro.url);
+---
+
+<SiteLayout
+  title="Private Practice Marketing for Solo Counselors | Counselor Marketing Co."
+  description={description}
+  path={path}
+  crumbs={crumbs}
+  faqs={faqs}
+  schema={[service(siteUrl, { name: 'Private Practice Marketing for Solo Counselors', description, path, serviceType: 'Marketing for solo counseling practices' })]}
+>
+  <PageHero
+    eyebrow="For solo counselors and therapists"
+    title="You're the clinician. Let marketing be the part you don't have to carry."
+    sub="Private practice marketing shouldn't mean evenings spent learning SEO. We bring in the right clients, and you choose who runs it."
+    crumbs={crumbs}
+  />
+
+  <Section>
+    <div class="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
+      <h2 class="h2">In a solo practice, every open spot is personal.</h2>
+      <p class="text-[17px] text-muted">
+        There's no one else's caseload to balance against yours. An empty hour is your income, and the worry about next month comes
+        home with you. Most solo counselors do their own marketing in the gaps between sessions, which means it happens in bursts and
+        then stops.
+      </p>
+    </div>
+  </Section>
+
+  <Section title="How the system works for a solo practice">
+    <StepsGrid
+      details={[
+        'A site built around the specialties you most want to see, and a Google profile that puts you on the map in your area.',
+        'A site that helps a first-time client feel they already know you, plus an ethical review program.',
+        'A short list of local partners who see the people you help best, and the words to reach out.',
+        "Instant alerts to your phone and automatic replies, so you don't lose a client while you're in session.",
+        'Your caseload meter, and where each new client came from.',
+      ]}
+    />
+  </Section>
+
+  <Section title="Two ways to run it">
+    <div class="grid gap-5 md:grid-cols-2">
+      {soloTiers.map((t) => (
+        <div class:list={['card flex flex-col p-7', t.recommended && 'border-accent']}>
+          <p class="text-lg font-semibold text-ink">{t.name}</p>
+          <p class="mt-2 font-mono text-3xl font-medium tracking-tight text-ink">{t.priceLabel}<span class="text-base text-muted">/mo</span></p>
+          <p class="mt-3 flex-1 text-muted">{soloFit[t.key]}</p>
+          <a href={withBase(`${SITE.auditPath}?plan=${t.key}`)} class:list={['mt-6 self-start', t.recommended ? 'btn-primary' : 'btn-secondary']}>{t.cta}</a>
+        </div>
+      ))}
+    </div>
+    <p class="mt-6 text-muted">
+      Both start with a {money(BUILD_FEE)} website build.
+      <a href={withBase('/pricing')} class="link-arrow ml-2">Compare plans <Ph name="arrow-right" class="size-4" /></a>
+    </p>
+  </Section>
+
+  <Section narrow>
+    <div class="rounded-card border border-line p-6">
+      <p class="text-sm text-muted"><em>Illustrative, not a promise</em></p>
+      <p class="mt-2 text-[17px] text-ink">
+        At $130 a session and 20 sessions, one new client is worth about $2,600. On Done for You, about four new clients a year covers
+        the cost.
+      </p>
+      <a href={withBase('/caseload-calculator')} class="link-arrow mt-4">Run your numbers in the Caseload Calculator <Ph name="arrow-right" class="size-4" /></a>
+    </div>
+  </Section>
+
+  <Faq faqs={faqs} />
+  <CtaBand title="Find out where your next clients will come from." />
+</SiteLayout>

@@ -1,0 +1,58 @@
+---
+// Inner-page hero. Taste rules: at most 4 text elements, subtext short,
+// CTA visible without scrolling, top padding capped. Pass an `aside` slot
+// (a form, a screenshot) for the two-column version.
+import { SITE } from '../../lib/site';
+import { withBase } from '../../lib/url';
+import Ph from './Ph.astro';
+
+interface Props {
+  title: string;
+  sub?: string;
+  eyebrow?: string;
+  crumbs?: { name: string; path: string }[];
+  cta?: { label: string; href: string } | false;
+  secondary?: { label: string; href: string };
+}
+const { title, sub, eyebrow, crumbs = [], cta, secondary } = Astro.props;
+const primary = cta === false ? null : (cta ?? { label: SITE.auditCta, href: SITE.auditPath });
+const hasAside = Astro.slots.has('aside');
+---
+
+<section class="wrap pb-14 pt-10 sm:pt-14 lg:pb-20 lg:pt-20">
+  {crumbs.length > 0 && (
+    <nav aria-label="Breadcrumb" class="mb-8 text-sm text-muted">
+      <ol class="flex flex-wrap items-center gap-1.5">
+        <li><a href={withBase('/')} class="hover:text-ink">Home</a></li>
+        {crumbs.map((c, i) => (
+          <li class="flex items-center gap-1.5">
+            <Ph name="caret-right" class="size-3 opacity-60" />
+            {i === crumbs.length - 1 ? <span aria-current="page" class="text-ink">{c.name}</span> : <a href={withBase(c.path)} class="hover:text-ink">{c.name}</a>}
+          </li>
+        ))}
+      </ol>
+    </nav>
+  )}
+  <div class:list={[hasAside ? 'grid items-center gap-10 lg:grid-cols-[1fr_400px] lg:gap-14' : 'max-w-3xl']}>
+    <div>
+      {eyebrow && <p class="mb-4 text-sm font-medium text-accent">{eyebrow}</p>}
+      <h1 class="text-[clamp(36px,4.6vw,56px)] font-semibold leading-[1.05] tracking-[-0.035em] text-ink">{title}</h1>
+      {sub && <p class="lede mt-5 max-w-[44ch]">{sub}</p>}
+      {(primary || secondary) && (
+        <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
+          {primary && (
+            <a href={withBase(primary.href)} class="btn-primary">
+              {primary.label} <Ph name="arrow-right" class="size-4" />
+            </a>
+          )}
+          {secondary && (
+            <a href={withBase(secondary.href)} class="link-arrow">
+              {secondary.label} <Ph name="arrow-right" class="size-4" />
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+    {hasAside && <div><slot name="aside" /></div>}
+  </div>
+</section>

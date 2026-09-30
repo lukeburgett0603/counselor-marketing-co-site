@@ -1,0 +1,107 @@
+---
+// Public-site shell for the 2026-09-30 rebuild. Every page passes its own
+// title/description/path, a breadcrumb trail, and any extra schema nodes;
+// FAQs passed here become FAQPage schema (the page renders the same list
+// visibly through <Faq>, so the two can't drift).
+import '../styles/site.css';
+import SiteHeader from '../components/site/SiteHeader.astro';
+import SiteFooter from '../components/site/SiteFooter.astro';
+import Wordmark from '../components/site/Wordmark.astro';
+import { withBase } from '../lib/url';
+import { organization, website, person, breadcrumbs, faqPage, LOGO_URL, type Node } from '../lib/siteSchema';
+
+interface Props {
+  title: string;
+  description: string;
+  path: string;
+  crumbs?: { name: string; path: string }[];
+  schema?: Node[];
+  faqs?: { q: string; a: string }[];
+  ogType?: 'website' | 'article';
+  ogImage?: string;
+  noindex?: boolean;
+  // Landing-page mode (the audit page): logo + phone header, slim footer,
+  // no site navigation to wander off into.
+  minimal?: boolean;
+}
+
+const { title, description, path, crumbs = [], schema = [], faqs = [], ogType = 'website', ogImage, noindex = false, minimal = false } = Astro.props;
+
+const siteUrl = new URL(withBase('/'), Astro.site ?? Astro.url).toString().replace(/\/$/, '');
+const canonical = path === '/' ? `${siteUrl}/` : `${siteUrl}${path}`;
+const trail = path === '/' ? [] : [{ name: 'Home', path: '/' }, ...crumbs];
+
+const graph: Node[] = [organization(siteUrl), website(siteUrl), person(siteUrl), ...schema];
+if (trail.length) graph.push(breadcrumbs(siteUrl, trail));
+if (faqs.length) graph.push(faqPage(faqs));
+const jsonLd = JSON.stringify({ '@context': 'https://schema.org', '@graph': graph });
+const image = ogImage ?? LOGO_URL;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script is:inline>
+      // Before first paint: apply a saved light/dark choice so the page
+      // never flashes the wrong theme. No saved choice = follow the device.
+      try {
+        const t = localStorage.getItem('cmc-theme');
+        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    </script>
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex" />}
+    <link rel="icon" href={withBase('/favicon.svg')} type="image/svg+xml" />
+    <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0c0c0e" media="(prefers-color-scheme: dark)" />
+    <link rel="alternate" type="text/plain" title="LLM summary" href={withBase('/llms.txt')} />
+
+    <meta property="og:type" content={ogType} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:site_name" content="Counselor Marketing Co." />
+    <meta property="og:image" content={image} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={image} />
+
+    <script type="application/ld+json" is:inline set:html={jsonLd} />
+  </head>
+  <body class="min-h-screen">
+    <a
+      href="#main"
+      class="sr-only rounded-control bg-accent px-4 py-2 font-medium text-accent-ink focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60]"
+      >Skip to content</a
+    >
+    {minimal ? (
+      <header class="border-b border-line">
+        <div class="wrap flex h-16 items-center justify-between">
+          <a href={withBase('/')} aria-label="Counselor Marketing Co. home"><Wordmark /></a>
+          <a href="tel:+13035943897" class="text-[15px] font-medium text-ink hover:text-accent">(303) 594-3897</a>
+        </div>
+      </header>
+    ) : (
+      <SiteHeader currentPath={path} />
+    )}
+    <main id="main">
+      <slot />
+    </main>
+    {minimal ? (
+      <footer class="mt-16 border-t border-line">
+        <div class="wrap flex flex-wrap gap-x-6 gap-y-2 py-6 text-sm text-muted">
+          <span>© {new Date().getFullYear()} Counselor Marketing Co.</span>
+          <a href={withBase('/privacy-policy')} class="hover:text-ink">Privacy Policy</a>
+          <a href={withBase('/your-data')} class="hover:text-ink">Your Data Is Yours</a>
+        </div>
+      </footer>
+    ) : (
+      <SiteFooter />
+    )}
+  </body>
+</html>

@@ -1,0 +1,22 @@
+---
+// Renders the first approved testimonial for this slot, or nothing at all.
+import { getTestimonials } from '../../lib/testimonials';
+import Ph from './Ph.astro';
+
+interface Props {
+  slot: 'home' | 'audit' | 'results' | 'pricing' | 'services';
+  class?: string;
+}
+const { slot, class: className = '' } = Astro.props;
+const quote = (await getTestimonials()).find((t) => t.slots.includes(slot));
+---
+
+{quote && (
+  <figure class={`card p-6 ${className}`}>
+    <Ph name="quotes" class="size-6 text-accent" />
+    <blockquote class="mt-3 text-[17px] leading-relaxed text-ink">{quote.quote}</blockquote>
+    <figcaption class="mt-4 text-sm text-muted">
+      <span class="font-medium text-ink">{quote.author_name}</span>{quote.author_role && <>, {quote.author_role}</>}{quote.practice_name && <>, {quote.practice_name}</>}
+    </figcaption>
+  </figure>
+)}

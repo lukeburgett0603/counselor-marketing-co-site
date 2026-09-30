@@ -1,0 +1,120 @@
+---
+// rebuild/copy/04-free-caseload-audit.md. The primary conversion page and
+// the ads/outreach landing page: minimal header, one message, one form.
+import SiteLayout from '../layouts/SiteLayout.astro';
+import AuditForm from '../components/site/AuditForm.astro';
+import Section from '../components/site/Section.astro';
+import Faq from '../components/site/Faq.astro';
+import TestimonialSlot from '../components/site/TestimonialSlot.astro';
+import Ph from '../components/site/Ph.astro';
+import { STEPS, SITE } from '../lib/site';
+import { rootUrl, service } from '../lib/siteSchema';
+
+const path = '/free-caseload-audit';
+const description =
+  'A licensed counselor reviews how clients find, choose, and reach your practice, and shows where your next clients will come from. Written plan within 48 hours. Free.';
+
+const covers = [
+  'Where you rank for the searches that matter in your area, whether you appear on Google Maps, and what the practices outranking you are doing differently. Real search data, not guesses.',
+  'What a first-time client sees on your site and Google profile, on their phone, and where they are likely to give up.',
+  'The kinds of local referral partners worth reaching out to in your area.',
+  'How easy it is to reach you, and what happens after someone does.',
+];
+
+const faqs = [
+  { q: 'Is it really free?', a: 'Yes. No card, no obligation, and no pressure call unless you ask for one.' },
+  { q: 'What do you need from me?', a: 'Just the form. We research everything else from public information.' },
+  { q: 'Will you contact me afterward?', a: "We'll send your audit and one follow-up. That's it." },
+  {
+    q: "What if I don't have a website yet?",
+    a: 'Put your practice name and city in that field instead. The audit covers Google, Maps, and your referral options, and outlines what your first website needs.',
+  },
+  { q: 'Is my information private?', a: 'Yes. We use it only to prepare your audit and never share it.' },
+];
+
+const siteUrl = rootUrl(Astro.site, Astro.url);
+---
+
+<SiteLayout
+  title="Free Caseload Audit for Counseling Practices | Counselor Marketing Co."
+  description={description}
+  path={path}
+  crumbs={[{ name: 'Free Caseload Audit', path }]}
+  faqs={faqs}
+  minimal
+  schema={[service(siteUrl, { name: 'Free Caseload Audit', description, path, serviceType: 'Marketing audit for counseling practices' })]}
+>
+  <section class="wrap pb-16 pt-10 sm:pt-14 lg:pb-20 lg:pt-16">
+    <div class="grid items-start gap-10 lg:grid-cols-[1fr_420px] lg:gap-14">
+      <div class="lg:pt-6">
+        <h1 class="text-[clamp(36px,4.4vw,56px)] font-semibold leading-[1.05] tracking-[-0.035em] text-ink">
+          Find out where your next clients will come from.
+        </h1>
+        <p class="lede mt-6 max-w-[40ch]">A licensed counselor reviews how people find, choose, and reach your practice, and sends you a written plan. Free.</p>
+        <ul class="mt-8 space-y-3 text-[15px] text-muted">
+          <li class="flex gap-3"><Ph name="clock" class="mt-0.5 size-5 text-accent" />Written plan within 48 hours</li>
+          <li class="flex gap-3"><Ph name="seal-check" class="mt-0.5 size-5 text-accent" />Every finding checked, never guessed</li>
+          <li class="flex gap-3"><Ph name="certificate" class="mt-0.5 size-5 text-accent" />By {SITE.founder}, {SITE.credential}, {SITE.credentialLong}, {SITE.licenseState}</li>
+        </ul>
+      </div>
+      <div id="form" class="space-y-4 scroll-mt-24">
+        <AuditForm sourcePage="free-caseload-audit" />
+        <TestimonialSlot slot="audit" />
+      </div>
+    </div>
+  </section>
+
+  <Section title="What you'll get" intro="A written review of your practice, organized by the Full Caseload System.">
+    <ol class="border-t border-line">
+      {STEPS.slice(0, 4).map((step, i) => (
+        <li class="grid gap-3 border-b border-line py-6 md:grid-cols-[220px_1fr] md:gap-8">
+          <div class="flex items-center gap-3">
+            <span class="grid size-9 place-items-center rounded-control bg-accent-soft text-accent"><Ph name={step.icon} class="size-5" /></span>
+            <h3 class="h3">{step.name}</h3>
+          </div>
+          <p class="max-w-[62ch] text-muted">{covers[i]}</p>
+        </li>
+      ))}
+      <li class="grid gap-3 border-b border-line py-6 md:grid-cols-[220px_1fr] md:gap-8">
+        <div class="flex items-center gap-3">
+          <span class="grid size-9 place-items-center rounded-control bg-accent text-accent-ink"><Ph name="file-text" class="size-5" /></span>
+          <h3 class="h3">Your plan</h3>
+        </div>
+        <p class="max-w-[62ch] text-muted">The three changes most likely to bring you new clients first, and which plan (if any) fits your practice.</p>
+      </li>
+    </ol>
+  </Section>
+
+  <Section>
+    <div class="grid gap-10 lg:grid-cols-[1fr_1.5fr] lg:gap-16">
+      <h2 class="h2">Why it's worth your time</h2>
+      <ul class="divide-y divide-line border-y border-line">
+        {[
+          { i: 'magnifying-glass', t: 'Every finding is checked, never guessed.', d: "Rankings come from real search data. Maps results come from a live search. Your website platform is identified from your site's own code." },
+          { i: 'scales', t: 'Written by a counselor.', d: "Luke knows what you're allowed to say under your ethics code, so the advice never puts your license at risk." },
+          { i: 'hand-heart', t: 'Yours to keep.', d: 'Use the plan with us, on your own, or with someone else.' },
+          { i: 'star', t: 'Proof, not promises.', d: 'Freedom Counseling Services went from 3.5 to 4.0 Google stars in three weeks.' },
+        ].map((b) => (
+          <li class="flex gap-4 py-6">
+            <Ph name={b.i} class="mt-0.5 size-6 text-accent" />
+            <div>
+              <h3 class="h3">{b.t}</h3>
+              <p class="mt-1.5 text-muted">{b.d}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </Section>
+
+  <Faq faqs={faqs} />
+
+  <section class="wrap py-10">
+    <div class="rounded-card bg-ink px-6 py-12 text-page sm:px-12 lg:flex lg:items-center lg:justify-between lg:gap-12">
+      <h2 class="max-w-2xl text-[clamp(28px,3.2vw,40px)] font-semibold leading-[1.12] tracking-[-0.03em]">
+        Your next clients are already looking for someone like you.
+      </h2>
+      <a href="#form" class="btn-primary mt-8 shrink-0 lg:mt-0">{SITE.auditCta} <Ph name="arrow-up-right" class="size-4" /></a>
+    </div>
+  </section>
+</SiteLayout>

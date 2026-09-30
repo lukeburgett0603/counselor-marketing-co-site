@@ -1,0 +1,46 @@
+---
+// rebuild/copy/17-results-and-freedom.md (hub).
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import PageHero from '../../components/site/PageHero.astro';
+import TestimonialSlot from '../../components/site/TestimonialSlot.astro';
+import CtaBand from '../../components/site/CtaBand.astro';
+import Ph from '../../components/site/Ph.astro';
+import { withBase } from '../../lib/url';
+import { rootUrl, itemList } from '../../lib/siteSchema';
+
+const path = '/results';
+const siteUrl = rootUrl(Astro.site, Astro.url);
+---
+
+<SiteLayout
+  title="Results | Counselor Marketing Co."
+  description="Real results from real counseling practices using the Full Caseload System, reported honestly and only with permission."
+  path={path}
+  crumbs={[{ name: 'Results', path }]}
+  schema={[itemList(siteUrl, [{ name: 'Freedom Counseling Services', path: '/results/freedom-counseling-services' }])]}
+>
+  <PageHero
+    title="Results we can show you."
+    sub="We only publish results that are real and that the practice has approved. You'll find more here as practices complete their first months."
+    crumbs={[{ name: 'Results', path }]}
+    cta={false}
+  />
+  <section class="wrap">
+    <div class="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+      <a href={withBase('/results/freedom-counseling-services')} class="card group block p-8 transition-colors hover:border-accent">
+        <p class="text-sm text-muted">Louisville, Kentucky · Five counselors</p>
+        <h2 class="mt-2 text-2xl font-semibold tracking-[-0.02em] text-ink">Freedom Counseling Services</h2>
+        <p class="mt-6 font-mono text-4xl font-medium tracking-tight text-ink">3.5 <span class="text-muted">→</span> 4.0</p>
+        <p class="mt-1 text-sm text-muted">Google stars in three weeks</p>
+        <span class="link-arrow mt-6">Read the case study <Ph name="arrow-right" class="size-4" /></span>
+      </a>
+      <TestimonialSlot slot="results" />
+    </div>
+    <p class="mt-8 flex max-w-3xl gap-3 text-[15px] text-muted">
+      <Ph name="lock-simple" class="mt-0.5 size-5 text-accent" />
+      Every result here is shared with the practice's permission. We never publish client details or anything that could identify a
+      practice's clients.
+    </p>
+  </section>
+  <CtaBand title="See what the Full Caseload System would do for your practice." />
+</SiteLayout>

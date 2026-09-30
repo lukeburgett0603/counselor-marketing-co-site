@@ -1,17 +1,231 @@
 ---
-import { getHomepage, getPublishedPages, getBusiness } from '../lib/pages';
-import Homepage from '../templates/Homepage.astro';
+// Homepage (rebuild/copy/01-homepage.md). Target search: digital marketing
+// for counselors.
+import SiteLayout from '../layouts/SiteLayout.astro';
+import AuditForm from '../components/site/AuditForm.astro';
+import ProofStrip from '../components/site/ProofStrip.astro';
+import Section from '../components/site/Section.astro';
+import StepsGrid from '../components/site/StepsGrid.astro';
+import Guide from '../components/site/Guide.astro';
+import Faq from '../components/site/Faq.astro';
+import CtaBand from '../components/site/CtaBand.astro';
+import TestimonialSlot from '../components/site/TestimonialSlot.astro';
+import ProductShot from '../components/site/ProductShot.astro';
+import Ph from '../components/site/Ph.astro';
+import { Image } from 'astro:assets';
+import headshot from '../assets/luke-burgett.webp';
+import { TIERS, BUILD_FEE, money } from '../lib/site';
+import { withBase } from '../lib/url';
 
-const page = await getHomepage();
-const allPages = await getPublishedPages();
-const business = await getBusiness();
+const faqs = [
+  {
+    q: 'Why not just use a $99 website builder?',
+    a: "If your caseload is full and you just want a nicer site, that might be enough. If you have open spots, a website alone won't fill them. You also need referrals, fast follow-up, and a way to see what's working.",
+  },
+  {
+    q: 'How long until I get new clients?',
+    a: 'Referrals and Google Ads can bring inquiries within weeks. Search builds over months. Your audit will tell you which to lean on first.',
+  },
+  {
+    q: 'Do I have to write anything?',
+    a: 'Not on Done for You or Group Practice. We research, plan, and write, and you approve. On Self-Guided, your content plan tells you exactly what to write next.',
+  },
+  {
+    q: 'Is this ethical for a licensed counselor?',
+    a: "Yes. It's designed around the ACA, APA, and NASW codes by a counselor who practices under them.",
+  },
+  {
+    q: 'Do you work with my kind of practice?',
+    a: 'We work with counselors, therapists, and psychologists in private practice, solo or group, across specialties. If your work is clinical counseling or psychology, the system fits.',
+  },
+];
 
-if (!page) {
-  throw new Error(
-    'No page with page_type "Homepage" and status "content-complete" was found in Supabase. ' +
-      'Run site-structure-planner-supabase and webpage-copywriter before building.'
-  );
-}
+const stepDetails = [
+  'Local SEO and Google Maps put you in front of the people searching in your area. A website built for your specialties, Google Business Profile management, and Google Ads when you need clients sooner. Content written for how people search now, so AI assistants have a reason to mention you too.',
+  'A site that answers what a nervous first-time client is really asking: is this person right for me, what does it cost, what happens first. Plus a review program that grows your Google rating without ever asking a client for a review.',
+  'The doctors, attorneys, pastors, and school counselors in your area already send people to counselors. We help you become the one they think of first.',
+  'Every inquiry gets an instant confirmation, you get an instant alert, and your CRM reminds you until every lead has a reply. When follow-up is slow, people move on to the next name on their list.',
+  'One dashboard shows new clients, where they came from, how fast you respond, and how full your caseload is, counselor by counselor.',
+];
+
+const timeline = [
+  { when: 'First 30 days', what: 'Your new site is live, your Google Business Profile is fixed, your dashboard is on, and referral outreach begins.' },
+  { when: 'Months 2 and 3', what: 'Referral partners and (if you choose) Google Ads start bringing inquiries. Search rankings begin to move.' },
+  { when: 'Months 4 to 6 and beyond', what: 'Search traffic builds on itself. This is when the system starts working without you thinking about it.' },
+];
+
+const trust = [
+  {
+    icon: 'scales',
+    title: 'Built for your ethics code.',
+    text: "Everything we do is checked against the ACA, APA, and NASW codes and your state board's advertising rules. We never solicit testimonials from clients, never pay for referrals, and never add ad-tracking scripts to your site.",
+  },
+  {
+    icon: 'download-simple',
+    title: 'Your data is yours.',
+    text: 'Download everything, any time. If you ever leave, your website, your domain, and your data go with you.',
+    link: { label: 'Your Data Is Yours', href: '/your-data' },
+  },
+  { icon: 'calendar-check', title: 'Month-to-month.', text: 'No long contracts. We keep you by being worth it.' },
+];
 ---
 
-<Homepage page={page} allPages={allPages} business={business} />
+<SiteLayout
+  title="Digital Marketing for Counselors | The Full Caseload System"
+  description="A licensed counselor's system for filling your caseload: get found on Google, chosen by the right clients, referred by local partners, and booked fast. Free Caseload Audit."
+  path="/"
+  faqs={faqs}
+>
+  <section class="wrap pb-16 pt-10 sm:pt-14 lg:pb-20 lg:pt-20">
+    <div class="grid items-center gap-10 lg:grid-cols-[1fr_400px] lg:gap-14">
+      <div>
+        <p class="mb-5 text-sm font-medium text-accent">For counselors, therapists, and psychologists in private practice</p>
+        <h1 class="text-[clamp(38px,4.4vw,56px)] font-semibold leading-[1.04] tracking-[-0.035em] text-ink">
+          Stop wondering where your next client will come from.
+        </h1>
+        <p class="lede mt-6 max-w-[36ch]">We build your website and run the system that fills your caseload. Built by a licensed counselor.</p>
+        <div class="mt-9 flex items-center gap-3 text-[15px] text-muted">
+          <Image src={headshot} alt="Luke Burgett, LPCA" widths={[44, 88]} sizes="44px" class="size-11 rounded-full object-cover" />
+          <span><strong class="block font-medium text-ink">Luke Burgett, LPCA</strong>Licensed Professional Counselor Associate, Kentucky</span>
+        </div>
+      </div>
+      <div class="space-y-4">
+        <AuditForm sourcePage="home" />
+        <TestimonialSlot slot="home" />
+      </div>
+    </div>
+  </section>
+
+  <ProofStrip />
+
+  <section class="wrap py-16 lg:py-24">
+    <div class="grid gap-12 lg:grid-cols-2 lg:gap-20">
+      <div>
+        <h2 class="h2">Open spots cost more than a quiet afternoon.</h2>
+        <div class="mt-5 space-y-4 text-[17px] text-muted">
+          <p>
+            When referrals slow down, it rarely stays small. Revenue dips. You cover the gap from savings, or you borrow. Good
+            practices start asking hard questions: cut hours, let an associate go, move somewhere cheaper.
+          </p>
+          <p>
+            None of that means you're doing something wrong as a clinician. You were trained to help people, not to market a
+            practice. Most counselors are never taught how clients actually find them.
+          </p>
+          <p class="font-medium text-ink">That's the part we take off your plate.</p>
+        </div>
+      </div>
+      <div class="lg:border-l lg:border-line lg:pl-20">
+        <h2 class="h2">A website isn't a marketing plan.</h2>
+        <div class="mt-5 space-y-4 text-[17px] text-muted">
+          <p>
+            You can get a therapist website for $99 a month now, and some of them look great. But a website is one tool. A full
+            caseload takes a system: people have to find you, trust you, and reach you, someone has to follow up fast, and you
+            need to see which of it is working.
+          </p>
+          <p>
+            That's what <strong class="font-medium text-ink">digital marketing for counselors</strong> should mean. Not a site
+            that sits there. A system that brings you clients, and shows you where each one came from.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <Section title="The Full Caseload System">
+    <p class="lede -mt-6 mb-10 max-w-3xl">
+      The right clients find you on Google, Maps, and AI search, choose you once they land, and get booked fast. Local partners
+      send you referrals, and you watch it all work in one dashboard. Five steps, each measured. You get all five on every plan.
+      The only question is who runs them.
+    </p>
+    <StepsGrid details={stepDetails} />
+    <a href={withBase('/how-it-works')} class="btn-secondary mt-10">See the full system <Ph name="arrow-right" class="size-4" /></a>
+  </Section>
+
+  <Section title="What to expect, honestly">
+    <ol class="grid gap-8 md:grid-cols-3 md:gap-0">
+      {timeline.map((t, i) => (
+        <li class="relative border-t-2 border-line pt-6 md:pr-8">
+          <span class:list={['absolute -top-[7px] left-0 size-3 rounded-full', i === 0 ? 'bg-accent' : 'border-2 border-accent bg-page']} />
+          <p class="font-mono text-sm text-accent">{t.when}</p>
+          <p class="mt-2 text-[17px] text-ink">{t.what}</p>
+        </li>
+      ))}
+    </ol>
+    <p class="mt-10 max-w-2xl text-muted">
+      Search takes time. Anyone who promises page one in 30 days is guessing. That's why the system never relies on search alone.
+    </p>
+  </Section>
+
+  <Section>
+    <div class="grid items-center gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
+      <div>
+        <h2 class="h2">See your caseload fill, not a vanity report.</h2>
+        <p class="lede mt-5">
+          Every lead in one place, with a "due this week" list so no one falls through the cracks. Where each new client came from.
+          How fast you respond. And the number you actually care about: how full your caseload is.
+        </p>
+        <a href={withBase('/platform')} class="link-arrow mt-6">Tour the platform <Ph name="arrow-right" class="size-4" /></a>
+      </div>
+      <ProductShot shot="overview" />
+    </div>
+  </Section>
+
+  <Section title="Real practices, real results.">
+    <div class="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+      <a href={withBase('/results/freedom-counseling-services')} class="card group block p-8 transition-colors hover:border-accent">
+        <p class="font-mono text-4xl font-medium tracking-tight text-ink">3.5 <span class="text-muted">→</span> 4.0</p>
+        <p class="mt-1 text-sm text-muted">Google stars in three weeks</p>
+        <p class="mt-6 text-[17px] text-muted">
+          <strong class="font-medium text-ink">Freedom Counseling Services</strong>, a group counseling practice in Louisville,
+          Kentucky. Went from 3.5 to 4.0 stars on Google in three weeks with our ethical review strategy: a simple invitation in the
+          waiting room, and no client ever asked directly. Their new website and the full platform are live.
+        </p>
+        <span class="link-arrow mt-6">Read Freedom's story <Ph name="arrow-right" class="size-4" /></span>
+      </a>
+      <TestimonialSlot slot="results" />
+    </div>
+  </Section>
+
+  <Guide />
+
+  <Section>
+    <div class="grid gap-10 lg:grid-cols-[1fr_1.5fr] lg:gap-16">
+      <h2 class="h2">Ethical by design. Yours to keep.</h2>
+      <ul class="divide-y divide-line border-y border-line">
+        {trust.map((t) => (
+          <li class="flex gap-4 py-6">
+            <Ph name={t.icon} class="mt-0.5 size-6 text-accent" />
+            <div>
+              <h3 class="h3">{t.title}</h3>
+              <p class="mt-1.5 text-muted">{t.text}</p>
+              {t.link && <a href={withBase(t.link.href)} class="link-arrow mt-2 text-[15px]">{t.link.label} <Ph name="arrow-right" class="size-3.5" /></a>}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </Section>
+
+  <Section title="Every plan includes the whole system. The only question is who runs it.">
+    <div class="card divide-y divide-line">
+      {TIERS.map((t) => (
+        <div class="grid gap-2 p-6 sm:grid-cols-[200px_160px_1fr] sm:items-baseline sm:gap-6">
+          <p class="flex items-center gap-2 font-semibold text-ink">
+            {t.name}
+            {t.recommended && <span class="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent">Recommended</span>}
+          </p>
+          <p class="font-mono text-2xl font-medium tracking-tight text-ink">
+            {t.key === 'group' ? 'from ' : ''}{t.priceLabel}<span class="text-base text-muted">/mo</span>
+          </p>
+          <p class="text-muted">{t.promise}</p>
+        </div>
+      ))}
+    </div>
+    <p class="mt-5 text-muted">All plans start with a {money(BUILD_FEE)} website build.</p>
+    <a href={withBase('/pricing')} class="link-arrow mt-3">Compare plans <Ph name="arrow-right" class="size-4" /></a>
+  </Section>
+
+  <Faq faqs={faqs} />
+
+  <CtaBand />
+</SiteLayout>

@@ -1,0 +1,99 @@
+---
+// rebuild/copy/06-website-design.md. Target: website design for therapists.
+import SiteLayout from '../layouts/SiteLayout.astro';
+import PageHero from '../components/site/PageHero.astro';
+import Section from '../components/site/Section.astro';
+import FeatureList from '../components/site/FeatureList.astro';
+import SeeNote from '../components/site/SeeNote.astro';
+import SystemFit from '../components/site/SystemFit.astro';
+import ProductShot from '../components/site/ProductShot.astro';
+import Faq from '../components/site/Faq.astro';
+import CtaBand from '../components/site/CtaBand.astro';
+import Ph from '../components/site/Ph.astro';
+import { withBase } from '../lib/url';
+import { rootUrl, service } from '../lib/siteSchema';
+
+const path = '/website-design';
+const description =
+  'Website design for therapists and counselors, built for your specialties and area, fast on any phone, and ready to turn visitors into booked clients. Part of the Full Caseload System.';
+const crumbs = [{ name: 'Services', path: '/services' }, { name: 'Website Design', path }];
+const faqs = [
+  { q: 'How much does a website cost?', a: '$1,500, once, on every plan. That includes your Google Business Profile setup, domain setup and migration, and your platform. Plans start at $149/mo.' },
+  { q: 'How long does it take?', a: 'We aim to have your site live within 30 days of kickoff. The biggest variable is how quickly your photos and details come together.' },
+  { q: 'Can I edit my own website?', a: 'Yes. Your admin lets you update page copy, photos, your availability, and blog posts.' },
+  { q: 'I already have a website. Do I lose it?', a: 'No. We migrate your content, keep your domain, and redirect old pages so nothing breaks.' },
+  { q: 'Do I own my website?', a: 'Your domain is yours, and your data is yours. If you ever leave, you take your website with you as files you can host anywhere.' },
+];
+const siteUrl = rootUrl(Astro.site, Astro.url);
+---
+
+<SiteLayout
+  title="Website Design for Therapists | Built to Bring You Clients"
+  description={description}
+  path={path}
+  crumbs={crumbs}
+  faqs={faqs}
+  schema={[service(siteUrl, { name: 'Website Design for Therapists', description, path, serviceType: 'Website design' })]}
+>
+  <PageHero
+    eyebrow="Step 1 of the Full Caseload System: Get Found"
+    title="A website built to bring you clients, not just to look nice."
+    sub="Our website design for therapists starts with one question: when someone lands here at 11pm on their phone, will they reach out?"
+    crumbs={crumbs}
+  />
+
+  <Section>
+    <div class="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
+      <h2 class="h2">Most therapist websites are brochures.</h2>
+      <div class="space-y-4 text-[17px] text-muted">
+        <p>
+          They look calm and professional, list credentials and specialties, and end with "contact me." Then they sit there. A
+          visitor who's nervous and unsure doesn't find the answers they came for, doesn't know what happens next, and closes the tab.
+        </p>
+        <p>
+          A client-ready website does three things a brochure doesn't. It shows up for the searches people in your area really make.
+          It answers a first-time client's real questions. And it makes reaching out easy.
+        </p>
+      </div>
+    </div>
+  </Section>
+
+  <Section title="What's in every website we build">
+    <FeatureList
+      items={[
+        { t: 'A page for each specialty you want to be known for', d: 'Written around what people really search. "Anxiety counseling in Louisville" gets its own page, not a bullet point.' },
+        { t: 'A profile page for each clinician', d: 'With their approach, specialties, and availability. Built in for up to 10 clinicians.' },
+        { t: 'A native appointment request form', d: 'It stays on your site, with no hand-off to a third-party tool where people drop off, plus "How did you hear about us?" so you know what\'s working.' },
+        { t: 'Fast and mobile-first', d: 'Many people looking for a counselor are searching on their phone, often late at night.' },
+        { t: 'Search foundations built in', d: 'Structured data, a sitemap, descriptive image text, and clean page titles, so Google and AI assistants understand what you do and where.' },
+        { t: 'Your brand, done properly', d: 'Colors, type, and photography that feel like your practice, not a template.' },
+        { t: 'Your domain in your name', d: "With your old site's content migrated and redirects set up, so you don't lose what you've already built." },
+      ]}
+    />
+    <div class="mt-10 max-w-3xl">
+      <SeeNote>Visits, which pages bring inquiries, and how many visitors reach out, so the site keeps getting better instead of going stale.</SeeNote>
+    </div>
+  </Section>
+
+  <Section>
+    <div class="grid items-center gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
+      <div>
+        <h2 class="h2">Built this way for Freedom Counseling Services.</h2>
+        <p class="mt-5 text-[17px] text-muted">
+          Freedom Counseling Services moved from an old Squarespace site to a site built this way, with a page for each of their five
+          counselors and each specialty.
+        </p>
+        <a href={withBase('/results/freedom-counseling-services')} class="link-arrow mt-5">See Freedom's story <Ph name="arrow-right" class="size-4" /></a>
+      </div>
+      <ProductShot shot="freedom-home" />
+    </div>
+  </Section>
+
+  <SystemFit
+    current="found"
+    text="A website is step 1, not the whole plan. It works best alongside SEO and Google Maps, ethical reviews, referral partners, and fast follow-up, which is why every plan includes all five steps."
+  />
+
+  <Faq faqs={faqs} />
+  <CtaBand title="Find out what your current site is costing you." />
+</SiteLayout>

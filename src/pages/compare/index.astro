@@ -1,0 +1,80 @@
+---
+// rebuild/copy/19-compare.md (hub).
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import PageHero from '../../components/site/PageHero.astro';
+import Section from '../../components/site/Section.astro';
+import DataTable from '../../components/site/DataTable.astro';
+import Checks from '../../components/site/Checks.astro';
+import CtaBand from '../../components/site/CtaBand.astro';
+import Ph from '../../components/site/Ph.astro';
+import { COMPARISONS } from '../../lib/compare';
+import { withBase } from '../../lib/url';
+import { rootUrl, itemList } from '../../lib/siteSchema';
+
+const path = '/compare';
+const siteUrl = rootUrl(Astro.site, Astro.url);
+---
+
+<SiteLayout
+  title="How to Market a Counseling Practice: Your Options Compared"
+  description="Website builders, therapist site platforms, Psychology Today, marketing agencies, or the Full Caseload System. An honest comparison, with who each option is best for."
+  path={path}
+  crumbs={[{ name: 'Compare', path }]}
+  schema={[itemList(siteUrl, COMPARISONS.map((c) => ({ name: c.title, path: `/compare/${c.slug}` })))]}
+>
+  <PageHero
+    title="Your options for getting clients, compared honestly."
+    sub="Here's what each option does well, what it leaves to you, and who it fits best, including when we're not the right choice."
+    crumbs={[{ name: 'Compare', path }]}
+    cta={false}
+  />
+
+  <Section>
+    <div class="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
+      <h2 class="h2">What to look for</h2>
+      <Checks
+        items={[
+          'Does it just get you a website, or bring you clients?',
+          'Can you see new clients and where they came from, not just visits?',
+          'Does it respect your ethics code (reviews, testimonials, referrals, tracking)?',
+          'Who does the work: you, or them?',
+          'What happens to your website and data if you leave?',
+        ]}
+      />
+    </div>
+  </Section>
+
+  <Section title="Side by side">
+    <DataTable
+      caption="Options for marketing a counseling practice"
+      head={['', 'Best for', 'Price (checked)', 'Who does the work', 'Measures']}
+      rows={[
+        ['DIY builders (Squarespace)', 'Practices with time to do it all themselves', '$19 to $49/mo (annual)', 'You', 'Visits'],
+        ['Psychology Today', 'Almost every practice, as one channel', '$29.95/mo', 'You', 'Profile views and calls'],
+        ['WebsiteTherapy', 'An affordable, AI-maintained website', '$99 to $199/mo', 'Their AI and team', 'Not listed'],
+        ['TherapySites', 'An affordable site with live support, adding marketing piece by piece', '$69 to $336/mo + $199 design', 'Them, by add-on', 'Not listed'],
+        ['General agencies', 'Large, multi-location organizations', 'About $500 to $5,000+/mo', 'Them', 'Usually traffic and clicks'],
+        ['<span class="text-accent">Counselor Marketing Co.</span>', 'Practices with open spots that want the whole system', '$149 to $1,500/mo + $1,500 build', 'You or us', 'New clients and caseload'],
+      ]}
+    />
+    <p class="mt-4 text-sm text-muted">Prices checked September 28 to 30, 2026, on each company's own website. Check their sites for current pricing.</p>
+  </Section>
+
+  <Section title="The detailed comparisons">
+    <ul class="divide-y divide-line border-y border-line">
+      {COMPARISONS.map((c) => (
+        <li>
+          <a href={withBase(`/compare/${c.slug}`)} class="group flex items-center justify-between gap-6 py-5">
+            <span>
+              <span class="h3 block group-hover:text-accent">{c.title}</span>
+              <span class="mt-1 block max-w-[75ch] text-[15px] text-muted">{c.description}</span>
+            </span>
+            <Ph name="arrow-right" class="size-5 text-accent" />
+          </a>
+        </li>
+      ))}
+    </ul>
+  </Section>
+
+  <CtaBand title="Not sure which option fits?" body="Your free audit tells you honestly which option fits your practice." />
+</SiteLayout>
