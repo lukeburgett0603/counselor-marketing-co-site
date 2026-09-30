@@ -11,7 +11,7 @@ import Ph from './Ph.astro';
       {TIERS.map((t) => (
         <li>
           <span class="text-sm text-muted">{t.name}</span>
-          <span class="block font-mono text-xl font-medium text-ink">{t.key === 'group' ? 'from ' : ''}{t.priceLabel}<span class="text-sm text-muted">/mo</span></span>
+          <span class="block font-mono text-xl font-medium text-ink">{t.key === 'group' && <span class="font-sans text-sm text-muted">from </span>}{t.priceLabel}<span class="text-sm text-muted">/mo</span></span>
         </li>
       ))}
     </ul>

@@ -25,6 +25,9 @@
   --accent-ink: #ffffff;
   --accent-soft: #e9eefc;
   --shadow: 0 1px 2px rgb(24 24 27 / 0.04), 0 8px 24px -12px rgb(24 24 27 / 0.12);
+  --band: #18181b;
+  --band-ink: #fafafa;
+  --band-line: #18181b;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -39,6 +42,9 @@
     --accent-ink: #0c0c0e;
     --accent-soft: #172150;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px -12px rgb(0 0 0 / 0.6);
+    --band: #172150;
+    --band-ink: #f4f4f5;
+    --band-line: #2a3a80;
     color-scheme: dark;
   }
 }
@@ -53,6 +59,9 @@
   --accent-ink: #0c0c0e;
   --accent-soft: #172150;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px -12px rgb(0 0 0 / 0.6);
+  --band: #172150;
+  --band-ink: #f4f4f5;
+  --band-line: #2a3a80;
   color-scheme: dark;
 }
 
@@ -163,6 +172,10 @@ h1, h2, h3, h4 {
 .table-wrap td {
   color: var(--muted);
 }
+.table-wrap tbody th {
+  white-space: nowrap;
+  color: var(--ink);
+}
 .table-wrap td:first-child {
   color: var(--ink);
   font-weight: 500;
@@ -239,6 +252,11 @@ h1, h2, h3, h4 {
   .link-arrow:hover {
     text-decoration: underline;
     text-underline-offset: 4px;
+  }
+  .band {
+    background: var(--band);
+    color: var(--band-ink);
+    border: 1px solid var(--band-line);
   }
   .card {
     background: var(--surface);

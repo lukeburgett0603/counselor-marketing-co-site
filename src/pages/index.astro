@@ -171,8 +171,8 @@ const trust = [
   </Section>
 
   <Section title="Real practices, real results.">
-    <div class="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-      <a href={withBase('/results/freedom-counseling-services')} class="card group block p-8 transition-colors hover:border-accent">
+    <div class="grid gap-6 lg:has-[figure]:grid-cols-[1.4fr_1fr]">
+      <a href={withBase('/results/freedom-counseling-services')} class="card group block p-8 transition-colors only:max-w-3xl hover:border-accent">
         <p class="font-mono text-4xl font-medium tracking-tight text-ink">3.5 <span class="text-muted">→</span> 4.0</p>
         <p class="mt-1 text-sm text-muted">Google stars in three weeks</p>
         <p class="mt-6 text-[17px] text-muted">
@@ -209,13 +209,13 @@ const trust = [
   <Section title="Every plan includes the whole system. The only question is who runs it.">
     <div class="card divide-y divide-line">
       {TIERS.map((t) => (
-        <div class="grid gap-2 p-6 sm:grid-cols-[200px_160px_1fr] sm:items-baseline sm:gap-6">
-          <p class="flex items-center gap-2 font-semibold text-ink">
+        <div class="grid gap-2 p-6 sm:grid-cols-[260px_200px_1fr] sm:items-baseline sm:gap-6">
+          <p class="flex flex-wrap items-center gap-2 whitespace-nowrap font-semibold text-ink">
             {t.name}
             {t.recommended && <span class="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent">Recommended</span>}
           </p>
           <p class="font-mono text-2xl font-medium tracking-tight text-ink">
-            {t.key === 'group' ? 'from ' : ''}{t.priceLabel}<span class="text-base text-muted">/mo</span>
+            {t.key === 'group' && <span class="font-sans text-base text-muted">from </span>}{t.priceLabel}<span class="text-base text-muted">/mo</span>
           </p>
           <p class="text-muted">{t.promise}</p>
         </div>
