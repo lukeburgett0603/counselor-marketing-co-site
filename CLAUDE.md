@@ -2300,6 +2300,39 @@ live contact form would have silently stopped accepting submissions.
   function (genuine success, test lead deleted after). All throwaway
   accounts/test data removed afterward.
 
+## Explicit H1/H2/H3 heading hierarchy + keyword-in-title guidance (synced 2026-10-01)
+
+Synced from `local-business-site-template` — see that repo's CLAUDE.md
+("Explicit heading hierarchy for `.prose` body copy...") for the full
+diagnosis, found on and fixed first against Freedom Counseling
+Services' live site. This repo's own `.prose h2`/`h3` rule had the
+identical gap the template's had (font-weight/letter-spacing only, no
+explicit font-size), so this was a clean, direct port with no
+CMC-specific values to reconcile — unlike Freedom's own copy, which
+needed its weight bumped from a site-specific softened 500 back up to
+700; this repo's weight was already 800 and is untouched.
+
+- `.prose h1`/`h2`/`h3` now get fixed, explicit `font-size`/`line-height`
+  in `rem` (2.25rem/1.75rem/1.375rem) instead of Tailwind Typography's
+  em-relative-to-prose-variant scale — a markdown heading now renders at
+  the identical pixel size in the admin rich-text editor's `prose-sm`
+  preview as on a published `prose`/`prose-lg` page. `.prose h1` is a
+  new, defensive addition (a stray H1 in body copy — e.g. a leftover "# "
+  from a pasted draft — now renders as a real heading instead of
+  Typography's unstyled 2.25em fallback).
+- `admin/blog.astro`'s Content Plan hand-off keyword-guidance panel and
+  `admin/content-plan.astro`'s "Add idea" modal both now nudge toward
+  working the target keyword's core topic words into the title itself
+  (not the literal "near me"/long-tail phrase verbatim) — the same
+  real gap found on Freedom's own Content Plan data; not separately
+  audited against this repo's own content plan items in this pass.
+- **Verified**: `astro check` (0 errors) and a real `npm run build`
+  against this project's live Supabase data, both clean (50 pages). Not
+  separately verified in a live browser against this repo's own
+  content — the CSS/markup change is identical to what was already
+  thoroughly live-verified on Freedom's site, with no CMC-specific
+  branching to re-test.
+
 ## Backlog for this repo
 
 - **Blog analytics (pageviews/leads/CTA clicks per post) — planned, not
