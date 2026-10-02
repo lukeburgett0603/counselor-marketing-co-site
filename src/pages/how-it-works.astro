@@ -9,7 +9,7 @@ import Faq from '../components/site/Faq.astro';
 import CtaBand from '../components/site/CtaBand.astro';
 import ProductShot from '../components/site/ProductShot.astro';
 import Ph from '../components/site/Ph.astro';
-import { STEPS } from '../lib/site';
+import { STEPS, FREEDOM_CONVERSION } from '../lib/site';
 import { withBase } from '../lib/url';
 import { rootUrl, service } from '../lib/siteSchema';
 
@@ -21,7 +21,7 @@ const detail = [
   {
     do: [
       'Build a fast website with a page for each of your specialties.',
-      'Fix and manage your Google Business Profile so you show up on Google Maps.',
+      'Complete and manage your Google Business Profile so you show up on Google Maps: every question answered, fresh photos, regular posts, and reviews grown ethically, without ever asking a client.',
       'Handle local SEO and citations.',
       'Write articles people are really searching for, written so AI assistants can cite them.',
       'Run Google Ads when you need inquiries sooner.',
@@ -32,13 +32,14 @@ const detail = [
   },
   {
     do: [
-      "Write every page to answer a first-time client's real questions: fit, cost, what happens first.",
-      'Make reaching out easy on any phone.',
-      'Run an ethical review program that grows your Google rating without ever asking a client for a review.',
+      'Get clear on exactly who you serve.',
+      "Write every page around your ideal client's story: the pain that brought them here, empathy, and your competence to help with exactly that.",
+      'Make the path to becoming a client crystal clear, with a way to reach you always one click away.',
+      'Keep every page fast on any phone.',
     ],
-    see: 'How many visits turn into inquiries, and your Google rating over time.',
-    note: ['Proof', 'Freedom Counseling Services went from 3.5 to 4.0 stars in three weeks.'],
-    shot: 'review-program',
+    see: 'How many visits turn into inquiries, and which pages bring them.',
+    note: ['Proof', `Freedom Counseling Services: ${FREEDOM_CONVERSION.rate} of inquiries became clients (${FREEDOM_CONVERSION.detail}).`],
+    shot: 'freedom-home',
   },
   {
     do: [
@@ -109,7 +110,7 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
 
   <Section>
     <div class="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
-      <h2 class="h2">How a new client actually reaches you</h2>
+      <h2 class="h2 lg:sticky lg:top-24 lg:self-start">How a new client actually reaches you</h2>
       <div class="space-y-4 text-[17px] text-muted">
         <p>
           Someone decides it's time to talk to someone. They search Google or Maps, ask ChatGPT, or ask their doctor or pastor. They
@@ -156,8 +157,8 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
       head={['', 'Self-Guided', 'Done for You', 'Group Practice']}
       highlight={2}
       rows={[
-        ['Get Found', 'Your content plan shows what to publish; we host and maintain your site', 'We write 2 articles a month and manage your Google profile', 'We write 4 articles a month, plus a page for each clinician'],
-        ['Get Chosen', 'Review program tools', 'We run the review program', 'Practice-wide'],
+        ['Get Found', 'Your content plan shows what to publish; Google profile checklist and review tools; we host and maintain your site', 'We write 2 articles a month and manage your Google profile and review program', 'We write 4 articles a month, plus a page for each clinician'],
+        ['Get Chosen', 'Copy written for your ideal clients, in the build', 'Plus monthly refinements to the pages that bring inquiries', 'Plus copy for each clinician and specialty'],
         ['Get Referred', 'Tracker and outreach kit', 'Plus coaching', 'Coaching for your team'],
         ['Get Booked', 'Alerts, CRM, automatic reply', 'Plus a monthly response-time review', 'Plus lead routing to each clinician'],
         ['Watch It Work', 'Your Overview dashboard', 'Plus a monthly call with Luke', 'Plus a caseload meter for each clinician'],
@@ -168,7 +169,7 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
 
   <Section>
     <div class="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
-      <div>
+      <div class="lg:sticky lg:top-24 lg:self-start">
         <h2 class="h2">Built around your ethics code, not around it.</h2>
         <p class="mt-5 text-[17px] text-muted">
           A generic agency's playbook can put a counselor's license at risk: testimonials from clients, outcome promises, gifts to

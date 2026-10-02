@@ -1,8 +1,7 @@
 ---
 // rebuild/copy/17-results-and-freedom.md (case study). Freedom's site
-// screenshots approved 2026-09-30. Only the result Freedom has approved
-// sharing (3.5 to 4.0 stars) is published; the 74% lead-to-client rate
-// stays internal until they say otherwise.
+// screenshots approved 2026-09-30. Freedom approved publishing its
+// lead-to-client rate on 2026-10-02 (FREEDOM_CONVERSION in lib/site.ts).
 import SiteLayout from '../../layouts/SiteLayout.astro';
 import PageHero from '../../components/site/PageHero.astro';
 import Section from '../../components/site/Section.astro';
@@ -11,10 +10,11 @@ import ProductShot from '../../components/site/ProductShot.astro';
 import TestimonialSlot from '../../components/site/TestimonialSlot.astro';
 import CtaBand from '../../components/site/CtaBand.astro';
 import { rootUrl, article } from '../../lib/siteSchema';
+import { FREEDOM_CONVERSION } from '../../lib/site';
 
 const path = '/results/freedom-counseling-services';
 const description =
-  'How a five-counselor Christian counseling practice in Louisville moved to the Full Caseload System and went from 3.5 to 4.0 Google stars in three weeks.';
+  `How a five-counselor Christian counseling practice in Louisville moved to the Full Caseload System: ${FREEDOM_CONVERSION.rate} of inquiries became clients, and 3.5 to 4.0 Google stars in three weeks.`;
 const crumbs = [{ name: 'Results', path: '/results' }, { name: 'Freedom Counseling Services', path }];
 const siteUrl = rootUrl(Astro.site, Astro.url);
 ---
@@ -42,7 +42,12 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
   />
 
   <section class="wrap">
-    <dl class="card grid divide-y divide-line md:grid-cols-3 md:divide-x md:divide-y-0">
+    <dl class="card grid sm:grid-cols-2 lg:grid-cols-4 [&>div]:border-line max-sm:[&>div+div]:border-t sm:max-lg:[&>div:nth-child(even)]:border-l sm:max-lg:[&>div:nth-child(n+3)]:border-t lg:[&>div+div]:border-l">
+      <div class="p-6">
+        <dt class="text-sm text-muted">Inquiries that became clients</dt>
+        <dd class="mt-1 font-mono text-3xl font-medium tracking-tight text-ink">{FREEDOM_CONVERSION.rate}</dd>
+        <dd class="mt-1 text-xs text-muted">{FREEDOM_CONVERSION.detail}</dd>
+      </div>
       <div class="p-6">
         <dt class="text-sm text-muted">Google rating, in three weeks</dt>
         <dd class="mt-1 font-mono text-3xl font-medium tracking-tight text-ink">3.5 → 4.0</dd>
@@ -81,8 +86,8 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
   <Section title="What we did, step by step">
     <StepsGrid
       details={[
-        'Migrated them to a new site with a page for each counselor and specialty, their domain kept, and redirects in place. Set up rank tracking for the searches that matter in Louisville.',
-        "Rebuilt every counselor's page around the questions a first-time client asks. Put the ethical review strategy in place: a simple invitation in the waiting room, no client ever asked directly.",
+        'Migrated them to a new site with a page for each counselor and specialty, their domain kept, and redirects in place. Fully optimized their Google Business Profile: every question answered, fresh photos of the practice, regular posts, and the ethical review program (a simple invitation in the waiting room, no client ever asked). Set up rank tracking for the searches that matter in Louisville.',
+        "Rewrote every counselor's and specialty page around the clients each one serves and the questions a first-time client asks, with a clear path to reaching out and a way to contact them always in view.",
         'Set up their referral partner tracker and outreach kit, with a practice handout and church-specific outreach.',
         'Instant alerts to their office, a CRM with a "due this week" list, and speed-to-lead tracking.',
         'An Overview dashboard with a caseload meter for each of the five counselors.',
@@ -92,9 +97,10 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
 
   <Section title="The result so far" narrow>
     <p class="text-[17px] text-muted">
-      <strong class="font-medium text-ink">Their Google rating went from 3.5 to 4.0 stars in three weeks.</strong> That's the first
-      number we're ready to share. The rest of the system has only been live since September 2026, and we'll add results here as they
-      mature, with Freedom's permission.
+      <strong class="font-medium text-ink">{FREEDOM_CONVERSION.rate} of the people who reached out became clients</strong>
+      ({FREEDOM_CONVERSION.detail}). <strong class="font-medium text-ink">Their Google rating went from 3.5 to 4.0 stars in three weeks.</strong>
+      The system has only been live since September 2026, so these are early numbers from one practice, not a promise. We'll add
+      results here as they mature, with Freedom's permission.
     </p>
     <TestimonialSlot slot="results" class="mt-8" />
   </Section>

@@ -10,7 +10,7 @@ import Faq from '../components/site/Faq.astro';
 import CtaBand from '../components/site/CtaBand.astro';
 import TestimonialSlot from '../components/site/TestimonialSlot.astro';
 import Ph from '../components/site/Ph.astro';
-import { TIERS, ADDONS, BUILD_FEE, BUILD_INCLUDES, TIER_MATRIX, SITE, HIPAA_ANSWER, money } from '../lib/site';
+import { TIERS, ADDONS, BUILD_FEE, BUILD_INCLUDES, TIER_MATRIX, SITE, HIPAA_ANSWER, money, FREEDOM_CONVERSION } from '../lib/site';
 import { withBase } from '../lib/url';
 import { rootUrl, pricingService } from '../lib/siteSchema';
 
@@ -100,7 +100,7 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
     </p>
     <ul class="mt-8 flex flex-col gap-3 border-y border-line py-5 text-[15px] text-muted md:flex-row md:gap-10">
       <li class="flex gap-2"><Ph name="certificate" class="mt-0.5 size-5 text-accent" />Built by a licensed counselor.</li>
-      <li class="flex gap-2"><Ph name="star" class="mt-0.5 size-5 text-accent" />Freedom Counseling Services: 3.5 to 4.0 Google stars in three weeks.</li>
+      <li class="flex gap-2"><Ph name="chart-line-up" class="mt-0.5 size-5 text-accent" />Freedom Counseling Services: {FREEDOM_CONVERSION.rate} of inquiries became clients.</li>
       <li class="flex gap-2"><Ph name="download-simple" class="mt-0.5 size-5 text-accent" />Month-to-month, and your data is yours.</li>
     </ul>
     <TestimonialSlot slot="pricing" class="mt-8 max-w-2xl" />
@@ -117,7 +117,7 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
         </p>
         <a href={withBase('/caseload-calculator')} class="link-arrow mt-5">Run your own numbers in the Caseload Calculator <Ph name="arrow-right" class="size-4" /></a>
       </div>
-      <dl class="card grid grid-cols-2 divide-x divide-line self-start">
+      <dl class="card grid grid-cols-2 divide-x divide-line self-center">
         <div class="p-6">
           <dt class="text-sm text-muted">One new client (illustrative)</dt>
           <dd class="mt-1 font-mono text-3xl font-medium tracking-tight text-ink">$2,600</dd>

@@ -44,7 +44,7 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
 
   <Section>
     <div class="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
-      <h2 class="h2">Most therapist websites are brochures.</h2>
+      <h2 class="h2 lg:sticky lg:top-24 lg:self-start">Most therapist websites are brochures.</h2>
       <div class="space-y-4 text-[17px] text-muted">
         <p>
           They look calm and professional, list credentials and specialties, and end with "contact me." Then they sit there. A
@@ -52,7 +52,7 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
         </p>
         <p>
           A client-ready website does three things a brochure doesn't. It shows up for the searches people in your area really make.
-          It answers a first-time client's real questions. And it makes reaching out easy.
+          It speaks to the clients you most want to see and answers their real questions. And it makes reaching out easy.
         </p>
       </div>
     </div>
@@ -62,10 +62,11 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
     <FeatureList
       items={[
         { t: 'A page for each specialty you want to be known for', d: 'Written around what people really search. "Anxiety counseling in Louisville" gets its own page, not a bullet point.' },
-        { t: 'A profile page for each clinician', d: 'With their approach, specialties, and availability. Built in for up to 10 clinicians.' },
+        { t: 'A profile page for each clinician', d: `With their approach, specialties, and availability. Built in for up to 10 clinicians. Have more than 10? <a class="text-accent underline-offset-2 hover:underline" href="${withBase('/contact')}">Contact us</a> for custom pricing.` },
         { t: 'A native appointment request form', d: 'It stays on your site, with no hand-off to a third-party tool where people drop off, plus "How did you hear about us?" so you know what\'s working.' },
         { t: 'Fast and mobile-first', d: 'Many people looking for a counselor are searching on their phone, often late at night.' },
-        { t: 'Search foundations built in', d: 'Structured data, a sitemap, descriptive image text, and clean page titles, so Google and AI assistants understand what you do and where.' },
+        { t: 'Search foundations built in', d: 'Comprehensive schema markup on every page (your practice, each clinician, each service, and your FAQs), plus a sitemap, descriptive image text, and clean page titles, so Google and AI assistants understand exactly who you are, what you do, and where.' },
+        { t: 'Copy written for your ideal clients', d: `Every page speaks to the people you most want to see, with a clear path to reaching out and a call to action always in view. <a class="text-accent underline-offset-2 hover:underline" href="${withBase('/therapist-website-copywriting')}">How we write it</a>.` },
         { t: 'Your brand, done properly', d: 'Colors, type, and photography that feel like your practice, not a template.' },
         { t: 'Your domain in your name', d: "With your old site's content migrated and redirects set up, so you don't lose what you've already built." },
       ]}
@@ -91,7 +92,7 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
 
   <SystemFit
     current="found"
-    text="A website is step 1, not the whole plan. It works best alongside SEO and Google Maps, ethical reviews, referral partners, and fast follow-up, which is why every plan includes all five steps."
+    text="A website is step 1, not the whole plan. It works best alongside local SEO, a complete Google Business Profile, copy that gets you chosen, referral partners, and fast follow-up, which is why every plan includes all five steps."
   />
 
   <Faq faqs={faqs} />

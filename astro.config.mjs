@@ -30,6 +30,7 @@ const redirects = {
   '/branding': '/website-design',
   '/case-study-freedom-counseling': '/results/freedom-counseling-services',
   '/faith-based-counseling-marketing': '/christian-counseling-marketing',
+  '/ethical-reviews': '/google-business-profile-for-therapists#ethical-reviews',
 };
 
 // `site` gets overwritten per client repo once a domain is known

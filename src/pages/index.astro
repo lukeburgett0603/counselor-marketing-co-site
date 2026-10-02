@@ -14,7 +14,7 @@ import ProductShot from '../components/site/ProductShot.astro';
 import Ph from '../components/site/Ph.astro';
 import { Image } from 'astro:assets';
 import headshot from '../assets/luke-burgett.webp';
-import { TIERS, BUILD_FEE, money } from '../lib/site';
+import { TIERS, BUILD_FEE, money, FREEDOM_CONVERSION } from '../lib/site';
 import { withBase } from '../lib/url';
 
 const faqs = [
@@ -173,12 +173,20 @@ const trust = [
   <Section title="Real practices, real results.">
     <div class="grid gap-6 lg:has-[figure]:grid-cols-[1.4fr_1fr]">
       <a href={withBase('/results/freedom-counseling-services')} class="card group block p-8 transition-colors only:max-w-3xl hover:border-accent">
-        <p class="font-mono text-4xl font-medium tracking-tight text-ink">3.5 <span class="text-muted">→</span> 4.0</p>
-        <p class="mt-1 text-sm text-muted">Google stars in three weeks</p>
+        <div class="flex flex-wrap gap-x-12 gap-y-4">
+          <div>
+            <p class="font-mono text-4xl font-medium tracking-tight text-ink">{FREEDOM_CONVERSION.rate}</p>
+            <p class="mt-1 text-sm text-muted">of inquiries became clients</p>
+          </div>
+          <div>
+            <p class="font-mono text-4xl font-medium tracking-tight text-ink">3.5 <span class="text-muted">→</span> 4.0</p>
+            <p class="mt-1 text-sm text-muted">Google stars in three weeks</p>
+          </div>
+        </div>
         <p class="mt-6 text-[17px] text-muted">
           <strong class="font-medium text-ink">Freedom Counseling Services</strong>, a group counseling practice in Louisville,
-          Kentucky. Went from 3.5 to 4.0 stars on Google in three weeks with our ethical review strategy: a simple invitation in the
-          waiting room, and no client ever asked directly. Their new website and the full platform are live.
+          Kentucky. {FREEDOM_CONVERSION.clients} of their {FREEDOM_CONVERSION.leads} inquiries became clients, and their Google rating
+          went from 3.5 to 4.0 stars in three weeks, with no client ever asked for a review.
         </p>
         <span class="link-arrow mt-6">Read Freedom's story <Ph name="arrow-right" class="size-4" /></span>
       </a>
@@ -190,7 +198,7 @@ const trust = [
 
   <Section>
     <div class="grid gap-10 lg:grid-cols-[1fr_1.5fr] lg:gap-16">
-      <h2 class="h2">Ethical by design. Yours to keep.</h2>
+      <h2 class="h2 lg:sticky lg:top-24 lg:self-start">Ethical by design. Yours to keep.</h2>
       <ul class="divide-y divide-line border-y border-line">
         {trust.map((t) => (
           <li class="flex gap-4 py-6">

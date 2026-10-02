@@ -10,7 +10,10 @@ import PlansLine from '../components/site/PlansLine.astro';
 import ProductShot from '../components/site/ProductShot.astro';
 import CtaBand from '../components/site/CtaBand.astro';
 import Ph from '../components/site/Ph.astro';
+import { Image } from 'astro:assets';
+import headshot from '../assets/luke-burgett.webp';
 import { withBase } from '../lib/url';
+import { SITE, FREEDOM_CONVERSION } from '../lib/site';
 import { rootUrl, service } from '../lib/siteSchema';
 
 const path = '/christian-counseling-marketing';
@@ -35,8 +38,30 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
   />
 
   <Section>
+    <div class="card grid gap-8 p-8 md:grid-cols-[auto_1fr] md:items-start md:gap-10">
+      <Image src={headshot} alt={`${SITE.founder}, ${SITE.credential}`} widths={[160, 320]} sizes="160px" class="size-28 rounded-card object-cover md:size-36" />
+      <div>
+        <h2 class="h2">I'm a Christian counselor too.</h2>
+        <div class="mt-5 space-y-4 text-[17px] text-muted">
+          <p>
+            I'm {SITE.founder}, a {SITE.credentialLong} in {SITE.licenseState}, and I integrate my faith into my own clinical work. I
+            know how hard that is to get right, and it's even harder to explain to someone looking for help: how much faith shows up in
+            session, whether they'll be pushed into it, and how it fits with evidence-based care.
+          </p>
+          <p>
+            Your website should answer those questions plainly, in your voice, so the right clients feel safe reaching out. That's what
+            we build. I'm also a marketer for the Global Missions Health Conference, so I know firsthand what it takes to reach people of
+            faith with care and integrity.
+          </p>
+        </div>
+        <a href={withBase('/about')} class="link-arrow mt-5">More about Luke <Ph name="arrow-right" class="size-4" /></a>
+      </div>
+    </div>
+  </Section>
+
+  <Section>
     <div class="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
-      <h2 class="h2">Two audiences, one website.</h2>
+      <h2 class="h2 lg:sticky lg:top-24 lg:self-start">Two audiences, one website.</h2>
       <p class="text-[17px] text-muted">
         Some people search specifically for a Christian counselor. Many more want a good counselor and would welcome faith being
         respected. Physicians and schools want to see licensure and clinical training first. A site that leans too far one way loses
@@ -49,7 +74,7 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
     <StepsGrid
       details={[
         'Pages for "Christian counseling in [city]" and your clinical specialties, so you\'re found both ways.',
-        'Clear language about how faith is integrated (always following the client\'s lead), next to your credentials.',
+        'Copy that names the real hesitations people bring to Christian counseling, explains how you integrate faith (always following the client\'s lead), and shows your clinical training right alongside it.',
         'Churches and pastors are some of the strongest referral partners a Christian practice can have. Your outreach kit includes church-specific intros and a handout that says you offer faith-integrated care.',
         'Fast replies to every inquiry, so no one waits to hear back.',
         'A dashboard showing which churches and partners send clients.',
@@ -63,8 +88,8 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
         <h2 class="h2">Freedom Counseling Services</h2>
         <p class="mt-5 text-[17px] text-muted">
           A Christian counseling practice in Louisville with five counselors. Their new site presents faith-integrated care alongside
-          each counselor's clinical specialties, and they went from 3.5 to 4.0 Google stars in three weeks with our ethical review
-          strategy.
+          each counselor's clinical specialties. {FREEDOM_CONVERSION.rate} of their inquiries have become clients
+          ({FREEDOM_CONVERSION.detail}), and their Google rating went from 3.5 to 4.0 stars in three weeks.
         </p>
         <a href={withBase('/results/freedom-counseling-services')} class="link-arrow mt-5">Read Freedom's story <Ph name="arrow-right" class="size-4" /></a>
       </div>

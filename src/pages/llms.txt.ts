@@ -1,7 +1,7 @@
 // /llms.txt: a plain summary for AI assistants and buying agents
 // (rebuild/ai-seo-and-schema.md). Built from site.ts so it can't go stale.
 import type { APIRoute } from 'astro';
-import { SITE, TIERS, BUILD_FEE, money } from '../lib/site';
+import { SITE, TIERS, BUILD_FEE, money, FREEDOM_CONVERSION } from '../lib/site';
 import { withBase } from '../lib/url';
 
 export const GET: APIRoute = ({ site }) => {
@@ -16,7 +16,7 @@ export const GET: APIRoute = ({ site }) => {
 - [How It Works](${u('/how-it-works')}): the five steps and what each includes
 - [Pricing](${u('/pricing')}): ${tiers}, plus a ${money(BUILD_FEE)} build ([plain text](${u('/pricing.md')}))
 - [Free Caseload Audit](${u(SITE.auditPath)}): written plan within 48 hours
-- [Results](${u('/results')}): Freedom Counseling Services, 3.5 to 4.0 Google stars in three weeks
+- [Results](${u('/results')}): Freedom Counseling Services: ${FREEDOM_CONVERSION.rate} of inquiries became clients (${FREEDOM_CONVERSION.detail}); 3.5 to 4.0 Google stars in three weeks
 - [Compare](${u('/compare')}): honest comparisons with WebsiteTherapy, TherapySites, Psychology Today, DIY builders, agencies
 - [How to Get More Therapy Clients](${u('/how-to-get-more-therapy-clients')}): the complete guide
 - [Caseload Calculator](${u('/caseload-calculator')}): free tool, same math as the platform
@@ -24,9 +24,10 @@ export const GET: APIRoute = ({ site }) => {
 
 ## Services
 - [Website Design](${u('/website-design')})
-- [SEO & Google Maps](${u('/seo')})
+- [Local SEO](${u('/seo')})
+- [Google Business Profile](${u('/google-business-profile-for-therapists')}): profile completion, photos, posts, and ethical review growth
 - [Google Ads](${u('/google-ads-for-therapists')})
-- [Ethical Reviews](${u('/ethical-reviews')})
+- [Website Copy & Conversion](${u('/therapist-website-copywriting')}): get chosen by the right clients
 - [Referral Marketing](${u('/referral-marketing')})
 - [The Platform](${u('/platform')})
 `;

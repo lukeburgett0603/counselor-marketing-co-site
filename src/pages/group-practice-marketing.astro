@@ -8,7 +8,7 @@ import ProductShot from '../components/site/ProductShot.astro';
 import Faq from '../components/site/Faq.astro';
 import CtaBand from '../components/site/CtaBand.astro';
 import Ph from '../components/site/Ph.astro';
-import { SITE, GROUP_PRICES, BUILD_FEE, money } from '../lib/site';
+import { SITE, GROUP_PRICES, BUILD_FEE, money, FREEDOM_CONVERSION } from '../lib/site';
 import { withBase } from '../lib/url';
 import { rootUrl, service } from '../lib/siteSchema';
 
@@ -42,7 +42,7 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
 
   <Section>
     <div class="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
-      <h2 class="h2">Uneven caseloads are expensive.</h2>
+      <h2 class="h2 lg:sticky lg:top-24 lg:self-start">Uneven caseloads are expensive.</h2>
       <p class="text-[17px] text-muted">
         Your most established counselors are full and turning people away. Your newest, including the associate you hired last month,
         are sitting with open hours you're paying for. Inquiries land in a shared inbox, some wait days for a reply, and no one can say
@@ -91,8 +91,8 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
     <div class="card grid gap-6 p-8 md:grid-cols-[1fr_auto] md:items-center">
       <p class="text-[17px] text-muted">
         <span class="font-medium text-ink">Freedom Counseling Services</span>, a five-counselor group practice in Louisville, runs on
-        this platform, with a page and a caseload meter for each counselor. They went from 3.5 to 4.0 Google stars in three weeks with
-        our ethical review strategy.
+        this platform, with a page and a caseload meter for each counselor. {FREEDOM_CONVERSION.rate} of their inquiries have become
+        clients ({FREEDOM_CONVERSION.detail}).
       </p>
       <a href={withBase('/results/freedom-counseling-services')} class="link-arrow whitespace-nowrap">Read Freedom's story <Ph name="arrow-right" class="size-4" /></a>
     </div>

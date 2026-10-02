@@ -10,7 +10,7 @@ const { faqs, title = 'Common questions' } = Astro.props;
 
 <section class="wrap py-14 lg:py-20">
   <div class="grid gap-10 lg:grid-cols-[1fr_2fr]">
-    <h2 class="h2">{title}</h2>
+    <h2 class="h2 lg:sticky lg:top-24 lg:self-start">{title}</h2>
     <div class="divide-y divide-line border-y border-line">
       {faqs.map((f) => (
         <details class="group py-5">

@@ -1,0 +1,107 @@
+---
+// Get Chosen: CMC's conversion method (rebuild/review-feedback.md items 1 and 8).
+// The copy framework underneath is never named publicly (see the
+// never-name-storybrand rule); describe it, don't brand it.
+// Target: therapist website copy (KD 7) / therapist website copywriting.
+import SiteLayout from '../layouts/SiteLayout.astro';
+import PageHero from '../components/site/PageHero.astro';
+import Section from '../components/site/Section.astro';
+import FeatureList from '../components/site/FeatureList.astro';
+import SystemFit from '../components/site/SystemFit.astro';
+import ProductShot from '../components/site/ProductShot.astro';
+import Faq from '../components/site/Faq.astro';
+import CtaBand from '../components/site/CtaBand.astro';
+import Ph from '../components/site/Ph.astro';
+import { withBase } from '../lib/url';
+import { FREEDOM_CONVERSION } from '../lib/site';
+import { rootUrl, service } from '../lib/siteSchema';
+
+const path = '/therapist-website-copywriting';
+const description =
+  "Therapist website copywriting and conversion: we help you get clear on who you serve, then write every page around your ideal client's story, so the right people know they've found their counselor.";
+const crumbs = [{ name: 'Services', path: '/services' }, { name: 'Website Copy & Conversion', path }];
+const faqs = [
+  { q: 'Do I have to write my own website copy?', a: "No. We interview you about who you serve and how you work, then write it. You review every page, and nothing goes live until it sounds like you." },
+  { q: "What if I see lots of different kinds of clients?", a: "Most counselors do. We still start with the people you most want to see and write each specialty page for the person searching for that help. A clear message attracts more of the right people, not fewer." },
+  { q: 'Is this different from your website design?', a: 'They work together. Website design covers the build: pages, speed, search foundations. This is the message on those pages and how each one leads a visitor to reach out. Every website we build gets both.' },
+  { q: 'Can you rewrite my current site without rebuilding it?', a: "Copy and conversion are part of every build, because the speed and the always-visible call to action live in the site itself. Your free audit shows what your current site is missing either way." },
+];
+const method = [
+  { t: 'Know exactly who you serve', icon: 'target', d: "We start by getting clear on the clients you most want to see: what they're struggling with, what they've already tried, and what they're afraid of. Everything else is written for them." },
+  { t: 'Name their pain, in their words', icon: 'chat-centered-text', d: "Someone looking for a counselor is usually having a hard time. Your pages describe what they're going through the way they'd describe it, so they feel understood before they ever call." },
+  { t: 'Show empathy and competence', icon: 'hand-heart', d: "Warmth alone isn't enough, and neither are credentials alone. Each page shows that you understand, and that you're trained and experienced to help with this exact problem." },
+  { t: 'Make the next step obvious', icon: 'path', d: "A simple, clear plan: reach out, talk for a few minutes, schedule a first session. No one should wonder what happens after they hit send." },
+  { t: 'A way to reach you, always in view', icon: 'cursor-click', d: 'On every page and every screen size, requesting an appointment is one click away. Nobody has to hunt for a contact page.' },
+  { t: 'Fast, on any phone', icon: 'lightning', d: "Many people search for a counselor late at night on their phone. Pages that load instantly keep them reading instead of giving up." },
+];
+const siteUrl = rootUrl(Astro.site, Astro.url);
+---
+
+<SiteLayout
+  title="Therapist Website Copywriting That Brings the Right Clients"
+  description={description}
+  path={path}
+  crumbs={crumbs}
+  faqs={faqs}
+  schema={[service(siteUrl, { name: 'Therapist Website Copywriting and Conversion', description, path, serviceType: 'Website copywriting' })]}
+>
+  <PageHero
+    eyebrow="Step 2 of the Full Caseload System: Get Chosen"
+    title="The right clients should know, within seconds, that they've found their counselor."
+    sub="We help you get clear on who you serve, then write every page around their story: the pain that brought them here, why you can help, and exactly what to do next."
+    crumbs={crumbs}
+  />
+
+  <Section>
+    <div class="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
+      <h2 class="h2 lg:sticky lg:top-24 lg:self-start">Getting found isn't the same as getting chosen.</h2>
+      <div class="space-y-4 text-[17px] text-muted">
+        <p>
+          Someone finds you on Google, clicks, and lands on a page that talks about your training, lists twelve specialties, and ends
+          with "contact me." It's all true. It just doesn't tell them whether you're the right person for what they're going through.
+          So they go back and click the next counselor.
+        </p>
+        <p>
+          The practices that fill their caseloads aren't always the best clinicians. Their websites speak directly to the people they
+          serve, show they can help, and make reaching out easy. That's what this step builds.
+        </p>
+      </div>
+    </div>
+  </Section>
+
+  <Section title="Our method for turning visitors into clients" intro="Every page we write and build follows the same approach.">
+    <FeatureList items={method} />
+  </Section>
+
+  <Section>
+    <div class="grid items-center gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
+      <div>
+        <p class="font-mono text-5xl font-medium tracking-tight text-ink">{FREEDOM_CONVERSION.rate}</p>
+        <p class="mt-1 text-sm text-muted">of inquiries became clients ({FREEDOM_CONVERSION.detail})</p>
+        <h2 class="h3 mt-8">Built this way for Freedom Counseling Services.</h2>
+        <p class="mt-3 text-[17px] text-muted">
+          Each of Freedom's five counselors has a page written around the clients they see, and each specialty has a page written for
+          the person searching for that help. Getting more inquiries matters, but so does who they are: the right people, who already
+          know Freedom is a fit when they reach out.
+        </p>
+        <a href={withBase('/results/freedom-counseling-services')} class="link-arrow mt-5">See Freedom's story <Ph name="arrow-right" class="size-4" /></a>
+      </div>
+      <ProductShot shot="freedom-home" />
+    </div>
+  </Section>
+
+  <Section title="What changes after we work together" narrow>
+    <p class="text-[17px] text-muted">
+      Your website, your Google profile, and every page in between say precisely who you serve and how you help. When the right person
+      finds you, they don't have to guess. They recognize themselves in what they read, trust that you can help, and know exactly how to
+      take the first step.
+    </p>
+  </Section>
+
+  <SystemFit
+    current="chosen"
+    text="Getting found brings people to your site. This step is what makes them reach out, and fast follow-up turns that inquiry into a first session."
+  />
+  <Faq faqs={faqs} />
+  <CtaBand title="Find out how your site reads to a first-time client." body="Your free audit shows what someone sees when they land on your site, and where they're likely to give up." />
+</SiteLayout>

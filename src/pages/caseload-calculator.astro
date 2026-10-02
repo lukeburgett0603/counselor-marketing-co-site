@@ -48,7 +48,7 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
   />
 
   <section class="wrap">
-    <div class="calc grid items-start gap-6 lg:grid-cols-[1fr_1.1fr]">
+    <div class="calc grid gap-6 lg:grid-cols-2">
       <form class="card space-y-6 p-6 sm:p-8" onsubmit="return false">
         {inputs.map((i) => (
           <label class="block">
@@ -70,9 +70,9 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
         ))}
       </form>
 
-      <div class="space-y-6 lg:sticky lg:top-24" aria-live="polite">
-        <div class="card divide-y divide-line">
-          <div class="grid grid-cols-2 divide-x divide-line">
+      <div aria-live="polite">
+        <div class="card flex h-full flex-col divide-y divide-line">
+          <div class="grid flex-1 grid-cols-2 divide-x divide-line">
             <div class="p-6">
               <p class="text-sm text-muted">Your full caseload</p>
               <p class="mt-1 font-mono text-4xl font-medium tracking-tight text-ink"><span data-out="full">30</span></p>
@@ -83,31 +83,32 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
               <p class="mt-1 font-mono text-4xl font-medium tracking-tight text-accent"><span data-out="open">12</span></p>
             </div>
           </div>
-          <div class="p-6">
+          <div class="flex flex-1 flex-col justify-center p-6">
             <p class="text-sm text-muted">Each new client is worth about</p>
             <p class="mt-1 font-mono text-3xl font-medium tracking-tight text-ink" data-out="clientValue">$2,600</p>
             <p class="mt-1 text-sm text-muted">over their course of treatment</p>
           </div>
-          <div class="p-6" data-when="open">
+          <div class="flex flex-1 flex-col justify-center p-6" data-when="open">
             <p class="text-sm text-muted">Filling your open spots</p>
             <p class="mt-1 font-mono text-3xl font-medium tracking-tight text-ink"><span data-out="monthlyGap">$4,500</span><span class="text-lg text-muted"> a month</span></p>
           </div>
-          <div class="hidden p-6" data-when="full">
+          <div class="flex flex-1 flex-col justify-center p-6" data-when="full" style="display: none">
             <p class="text-lg font-semibold text-ink">You're full. Nice work.</p>
             <p class="mt-1 text-muted">Our Self-Guided plan helps keep it that way.</p>
           </div>
-          <div class="p-6">
+          <div class="flex flex-1 flex-col justify-center p-6">
             <p class="text-muted">About <span class="font-mono font-medium text-ink" data-out="coverDFY">4</span> new clients a year would cover our Done for You plan.</p>
             <p class="mt-2 text-xs text-muted">Estimates only, based on the numbers you entered. Your results will vary.</p>
           </div>
         </div>
+      </div>
 
-        <form class="calc-capture card p-6" novalidate>
+      <form class="calc-capture card p-6 sm:p-8" novalidate>
           <p class="font-semibold text-ink">Want a plan to fill those <span data-out="open">12</span> spots?</p>
           <div class="absolute -left-[9999px] h-px w-px overflow-hidden" aria-hidden="true">
             <input type="text" name="hp_website" tabindex="-1" autocomplete="off" />
           </div>
-          <div class="mt-4 flex flex-col gap-3 sm:flex-row">
+          <div class="mt-4 flex flex-col gap-3 sm:flex-row lg:flex-col xl:flex-row">
             <label class="flex-1">
               <span class="sr-only">Email</span>
               <input name="email" type="email" required autocomplete="email" placeholder="you@yourpractice.com" class="w-full rounded-control border border-line bg-page px-3 py-3 text-ink" />
@@ -116,9 +117,12 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
           </div>
           <p class="mt-3 text-[13px] text-muted">We'll send your numbers and one follow-up. That's it.</p>
           <p class="status mt-2 text-sm text-ink" role="status"></p>
-        </form>
+      </form>
 
-        <a href={withBase(SITE.auditPath)} class="btn-secondary w-full">{SITE.auditCta} <Ph name="arrow-right" class="size-4" /></a>
+      <div class="card flex flex-col p-6 sm:p-8">
+        <p class="font-semibold text-ink">Want a full plan for your practice?</p>
+        <p class="mt-2 text-muted">A licensed counselor reviews how clients find, choose, and reach you, and sends {SITE.auditTurnaround}. Free.</p>
+        <div class="mt-auto pt-5"><a href={withBase(SITE.auditPath)} class="btn-secondary w-full sm:w-auto">{SITE.auditCta} <Ph name="arrow-right" class="size-4" /></a></div>
       </div>
     </div>
   </section>
@@ -182,8 +186,12 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
     set('clientValue', money(clientValue));
     set('monthlyGap', money(monthlyGap));
     set('coverDFY', coverDFY ? String(coverDFY) : 'a few');
-    document.querySelector('[data-when="open"]')?.classList.toggle('hidden', open === 0);
-    document.querySelector('[data-when="full"]')?.classList.toggle('hidden', open !== 0);
+    // Inline display, not the `hidden` class: these rows also carry `flex`,
+    // and a utility class can't reliably beat another utility class.
+    const openRow = document.querySelector<HTMLElement>('[data-when="open"]');
+    const fullRow = document.querySelector<HTMLElement>('[data-when="full"]');
+    if (openRow) openRow.style.display = open === 0 ? 'none' : '';
+    if (fullRow) fullRow.style.display = open !== 0 ? 'none' : '';
   }
   root?.querySelectorAll('input[type="number"]').forEach((el) => el.addEventListener('input', update));
   update();

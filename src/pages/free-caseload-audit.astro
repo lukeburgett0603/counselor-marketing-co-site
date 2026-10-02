@@ -7,7 +7,7 @@ import Section from '../components/site/Section.astro';
 import Faq from '../components/site/Faq.astro';
 import TestimonialSlot from '../components/site/TestimonialSlot.astro';
 import Ph from '../components/site/Ph.astro';
-import { STEPS, SITE } from '../lib/site';
+import { STEPS, SITE, FREEDOM_CONVERSION } from '../lib/site';
 import { rootUrl, service } from '../lib/siteSchema';
 
 const path = '/free-caseload-audit';
@@ -15,8 +15,8 @@ const description =
   'A licensed counselor reviews how clients find, choose, and reach your practice, and shows where your next clients will come from. Written plan within 48 hours. Free.';
 
 const covers = [
-  'Where you rank for the searches that matter in your area, whether you appear on Google Maps, and what the practices outranking you are doing differently. Real search data, not guesses.',
-  'What a first-time client sees on your site and Google profile, on their phone, and where they are likely to give up.',
+  'Where you rank for the searches that matter in your area, whether you appear on Google Maps, how complete your Google Business Profile is, and what the practices outranking you are doing differently. Real search data, not guesses.',
+  "Whether your site speaks to the clients you most want to see: how clearly it names their struggles and shows you can help, how easy the next step is, and where someone on their phone is likely to give up.",
   'The kinds of local referral partners worth reaching out to in your area.',
   'How easy it is to reach you, and what happens after someone does.',
 ];
@@ -87,13 +87,13 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
 
   <Section>
     <div class="grid gap-10 lg:grid-cols-[1fr_1.5fr] lg:gap-16">
-      <h2 class="h2">Why it's worth your time</h2>
+      <h2 class="h2 lg:sticky lg:top-24 lg:self-start">Why it's worth your time</h2>
       <ul class="divide-y divide-line border-y border-line">
         {[
           { i: 'magnifying-glass', t: 'Every finding is checked, never guessed.', d: "Rankings come from real search data. Maps results come from a live search. Your website platform is identified from your site's own code." },
           { i: 'scales', t: 'Written by a counselor.', d: "Luke knows what you're allowed to say under your ethics code, so the advice never puts your license at risk." },
           { i: 'hand-heart', t: 'Yours to keep.', d: 'Use the plan with us, on your own, or with someone else.' },
-          { i: 'star', t: 'Proof, not promises.', d: 'Freedom Counseling Services went from 3.5 to 4.0 Google stars in three weeks.' },
+          { i: 'chart-line-up', t: 'Proof, not promises.', d: `Freedom Counseling Services: ${FREEDOM_CONVERSION.rate} of inquiries became clients (${FREEDOM_CONVERSION.detail}).` },
         ].map((b) => (
           <li class="flex gap-4 py-6">
             <Ph name={b.i} class="mt-0.5 size-6 text-accent" />

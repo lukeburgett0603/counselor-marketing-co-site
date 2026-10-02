@@ -16,6 +16,18 @@ export const SITE = {
   auditTurnaround: 'a written plan within 48 hours',
 };
 
+// Freedom Counseling Services' lead-to-client rate, approved for publishing
+// 2026-10-02. Same calculation as Freedom's Caseload dashboard ("Leads who
+// became clients": Scheduled leads / real leads, all time). Refresh from
+// that dashboard before quoting a new figure.
+export const FREEDOM_CONVERSION = {
+  rate: '76%',
+  clients: 19,
+  leads: 25,
+  asOf: 'October 2026',
+  detail: '19 of 25, as of October 2026',
+};
+
 export interface NavLink {
   label: string;
   href: string;
@@ -36,10 +48,11 @@ export const STEPS = [
     key: 'found',
     name: 'Get Found',
     icon: 'magnifying-glass',
-    short: 'Google, Maps, and AI search, for the clients you most want to see.',
+    short: 'Google search, Maps, your Google Business Profile, and AI search, for the clients you most want to see.',
     links: [
       { label: 'Website Design', href: '/website-design' },
-      { label: 'SEO & Google Maps', href: '/seo' },
+      { label: 'Local SEO', href: '/seo' },
+      { label: 'Google Business Profile', href: '/google-business-profile-for-therapists' },
       { label: 'Google Ads', href: '/google-ads-for-therapists' },
     ],
   },
@@ -47,8 +60,8 @@ export const STEPS = [
     key: 'chosen',
     name: 'Get Chosen',
     icon: 'star',
-    short: 'A site that answers a nervous first-time client, and reviews grown ethically.',
-    links: [{ label: 'Ethical Reviews', href: '/ethical-reviews' }],
+    short: 'Copy that speaks to the clients you serve, a clear path to reaching out, and a way to contact you always one click away.',
+    links: [{ label: 'Website Copy & Conversion', href: '/therapist-website-copywriting' }],
   },
   {
     key: 'referred',
@@ -83,11 +96,12 @@ export const NAV: NavItem[] = [
         label: 'Get Found',
         links: [
           { label: 'Website Design', href: '/website-design' },
-          { label: 'SEO & Google Maps', href: '/seo' },
+          { label: 'Local SEO', href: '/seo' },
+          { label: 'Google Business Profile', href: '/google-business-profile-for-therapists' },
           { label: 'Google Ads', href: '/google-ads-for-therapists' },
         ],
       },
-      { label: 'Get Chosen', links: [{ label: 'Ethical Reviews', href: '/ethical-reviews' }] },
+      { label: 'Get Chosen', links: [{ label: 'Website Copy & Conversion', href: '/therapist-website-copywriting' }] },
       { label: 'Get Referred', links: [{ label: 'Referral Marketing', href: '/referral-marketing' }] },
       { label: 'Get Booked · Watch It Work', links: [{ label: 'The Platform', href: '/platform' }] },
     ],
@@ -140,9 +154,10 @@ export const FOOTER: NavGroup[] = [
     links: [
       { label: 'How It Works', href: '/how-it-works' },
       { label: 'Website Design', href: '/website-design' },
-      { label: 'SEO & Google Maps', href: '/seo' },
+      { label: 'Local SEO', href: '/seo' },
+      { label: 'Google Business Profile', href: '/google-business-profile-for-therapists' },
       { label: 'Google Ads', href: '/google-ads-for-therapists' },
-      { label: 'Ethical Reviews', href: '/ethical-reviews' },
+      { label: 'Website Copy & Conversion', href: '/therapist-website-copywriting' },
       { label: 'Referral Marketing', href: '/referral-marketing' },
       { label: 'The Platform', href: '/platform' },
     ],
@@ -209,7 +224,7 @@ export const TIERS: Tier[] = [
       'Your new website, hosted and maintained.',
       'The full platform: CRM, instant alerts, automatic replies, caseload meter.',
       'A content plan telling you what to publish next.',
-      'Review program tools.',
+      'Google Business Profile checklist and review program tools.',
       'A referral outreach kit.',
       'Ranking tracking for 10 searches.',
     ],
@@ -225,10 +240,9 @@ export const TIERS: Tier[] = [
     lead: 'Everything in Self-Guided, plus:',
     features: [
       '2 articles a month written for you.',
-      'Google Business Profile managed.',
+      'Google Business Profile managed, including your review program.',
       'Local SEO upkeep.',
       'Ranking tracking for 30 searches.',
-      'We run your review program.',
       'Referral coaching.',
       'A monthly strategy call with Luke.',
     ],
@@ -288,7 +302,8 @@ export const ADDONS = [
 
 export const BUILD_INCLUDES = [
   'A custom website built for your specialties and location, fast and mobile-first, with a profile page for each clinician. The build covers up to 10 clinicians; practices with 11 or more get a custom quote.',
-  'Full SEO foundation: structured data, sitemap, a page for each specialty, descriptive image text.',
+  'Copy written for your ideal clients: their pain, your competence to help, and a clear path to reaching out, with a call to action always in view.',
+  'Full SEO foundation: comprehensive schema markup (your practice, each clinician, each service, and your FAQs), sitemap, a page for each specialty, descriptive image text.',
   'A native appointment request form, with no hand-off to a third-party tool.',
   'Your Google Business Profile claimed, fixed, and optimized.',
   'Your domain registered in your name, plus migration from your old site with redirects.',
@@ -299,17 +314,17 @@ export const TIER_MATRIX: { step: string; cells: [string, string, string] }[] = 
   {
     step: 'Get Found',
     cells: [
-      'Hosting, security, updates. Search ranking tracking for 10 target searches. A content roadmap telling you what to publish next.',
-      'Everything in Self-Guided, plus 2 new articles a month written for you, Google Business Profile managed (posts, photos, Q&A), local SEO and citation upkeep, rank tracking for up to 30 searches.',
+      'Hosting, security, updates. Search ranking tracking for 10 target searches. A content roadmap telling you what to publish next. Google Business Profile checklist and ethical review program tools (waiting-room sign, templates, review log).',
+      'Everything in Self-Guided, plus 2 new articles a month written for you, Google Business Profile managed (posts, photos, Q&A, and your ethical review program), local SEO and citation upkeep, rank tracking for up to 30 searches.',
       'Everything in Done for You, plus 4 articles a month, a page for each clinician and specialty, rank tracking for up to 60 searches.',
     ],
   },
   {
     step: 'Get Chosen',
     cells: [
-      'Ethical review program tools (waiting-room sign, templates, review log).',
-      'We run the review program and log your reviews monthly.',
-      'Same, practice-wide.',
+      'Your website copy, written for your ideal clients in the build, with a clear path to reaching out and a call to action always in view. Visit-to-inquiry tracking in your dashboard.',
+      'Same, plus we refine pages each month based on which ones bring inquiries.',
+      'Same, plus copy for each clinician and specialty page, written for the clients each one serves.',
     ],
   },
   {

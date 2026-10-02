@@ -1,0 +1,155 @@
+---
+// Google Business Profile service page (rebuild/review-feedback.md items 5 and 8).
+// Absorbs the old /ethical-reviews page as its #ethical-reviews section;
+// /ethical-reviews redirects here. Target: google my business for therapists.
+import SiteLayout from '../layouts/SiteLayout.astro';
+import PageHero from '../components/site/PageHero.astro';
+import Section from '../components/site/Section.astro';
+import FeatureList from '../components/site/FeatureList.astro';
+import Checks from '../components/site/Checks.astro';
+import SystemFit from '../components/site/SystemFit.astro';
+import ProductShot from '../components/site/ProductShot.astro';
+import Faq from '../components/site/Faq.astro';
+import CtaBand from '../components/site/CtaBand.astro';
+import Ph from '../components/site/Ph.astro';
+import { withBase } from '../lib/url';
+import { rootUrl, service } from '../lib/siteSchema';
+
+const path = '/google-business-profile-for-therapists';
+const description =
+  "Google Business Profile management for therapists: a fully completed profile, fresh photos of your practice, regular posts, and ethical review growth that never asks a client for a review.";
+const crumbs = [{ name: 'Services', path: '/services' }, { name: 'Google Business Profile', path }];
+const faqs = [
+  { q: 'Why does my Google Business Profile matter so much?', a: "For many people, it's the first thing they see when they search for a counselor nearby, often before your website. It decides whether you show up in the map results and whether they click on you or the next listing." },
+  { q: 'Is it really better to answer "no" than to leave a question blank?', a: "Yes. An honest answer gives Google and the person searching a complete picture, and helps Google match you to the right searches. A blank tells them nothing. We go through every question with you and answer it truthfully." },
+  { q: 'Is a waiting-room sign really allowed?', a: "It's a passive, general invitation rather than a request, which is the lowest-risk approach we know. Your state board has the final say, so we'll show you exactly what we use." },
+  { q: 'Will I get reviews as fast as practices that ask?', a: "Maybe not. It's slower than asking, and it protects your license. Freedom's result shows it still works." },
+  { q: 'What about bad reviews?', a: "We'll help you handle them privately and ethically. You won't respond publicly, which protects your client's confidentiality." },
+  { q: 'Which plans include this?', a: 'Every website build claims, fixes, and optimizes your profile. Done for You and Group Practice include ongoing management: posts, photos, Q&A, and running your review program. Self-Guided gives you the tools and the checklist to do it yourself.' },
+];
+const reviewSteps = [
+  { t: 'A simple invitation in your waiting room.', d: 'A printed sign lets clients who want to share their experience do it on their own terms. No one on your team mentions it.' },
+  { t: 'Privacy first.', d: "The sign's QR code leads to a page explaining that reviewing is optional, what posting publicly means for their privacy, and that you won't respond. Only then does it link to Google." },
+  { t: 'Your paperwork backs it up.', d: "An online review policy for your intake forms, a closing survey with no review request, and clear do's and don'ts for your staff." },
+  { t: 'Tracked monthly.', d: 'Your review count and rating over time, in your dashboard.' },
+];
+const siteUrl = rootUrl(Astro.site, Astro.url);
+---
+
+<SiteLayout
+  title="Google Business Profile for Therapists | Counselor Marketing Co."
+  description={description}
+  path={path}
+  crumbs={crumbs}
+  faqs={faqs}
+  schema={[service(siteUrl, { name: 'Google Business Profile Management for Therapists', description, path, serviceType: 'Google Business Profile management' })]}
+>
+  <PageHero
+    eyebrow="Step 1 of the Full Caseload System: Get Found"
+    title="Your Google profile is often your first impression. Make it a complete one."
+    sub="We fill in every part of your Google Business Profile, keep it active, and grow your reviews without ever asking a client for one."
+    crumbs={crumbs}
+  />
+
+  <Section>
+    <div class="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
+      <h2 class="h2 lg:sticky lg:top-24 lg:self-start">Most people see your profile before they see your website.</h2>
+      <div class="space-y-4 text-[17px] text-muted">
+        <p>
+          Search "counselor near me" and Google shows a map with a few practices above everything else. Each one is a Google Business
+          Profile: a rating, photos, hours, and a few details. Many people decide right there who to call.
+        </p>
+        <p>
+          Most practices claim their profile once and leave it half finished: a few old photos, questions left blank, no posts in
+          months. Google's own guidance is that complete, accurate, active profiles help you show up. A full profile also answers the
+          questions a nervous first-time client has before they ever click.
+        </p>
+      </div>
+    </div>
+  </Section>
+
+  <Section title="What we do to optimize your profile">
+    <FeatureList
+      items={[
+        { t: 'Every question answered, honestly', icon: 'list-checks', d: 'Most profiles leave many of Google\'s questions unanswered. We go through every one with you. If your office isn\'t wheelchair accessible, "no" is better than a blank: it gives people a true picture and helps Google match you to the right searches.' },
+        { t: 'Fresh photos that show your practice', icon: 'camera', d: 'Your office, waiting room, entrance, parking, and the amenities that make people comfortable. Real, current photos show Google and the person searching that you\'re an active, real practice.' },
+        { t: 'Regular, helpful posts', icon: 'megaphone', d: 'Short updates on your specialties, availability, and topics people in your area care about, posted on a schedule. Never client stories or testimonials.' },
+        { t: 'Ethical review growth', icon: 'star', d: 'A waiting-room invitation clients can act on if they choose. No one is ever asked. <a class="text-accent underline-offset-2 hover:underline" href="#ethical-reviews">How it works</a>.' },
+        { t: 'Accurate details everywhere', icon: 'map-pin', d: 'Your name, address, phone, hours, categories, and services kept consistent with your website and directories.' },
+        { t: 'Tracked in your dashboard', icon: 'chart-line-up', d: 'Your review count and rating over time, and how many leads told you they found you on Google or Maps.' },
+      ]}
+    />
+  </Section>
+
+  <section class="wrap">
+    <a href={withBase('/results/freedom-counseling-services')} class="card group grid gap-6 p-8 transition-colors hover:border-accent md:grid-cols-[auto_1fr] md:items-center md:gap-12">
+      <div>
+        <p class="font-mono text-5xl font-medium tracking-tight text-ink">3.5 <span class="text-muted">→</span> 4.0</p>
+        <p class="mt-1 text-sm text-muted">Google stars in three weeks</p>
+      </div>
+      <div>
+        <h2 class="h3">Freedom Counseling Services: the whole profile, done this way.</h2>
+        <p class="mt-2 text-muted">
+          We completed Freedom's profile, added fresh photos of their practice, keep it active with regular posts, and put the ethical
+          review program in place. Their rating went from 3.5 to 4.0 stars in three weeks, and no client was ever asked.
+        </p>
+        <span class="link-arrow mt-3">Read Freedom's story <Ph name="arrow-right" class="size-4" /></span>
+      </div>
+    </a>
+  </section>
+
+  <Section id="ethical-reviews" title="More Google reviews, without ever asking a client for one.">
+    <div class="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
+      <h3 class="h3 lg:sticky lg:top-24 lg:self-start">Why most review advice doesn't work for counselors</h3>
+      <div class="space-y-4 text-[17px] text-muted">
+        <p>
+          The standard advice is to ask every happy client for a review. For a licensed counselor, that's a problem. The ACA Code of
+          Ethics says counselors don't solicit testimonials from current or former clients, and other professional codes say similar
+          things. Google also prohibits asking only happy customers.
+        </p>
+        <p>
+          So practices end up with a handful of old reviews, or a low rating from one unhappy person, and no ethical way to change it.
+          Our review program was built around your ethics code, by a licensed counselor.
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-14 grid items-center gap-10 lg:grid-cols-[1fr_1.2fr] lg:gap-16">
+      <ol class="space-y-8">
+        {reviewSteps.map((s, i) => (
+          <li class="grid grid-cols-[40px_1fr] gap-4">
+            <span class="grid size-9 place-items-center rounded-full border border-accent font-mono text-sm text-accent">{i + 1}</span>
+            <div>
+              <h3 class="text-[17px] font-semibold text-ink">{s.t}</h3>
+              <p class="mt-1.5 text-muted">{s.d}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+      <ProductShot shot="review-program" />
+    </div>
+
+    <div class="mt-14 max-w-3xl">
+      <h3 class="h3">What we never do</h3>
+      <div class="mt-6">
+        <Checks
+          icon="x-circle"
+          items={[
+            'Ask current or former clients for reviews.',
+            'Offer anything in exchange for a review.',
+            'Ask only the clients we expect to be happy.',
+            'Reply to reviews in a way that confirms someone is a client.',
+            'Post client stories or testimonials on your profile.',
+          ]}
+        />
+      </div>
+    </div>
+  </Section>
+
+  <SystemFit
+    current="found"
+    text="Your profile gets you onto the map. Your website and its copy are what get you chosen once someone clicks, which is why every plan includes all five steps."
+  />
+  <Faq faqs={faqs} />
+  <CtaBand title="See what potential clients see when they look you up." body="Your free audit checks your Google Business Profile, your map position, and your reviews." />
+</SiteLayout>

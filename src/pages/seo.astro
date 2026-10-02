@@ -10,11 +10,12 @@ import ProductShot from '../components/site/ProductShot.astro';
 import Faq from '../components/site/Faq.astro';
 import CtaBand from '../components/site/CtaBand.astro';
 import { rootUrl, service } from '../lib/siteSchema';
+import { withBase } from '../lib/url';
 
 const path = '/seo';
 const description =
   'Local SEO for therapists: rank in your area, show up in the Google Maps results, and publish content people (and AI assistants) actually find. Tracked in your dashboard.';
-const crumbs = [{ name: 'Services', path: '/services' }, { name: 'SEO & Google Maps', path }];
+const crumbs = [{ name: 'Services', path: '/services' }, { name: 'Local SEO', path }];
 const faqs = [
   { q: 'Is SEO worth it for a counseling practice?', a: "Most clients still find counselors through Google and Maps, so for most practices, yes. It's the step that keeps working after you stop paying for ads." },
   { q: "What's the difference between SEO and my Google Business Profile?", a: 'Your profile is what shows in the map results. SEO is everything that helps you rank, on the map and in the listings below it. We handle both.' },
@@ -25,12 +26,12 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
 ---
 
 <SiteLayout
-  title="SEO for Therapists and Google Maps | Counselor Marketing Co."
+  title="Local SEO for Therapists | Counselor Marketing Co."
   description={description}
   path={path}
   crumbs={crumbs}
   faqs={faqs}
-  schema={[service(siteUrl, { name: 'SEO for Therapists and Google Maps', description, path, serviceType: 'Local SEO' })]}
+  schema={[service(siteUrl, { name: 'Local SEO for Therapists', description, path, serviceType: 'Local SEO' })]}
 >
   <PageHero
     eyebrow="Step 1 of the Full Caseload System: Get Found"
@@ -41,7 +42,7 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
 
   <Section>
     <div class="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
-      <h2 class="h2">If you're not on the map, you're not in the running.</h2>
+      <h2 class="h2 lg:sticky lg:top-24 lg:self-start">If you're not on the map, you're not in the running.</h2>
       <div class="space-y-4 text-[17px] text-muted">
         <p>Most people still find a counselor the same way: a Google search, or the map results right under it.</p>
         <p>
@@ -53,11 +54,11 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
     </div>
   </Section>
 
-  <Section title="What SEO and Google Maps work includes">
+  <Section title="What our local SEO includes">
     <FeatureList
       items={[
-        { t: 'Google Business Profile, managed', d: "Claimed, completed, and kept active with posts, photos, and answers to common questions. Google's own guidance is that complete, accurate, active profiles help you show up." },
-        { t: 'Local SEO', d: 'Your practice name, address, and phone the same everywhere online, specialty and location pages, and the structured data that tells Google what you offer.' },
+        { t: 'Google Business Profile, managed', d: `Completed, kept active with posts and fresh photos, and growing in reviews ethically. <a class="text-accent underline-offset-2 hover:underline" href="${withBase('/google-business-profile-for-therapists')}">See what we do to your profile</a>.` },
+        { t: 'Local citations and consistency', d: 'Your practice name, address, and phone the same everywhere online, specialty and location pages, and comprehensive schema markup that tells Google what you offer.' },
         { t: 'Content people actually search for', d: 'Articles built from real search data for your specialties and area: 2 a month on Done for You, 4 on Group Practice. Your content plan shows what to write next on any plan.' },
         { t: 'Written for AI search too', d: "Clear answers, your real credentials, and structured data give ChatGPT, Perplexity, and Google's AI answers reasons to mention your practice." },
         { t: 'Rank tracking', d: 'We track your position for the searches that matter: 10 on Self-Guided, 30 on Done for You, 60 on Group Practice.' },

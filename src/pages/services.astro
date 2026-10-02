@@ -15,14 +15,15 @@ const groups = [
     icon: 'magnifying-glass',
     items: [
       { t: 'Website Design', h: '/website-design', d: "A fast site built for your specialties and location, so the right people recognize you're the counselor for them." },
-      { t: 'SEO & Google Maps', h: '/seo', d: 'Show up when people in your area search for a counselor, including the map results most people click first.' },
+      { t: 'Local SEO', h: '/seo', d: 'Show up when people in your area search for a counselor, including the map results most people click first.' },
+      { t: 'Google Business Profile', h: '/google-business-profile-for-therapists', d: 'A complete, active profile with fresh photos and regular posts, and Google reviews grown without ever asking a client for one.' },
       { t: 'Google Ads', h: '/google-ads-for-therapists', d: 'Inquiries in weeks, while your search rankings build. $300/mo add-on; your ad budget goes directly to Google.' },
     ],
   },
   {
     step: 'Get Chosen',
     icon: 'star',
-    items: [{ t: 'Ethical Reviews', h: '/ethical-reviews', d: 'Grow your Google rating without ever asking a client for a review. Freedom Counseling Services went from 3.5 to 4.0 stars in three weeks.' }],
+    items: [{ t: 'Website Copy & Conversion', h: '/therapist-website-copywriting', d: "Copy written around your ideal clients' story, a clear path to reaching out, and a way to contact you always one click away, so the right people know they've found their counselor." }],
   },
   {
     step: 'Get Referred',
@@ -55,7 +56,7 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
     <div class="border-t border-line">
       {groups.map((g) => (
         <div class="grid gap-6 border-b border-line py-8 lg:grid-cols-[260px_1fr] lg:gap-12">
-          <div class="flex items-center gap-3 self-start">
+          <div class="flex items-center gap-3 self-start lg:sticky lg:top-24">
             <span class="grid size-9 place-items-center rounded-control bg-accent-soft text-accent"><Ph name={g.icon} class="size-5" /></span>
             <h2 class="h3">{g.step}</h2>
           </div>
@@ -79,7 +80,7 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
 
   <Section>
     <div class="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
-      <h2 class="h2">Why you don't pick services one at a time</h2>
+      <h2 class="h2 lg:sticky lg:top-24 lg:self-start">Why you don't pick services one at a time</h2>
       <div>
         <p class="text-[17px] text-muted">
           An open caseload rarely has one cause. A beautiful website with no referral partners, or great rankings with slow
