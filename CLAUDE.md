@@ -2333,6 +2333,20 @@ needed its weight bumped from a site-specific softened 500 back up to
   thoroughly live-verified on Freedom's site, with no CMC-specific
   branching to re-test.
 
+## Review program: not in this repo (checked 2026-10-03)
+
+The template's admin "Review program" (`0069_review_program.sql`,
+`admin/review-program.astro`, `src/lib/reviewProgram.ts`) was built after
+this repo's last full template sync (2026-09-24), so none of it is here,
+and the old waiting-room sign / `/share-your-experience` page never
+shipped on CMC's site. On 2026-10-03 the template's version was rebuilt as
+"Trusted Without Asking" (no client-directed asks; event QR kit, HIPAA-safe
+reply, policy and front-desk script, neutral "Find us on Google" link).
+If this repo is ever brought current with the template again, take the
+2026-10-03 version (template commit after `c7b6442`) and never the
+sign-based one. The public program is
+`src/pages/google-reviews-for-therapists.astro`.
+
 ## Backlog for this repo
 
 - **Blog analytics (pageviews/leads/CTA clicks per post) — planned, not
