@@ -98,6 +98,7 @@ export const NAV: NavItem[] = [
           { label: 'Website Design', href: '/website-design' },
           { label: 'Local SEO', href: '/seo' },
           { label: 'Google Business Profile', href: '/google-business-profile-for-therapists' },
+          { label: 'Ethical Google Reviews', href: '/google-reviews-for-therapists' },
           { label: 'Google Ads', href: '/google-ads-for-therapists' },
         ],
       },
@@ -156,6 +157,7 @@ export const FOOTER: NavGroup[] = [
       { label: 'Website Design', href: '/website-design' },
       { label: 'Local SEO', href: '/seo' },
       { label: 'Google Business Profile', href: '/google-business-profile-for-therapists' },
+      { label: 'Ethical Google Reviews', href: '/google-reviews-for-therapists' },
       { label: 'Google Ads', href: '/google-ads-for-therapists' },
       { label: 'Website Copy & Conversion', href: '/therapist-website-copywriting' },
       { label: 'Referral Marketing', href: '/referral-marketing' },
@@ -224,7 +226,7 @@ export const TIERS: Tier[] = [
       'Your new website, hosted and maintained.',
       'The full platform: CRM, instant alerts, automatic replies, caseload meter.',
       'A content plan telling you what to publish next.',
-      'Google Business Profile checklist and review program tools.',
+      'Google Business Profile checklist, plus a review policy, front-desk script, and HIPAA-safe reply library.',
       'A referral outreach kit.',
       'Ranking tracking for 10 searches.',
     ],
@@ -240,7 +242,7 @@ export const TIERS: Tier[] = [
     lead: 'Everything in Self-Guided, plus:',
     features: [
       '2 articles a month written for you.',
-      'Google Business Profile managed, including your review program.',
+      'Google Business Profile managed, including Trusted Without Asking, our ethical review program.',
       'Local SEO upkeep.',
       'Ranking tracking for 30 searches.',
       'Referral coaching.',
@@ -307,15 +309,15 @@ export const BUILD_INCLUDES = [
   'A native appointment request form, with no hand-off to a third-party tool.',
   'Your Google Business Profile claimed, fixed, and optimized.',
   'Your domain registered in your name, plus migration from your old site with redirects.',
-  'Your platform set up for your practice: dashboard, CRM, caseload meter, automatic reply, review program, referral outreach kit and practice handout, and Google Ads tracking.',
+  'Your platform set up for your practice: dashboard, CRM, caseload meter, automatic reply, review tracking, referral outreach kit and practice handout, and Google Ads tracking.',
 ];
 
 export const TIER_MATRIX: { step: string; cells: [string, string, string] }[] = [
   {
     step: 'Get Found',
     cells: [
-      'Hosting, security, updates. Search ranking tracking for 10 target searches. A content roadmap telling you what to publish next. Google Business Profile checklist and ethical review program tools (waiting-room sign, templates, review log).',
-      'Everything in Self-Guided, plus 2 new articles a month written for you, Google Business Profile managed (posts, photos, Q&A, and your ethical review program), local SEO and citation upkeep, rank tracking for up to 30 searches.',
+      'Hosting, security, updates. Search ranking tracking for 10 target searches. A content roadmap telling you what to publish next. Google Business Profile checklist, plus Trusted Without Asking tools: a review and social media policy draft, a front-desk script, and a HIPAA-safe reply library.',
+      'Everything in Self-Guided, plus 2 new articles a month written for you, Google Business Profile managed (posts, photos, Q&A, new reviews checked and replies drafted, and workshop QR kits), local SEO and citation upkeep, rank tracking for up to 30 searches.',
       'Everything in Done for You, plus 4 articles a month, a page for each clinician and specialty, rank tracking for up to 60 searches.',
     ],
   },

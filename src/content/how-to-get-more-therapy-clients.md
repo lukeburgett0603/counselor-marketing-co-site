@@ -52,13 +52,18 @@ Get more referrals by building real relationships with the local professionals w
 
 ## How can therapists get more Google reviews ethically?
 
-Counselors can grow Google reviews ethically by making a passive, general invitation (such as a sign in the waiting room) and never asking clients directly. The ACA Code of Ethics (C.3.b) says counselors don't solicit testimonials from current clients, former clients, or others vulnerable to undue influence.
+Counselors can grow their reputation ethically by never asking current or former clients for reviews, in any form, and earning reviews from people who aren't clients instead. The ACA Code of Ethics (C.3.b) says counselors don't solicit testimonials from current clients, former clients, or others vulnerable to undue influence, and APA 5.05 and NASW 4.07(b) say much the same.
 
-That rules out the usual advice to "ask every happy client." It doesn't rule out making it easy for clients who want to share their experience. A simple waiting-room sign can link to a page that explains reviewing is optional, what posting publicly means for their privacy, and that you won't respond, before linking to Google.
+That rules out the usual advice to "ask every happy client." It also rules out the gentler versions, like a QR code sign in the waiting room or a review link in discharge paperwork: the rule turns on who is being asked, not how hard, and those are still requests aimed at clients.
 
-With this approach, Freedom Counseling Services, a group practice in Louisville, went from 3.5 to 4.0 Google stars in three weeks, without asking a single client.
+What works instead:
 
-**Never:** ask clients (current or former) for reviews, offer anything in exchange, ask only the clients you expect to be happy, or reply to a review in a way that confirms someone is your client. Your state board has the final word, so check its advertising rules too.
+- **Be easy to find, with no ask attached.** A complete Google Business Profile, and a neutral "Find us on Google" link on your website (never in client-only channels).
+- **Earn reviews from the public.** Community workshops, talks, and trainings give people a real experience with your practice; a QR code on the closing slide can invite a review of the event.
+- **Reply safely.** Use one generic reply for every review that never confirms someone is a client.
+- **Win without volume.** Reviews are one local ranking signal among many, so strong specialty pages and local links matter just as much.
+
+**Never:** ask clients (current or former) for reviews in any form, send surveys that steer happy clients to Google, offer anything in exchange, or reply in a way that confirms someone is your client. Your state board has the final word, so check its advertising rules too. We call our version of this [Trusted Without Asking](/google-reviews-for-therapists).
 
 ## How fast should I respond to therapy inquiries?
 
@@ -102,7 +107,7 @@ Track new clients and where each came from, not website visits. Ask every inquir
 1. **Week 1:** Complete your Google Business Profile, and check that your name, address, and phone match everywhere.
 2. **Week 1:** Add "How did you hear about us?" to your intake, and set up an automatic reply to inquiries.
 3. **Week 2:** List 20 local referral partners and send your first five introductions.
-4. **Week 2:** Put a passive review invitation in your waiting room.
+4. **Week 2:** Remove any review ask aimed at clients (signs, discharge fliers, reminder emails), and add a review policy to your intake paperwork.
 5. **Week 3:** Build or improve one specialty page for the clients you most want to see.
 6. **Week 4:** Follow up with your referral partners, and review your four numbers.
 

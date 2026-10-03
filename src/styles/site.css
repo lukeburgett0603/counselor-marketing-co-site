@@ -173,8 +173,12 @@ h1, h2, h3, h4 {
   color: var(--muted);
 }
 .table-wrap tbody th {
-  white-space: nowrap;
   color: var(--ink);
+}
+@media (min-width: 768px) {
+  .table-wrap tbody th {
+    white-space: nowrap;
+  }
 }
 .table-wrap td:first-child {
   color: var(--ink);

@@ -16,7 +16,7 @@ export const GET: APIRoute = ({ site }) => {
 - [How It Works](${u('/how-it-works')}): the five steps and what each includes
 - [Pricing](${u('/pricing')}): ${tiers}, plus a ${money(BUILD_FEE)} build ([plain text](${u('/pricing.md')}))
 - [Free Caseload Audit](${u(SITE.auditPath)}): written plan within 48 hours
-- [Results](${u('/results')}): Freedom Counseling Services: ${FREEDOM_CONVERSION.rate} of inquiries became clients (${FREEDOM_CONVERSION.detail}); 3.5 to 4.0 Google stars in three weeks
+- [Results](${u('/results')}): Freedom Counseling Services: ${FREEDOM_CONVERSION.rate} of inquiries became clients (${FREEDOM_CONVERSION.detail})
 - [Compare](${u('/compare')}): honest comparisons with WebsiteTherapy, TherapySites, Psychology Today, DIY builders, agencies
 - [How to Get More Therapy Clients](${u('/how-to-get-more-therapy-clients')}): the complete guide
 - [Caseload Calculator](${u('/caseload-calculator')}): free tool, same math as the platform
@@ -25,7 +25,8 @@ export const GET: APIRoute = ({ site }) => {
 ## Services
 - [Website Design](${u('/website-design')})
 - [Local SEO](${u('/seo')})
-- [Google Business Profile](${u('/google-business-profile-for-therapists')}): profile completion, photos, posts, and ethical review growth
+- [Google Business Profile](${u('/google-business-profile-for-therapists')}): profile completion, photos, posts, and HIPAA-safe review replies
+- [Google Reviews for Therapists](${u('/google-reviews-for-therapists')}): Trusted Without Asking, an ethical review program that never asks current or former clients for reviews (ACA C.3.b)
 - [Google Ads](${u('/google-ads-for-therapists')})
 - [Website Copy & Conversion](${u('/therapist-website-copywriting')}): get chosen by the right clients
 - [Referral Marketing](${u('/referral-marketing')})

@@ -1,0 +1,232 @@
+---
+// "Trusted Without Asking": CMC's ethical Google review program (decided
+// 2026-10-03; source plan: Luke's doc "Ethical Google Reviews Program for
+// Counseling Practices"). Replaces the retired waiting-room-sign approach,
+// which the plan classes as solicitation under ACA C.3.b.
+// Target: google reviews for therapists (40/mo, KD 6, Mangools 2026-10-03).
+// Supporting: can therapists ask for reviews, therapist testimonials.
+import SiteLayout from '../layouts/SiteLayout.astro';
+import PageHero from '../components/site/PageHero.astro';
+import Section from '../components/site/Section.astro';
+import DataTable from '../components/site/DataTable.astro';
+import Checks from '../components/site/Checks.astro';
+import SystemFit from '../components/site/SystemFit.astro';
+import Faq from '../components/site/Faq.astro';
+import CtaBand from '../components/site/CtaBand.astro';
+import Ph from '../components/site/Ph.astro';
+import { withBase } from '../lib/url';
+import { rootUrl, service } from '../lib/siteSchema';
+
+const path = '/google-reviews-for-therapists';
+const description =
+  'Google reviews for therapists, done ethically. Trusted Without Asking grows your reputation without ever asking a current or former client for a review, built around ACA C.3.b, APA, NASW, HIPAA, and Google policy.';
+const crumbs = [{ name: 'Services', path: '/services' }, { name: 'Google Reviews for Therapists', path }];
+
+const faqs = [
+  { q: 'Can therapists ask clients for Google reviews?', a: "No. The ACA Code of Ethics (C.3.b) says counselors don't solicit testimonials from current clients, former clients, or anyone vulnerable to undue influence, and a public review of a counselor works like a testimonial. APA 5.05 and NASW 4.07(b) have similar rules. There's no time limit on \"former.\"" },
+  { q: 'Is a QR code sign in the waiting room allowed?', a: "We don't recommend it. Nearly everyone who sees it is a client or a client's family member, so it's still an invitation aimed at clients. \"Passive\" lowers the pressure; it doesn't change who's being asked. The same QR code is fine on materials for the public, like a community workshop handout." },
+  { q: 'What about a review link in discharge paperwork?', a: "That's the highest-risk version: a request handed to a specific former client at an emotional moment. It also tends to go only to the good discharges, which Google's policy bans as review gating." },
+  { q: 'What if a client asks me how to leave a review?', a: 'Answer the question ("You can find us by searching our name on Google"), add a short privacy reminder, and leave it there. Don\'t encourage them or thank them for it. We give your front desk a script for exactly this.' },
+  { q: 'Can I reply to my Google reviews?', a: "Yes, carefully. Never confirm or hint that someone is a client, which can be a HIPAA disclosure. We give you one generic reply that works for positive and negative reviews alike." },
+  { q: 'How many reviews will I get?', a: "We don't promise a number, and you should be wary of anyone who does. We promise what we control: a complete, compliant, active Google profile and more public visibility. Reviews are one local ranking signal among many, and the program strengthens the others." },
+  { q: 'Can my staff, colleagues, or referral partners review us?', a: "Please don't ask them. Google treats reviews from people with a conflict of interest as policy-violating content and may remove them." },
+  { q: 'Is this legal advice?', a: "No. It's marketing guidance built around the codes. State boards adopt these codes differently, so confirm with yours, and have your attorney approve the review and social media policy before it goes into your paperwork." },
+];
+
+const rules = [
+  ['ACA Code, C.3.b', "Counselors don't solicit testimonials from current clients, former clients, or anyone vulnerable to undue influence.", 'No time limit on "former." A public review of a counselor is functionally a testimonial.'],
+  ['ACA draft revision', 'The draft of the revised Code keeps the ban and drops the "who use testimonials" wording.', 'No argument that reviews are exempt because you never "used" them.'],
+  ['APA 5.05, NASW 4.07(b)', 'Psychologists and social workers also may not solicit testimonials from current clients or others vulnerable to undue influence.', 'In a group practice, one policy has to satisfy every license in the building.'],
+  ['HIPAA and confidentiality', 'A reply with any client detail can be a disclosure of protected health information.', 'Never confirm that someone is a client, including in a review reply.'],
+  ['Google review policy', 'Bans incentives, asking only happy customers, pressuring people on premises, and conflict-of-interest reviews.', 'No "happy client" surveys that route to Google; no reviews from staff, partners, or family.'],
+];
+
+const pillars = [
+  {
+    t: 'A foundation built on ethics',
+    icon: 'scales',
+    items: [
+      'An audit of your website, Google profile, directories, intake forms, signage, and email signatures, with any client-directed review ask flagged and removed.',
+      'A review and social media policy for your informed consent paperwork, for your attorney to approve: you don\'t request reviews, staff won\'t confirm anyone is a client, and any review a client chooses to post is public and permanent.',
+      'A front-desk script for the one legitimate case: a client asks, on their own, how to leave a review.',
+    ],
+  },
+  {
+    t: 'Easy to find, with no ask attached',
+    icon: 'map-pin',
+    items: [
+      'A full Google Business Profile build-out: categories, services, hours, accessibility details, clinician bios, office photos, weekly posts, and answered questions.',
+      'A neutral "Find us on Google" link in your website footer and contact page. The word "review" never appears, and it never goes in client-only channels like your portal, reminders, or discharge papers.',
+      'Your name, address, and phone the same across Psychology Today, insurers, Yelp, Bing, and Apple Maps.',
+    ],
+  },
+  {
+    t: 'Reviews earned from people who aren\'t clients',
+    icon: 'presentation-chart',
+    items: [
+      'Community workshops, talks at schools, churches, and businesses, and trainings for other professionals: real experiences with your practice, open to the public.',
+      'A QR code on the closing slide and handout of those events, inviting a review of the event. Always general to the room, never one-on-one, never a condition of anything.',
+      "If a known client attends, no one asks them personally, and events are never marketed to your client list as a back door.",
+    ],
+  },
+  {
+    t: 'Response and protection',
+    icon: 'shield-check',
+    items: [
+      'Every new review checked, and a HIPAA-safe reply drafted: "Thank you for taking time to share. Our privacy obligations mean we never confirm whether someone has received services. If you\'d like to talk with us, please call our office." The same reply for positive and negative reviews.',
+      'A negative-review protocol: no public argument, no client detail, reviews that break Google policy reported, and concerns routed to your clinical director.',
+    ],
+  },
+  {
+    t: 'Win without a big review count',
+    icon: 'chart-line-up',
+    items: [
+      'Reviews are one local ranking signal among many. Service and location pages that match what people search, and local links from churches, schools, and community partners, make up the difference.',
+      'Monthly reporting on what matters: profile views, calls, direction requests, website clicks, and inquiries. Not star counts.',
+    ],
+  },
+];
+const siteUrl = rootUrl(Astro.site, Astro.url);
+---
+
+<SiteLayout
+  title="Google Reviews for Therapists, Without Asking Clients"
+  description={description}
+  path={path}
+  crumbs={crumbs}
+  faqs={faqs}
+  schema={[service(siteUrl, { name: 'Trusted Without Asking: Ethical Google Reviews for Therapists', description, path, serviceType: 'Online reputation management' })]}
+>
+  <PageHero
+    eyebrow="Trusted Without Asking: our ethical review program"
+    title="Grow your reputation without ever asking a client for a favor."
+    sub="Google reviews for therapists, done the way your ethics code requires: no asks, no signs, no discharge fliers. Visibility you can defend to a licensing board."
+    crumbs={crumbs}
+  />
+
+  <Section>
+    <div class="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
+      <h2 class="h2 lg:sticky lg:top-24 lg:self-start">Most review advice for counselors breaks the rules, even the gentle kind.</h2>
+      <div class="space-y-4 text-[17px] text-muted">
+        <p>
+          The usual advice is to ask every happy client. For a licensed counselor, that's soliciting a testimonial, and your code says
+          no. So the industry moved to softer versions: a QR code sign in the waiting room, a review link in discharge paperwork, an
+          optional survey.
+        </p>
+        <p>
+          Those feel kinder, but the rule turns on <strong class="font-medium text-ink">who is being asked, not how hard</strong>. A sign in
+          a room only clients sit in, or a flier handed to a client at termination, is still a request aimed at current and former
+          clients. It can also nudge someone toward publicly revealing they're in counseling.
+        </p>
+        <p class="text-ink">
+          Trusted Without Asking flips the strategy. Instead of asking clients, it makes your practice easy to find and judge, earns
+          reviews from people who aren't clients, and strengthens every other signal Google uses.
+        </p>
+      </div>
+    </div>
+  </Section>
+
+  <Section title="The rules this program is built around" intro="Built by a licensed counselor to satisfy every license in a group practice, not just one.">
+    <div class="hidden md:block">
+      <DataTable caption="Ethics codes and policies that apply to reviews" head={['Source', 'What it says', 'What it means for reviews']} rows={rules} />
+    </div>
+    <ul class="space-y-4 md:hidden">
+      {rules.map(([src, says, means]) => (
+        <li class="card p-5">
+          <h3 class="font-semibold text-ink">{src}</h3>
+          <p class="mt-2 text-muted">{says}</p>
+          <p class="mt-2 text-ink"><span class="text-muted">What it means: </span>{means}</p>
+        </li>
+      ))}
+    </ul>
+    <p class="mt-4 max-w-3xl text-sm text-muted">
+      Sources: the <a class="text-accent hover:underline" href="https://ctarchive.counseling.org/?p=15117" rel="noopener">Counseling Today on the ACA Code and reviews</a>,
+      the <a class="text-accent hover:underline" href="https://manifold.counseling.org/read/aca-code-of-ethics/section/5403851f-9eea-4961-91f4-a1e22670043f" rel="noopener">ACA draft revision, Section C</a>,
+      and <a class="text-accent hover:underline" href="https://support.google.com/contributionpolicy/answer/7400114" rel="noopener">Google's prohibited and restricted content policy</a>.
+      State boards adopt these codes differently, so confirm with yours.
+    </p>
+  </Section>
+
+  <Section title="The five parts of Trusted Without Asking" intro="Each one is something we deliver and you can point to if a board ever asks.">
+    <ol class="border-t border-line">
+      {pillars.map((p, i) => (
+        <li class="grid gap-4 border-b border-line py-8 md:grid-cols-[280px_1fr] md:gap-10">
+          <div class="flex items-start gap-3">
+            <span class="grid size-9 shrink-0 place-items-center rounded-control bg-accent-soft font-mono text-sm text-accent">{i + 1}</span>
+            <h3 class="h3 pt-1">{p.t}</h3>
+          </div>
+          <Checks items={p.items} />
+        </li>
+      ))}
+    </ol>
+  </Section>
+
+  <Section>
+    <div class="grid gap-6 md:grid-cols-2">
+      <div class="card p-8">
+        <Ph name="qr-code" class="size-7 text-accent" />
+        <h2 class="h3 mt-4">Where a QR code belongs</h2>
+        <p class="mt-3 text-muted">
+          The QR code itself is fine. The audience is what matters. On a community workshop handout, a speaking-event slide, or a
+          training packet, it invites the public to review an event they attended. In a waiting room or a discharge packet, it's a
+          request to your clients.
+        </p>
+      </div>
+      <div class="card p-8">
+        <Ph name="hand-heart" class="size-7 text-accent" />
+        <h2 class="h3 mt-4">What we promise, and what we don't</h2>
+        <p class="mt-3 text-muted">
+          We promise what we control: a complete, compliant, active Google profile and more public visibility. We never promise a
+          number of reviews. A review guarantee is itself a red flag, and it wouldn't hold up to your code's standard for accurate
+          advertising.
+        </p>
+      </div>
+    </div>
+  </Section>
+
+  <Section title="Never, under this program" narrow>
+    <Checks
+      icon="x-circle"
+      items={[
+        'Ask current or former clients for a review in any form: signs, fliers, discharge packets, portal messages, appointment reminders, "review us" email signatures, or in person.',
+        'Send satisfaction surveys that steer happy clients to Google.',
+        'Offer an incentive, or give staff a review quota.',
+        'Reply to a review with anything that confirms someone is a client.',
+        'Post, or encourage, reviews from staff, referral partners, or family.',
+      ]}
+    />
+  </Section>
+
+  <Section title="Which plans include it" narrow>
+    <div class="space-y-4 text-[17px] text-muted">
+      <p>
+        <strong class="font-medium text-ink">Every plan</strong> starts with the foundation: the marketing audit, the review and social
+        media policy draft, the front-desk script, the HIPAA-safe reply library, and your Google Business Profile built out as part of
+        your website build.
+      </p>
+      <p>
+        <strong class="font-medium text-ink">On Done for You and Group Practice</strong>, we run it: weekly profile posts, new reviews
+        checked and replies drafted, help promoting your workshops and talks with an event QR kit, local links, and the monthly report.
+      </p>
+      <a href={withBase('/pricing')} class="link-arrow">See pricing <Ph name="arrow-right" class="size-4" /></a>
+    </div>
+  </Section>
+
+  <Section narrow>
+    <div class="flex gap-4 rounded-card border border-line p-6">
+      <Ph name="info" class="mt-0.5 size-6 text-accent" />
+      <p class="text-muted">
+        This is marketing guidance, not legal advice. Each practice stays responsible for its own ethical and legal compliance, so check
+        your state board's rules and have your attorney approve the policy language. We'll re-check the program against the revised ACA
+        Code once it's final.
+      </p>
+    </div>
+  </Section>
+
+  <SystemFit
+    current="found"
+    text="Trusted Without Asking is part of your Google Business Profile management in step 1. A complete, honest profile gets you onto the map; your website and its copy are what get you chosen."
+  />
+  <Faq faqs={faqs} />
+  <CtaBand title="Find out if your current review tactics are putting your license at risk." body="Your free Caseload Audit checks your Google profile, your reviews, and any review asks that should come down." />
+</SiteLayout>

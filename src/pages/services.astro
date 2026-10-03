@@ -16,7 +16,8 @@ const groups = [
     items: [
       { t: 'Website Design', h: '/website-design', d: "A fast site built for your specialties and location, so the right people recognize you're the counselor for them." },
       { t: 'Local SEO', h: '/seo', d: 'Show up when people in your area search for a counselor, including the map results most people click first.' },
-      { t: 'Google Business Profile', h: '/google-business-profile-for-therapists', d: 'A complete, active profile with fresh photos and regular posts, and Google reviews grown without ever asking a client for one.' },
+      { t: 'Google Business Profile', h: '/google-business-profile-for-therapists', d: 'A complete, active profile with fresh photos and regular posts, and HIPAA-safe replies to every review.' },
+      { t: 'Google Reviews (Trusted Without Asking)', h: '/google-reviews-for-therapists', d: 'Build your reputation without ever asking a current or former client for a review. Built around ACA C.3.b, APA, NASW, HIPAA, and Google policy.' },
       { t: 'Google Ads', h: '/google-ads-for-therapists', d: 'Inquiries in weeks, while your search rankings build. $300/mo add-on; your ad budget goes directly to Google.' },
     ],
   },
@@ -41,7 +42,7 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
 
 <SiteLayout
   title="Marketing Services for Counseling Practices | Counselor Marketing Co."
-  description="Website design, SEO and Google Maps, Google Ads, ethical reviews, referral marketing, and a platform that tracks new clients. Every service is one step of the Full Caseload System."
+  description="Website design, local SEO, Google Business Profile, ethical Google reviews, Google Ads, website copy, referral marketing, and a platform that tracks new clients. Every service is one step of the Full Caseload System."
   path={path}
   crumbs={[{ name: 'Services', path }]}
   schema={[itemList(siteUrl, groups.flatMap((g) => g.items.map((i) => ({ name: i.t, path: i.h }))))]}
