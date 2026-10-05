@@ -6,7 +6,7 @@ import { SITE, TIERS, GROUP_PRICES, ADDONS, BUILD_FEE } from './site';
 
 export type Node = Record<string, unknown>;
 
-export const LOGO_URL = 'https://olrcclpwvobcvczzlprk.supabase.co/storage/v1/object/public/site-images/logo.png';
+export const LOGO_URL = 'https://olrcclpwvobcvczzlprk.supabase.co/storage/v1/object/public/site-images/logo-2026.png';
 
 export function ids(siteUrl: string) {
   return {
