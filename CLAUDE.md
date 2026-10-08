@@ -1484,6 +1484,30 @@ way the site's own pages do.
   above — disposable inbox, temporary lead, manual function invocation)
   the first time a client's nurture sequence actually goes live.
 
+## Nurture sender brought current with the template (2026-10-08)
+
+`supabase/functions/send-nurture-emails/index.ts` now matches the
+template's copy byte for byte (template commits `bef510f` and `ce8716c`).
+Before this, CMC's copy (last changed 2026-09-06) differed from the
+template only by missing changes, never by CMC-specific ones, so it was
+replaced wholesale. That brought in three things:
+
+- **`{{first_name}}` merge field**: subject and body replace
+  `{{first_name}}` with the first word of `leads.name`, falling back to
+  "there", before `renderEmailBody()` runs. The hint sits under "Nurture
+  email sequence" on `admin/lead-magnets.astro` (CMC's older admin
+  layout; the template's equivalent is "Follow-up emails" /
+  `.lm-seq-note`).
+- **RFC 8058 one-click unsubscribe**: every send carries
+  `List-Unsubscribe: <.../functions/v1/unsubscribe-lead?lead=ID>` and
+  `List-Unsubscribe-Post: List-Unsubscribe=One-Click`, which Gmail and
+  Yahoo check bulk senders for. `unsubscribe-lead` reads `lead` from the
+  query string for any HTTP method, so the provider's POST and a
+  person's GET both work. Never add a GET-only check to it.
+- **Address line 2 in the CAN-SPAM footer** (the template's 2026-09-15
+  change): the footer now includes `business.street_address_2`
+  (migration 0047, already on this database).
+
 ## Hub-and-spoke content (Content Pillar + Blog Post + Blog Index)
 
 Built 2026-08-29, first shipped on Counselor Marketing Co. — see

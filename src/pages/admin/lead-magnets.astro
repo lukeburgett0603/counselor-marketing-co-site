@@ -92,7 +92,9 @@ import { SEQUENCE_SCHEDULE_DAYS } from '../../lib/nurtureSequence';
         <h3 class="mb-1 text-sm font-semibold text-slate-700">Nurture email sequence</h3>
         <p class="mb-4 text-xs text-slate-500">
           Sent automatically to anyone who downloads this guide, on top of their instant download link — Day 0,
-          Day 3, Day 7, and Day 14 after they sign up. Leave a step's subject and body both blank to skip it.
+          Day 3, Day 7, and Day 14 after they sign up. Leave a step's subject and body both blank to skip it. Use
+          <code>{'{{first_name}}'}</code> anywhere in a subject or email to address them by name (e.g. "Hi
+          {'{{first_name}}'}, ..."); it's replaced with what they typed into the download form.
         </p>
         <div class="space-y-6">
           {
