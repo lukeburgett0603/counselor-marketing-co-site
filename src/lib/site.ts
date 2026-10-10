@@ -348,8 +348,8 @@ export const TIER_MATRIX: { step: string; cells: [string, string, string] }[] = 
   {
     step: 'Watch It Work',
     cells: [
-      'Overview dashboard: clients, caseload meter, sources.',
-      'Plus a monthly strategy call with Luke, a licensed counselor, walking through your Overview report.',
+      'Your dashboard: a personal Today screen, the caseload meter, where clients came from, and a printable monthly report.',
+      'Plus a monthly strategy call with Luke, a licensed counselor, walking through your monthly report.',
       'Plus a caseload meter for each clinician.',
     ],
   },

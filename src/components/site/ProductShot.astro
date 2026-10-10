@@ -12,11 +12,12 @@ interface Props {
   class?: string;
 }
 const SHOTS: Record<string, { alt: string; caption: string | false }> = {
-  overview: { alt: 'The Overview dashboard: new clients, lead sources, response time, and caseload for each counselor', caption: 'The Overview dashboard. Illustrative data.' },
-  crm: { alt: 'The lead CRM with a due-this-week list of follow-ups', caption: 'The lead CRM. Illustrative data.' },
-  caseload: { alt: 'The caseload meter for each counselor in a group practice', caption: 'Caseload for each counselor. Illustrative data.' },
-  referrals: { alt: 'The referral partner tracker listing local partners and their status', caption: 'The referral partner tracker. Illustrative data.' },
-  'seo-insights': { alt: 'SEO Insights: tracked searches and ranking positions over time', caption: 'SEO Insights. Illustrative data.' },
+  today: { alt: "The Today screen: a personal greeting, the practice caseload meter, new clients and inquiries this month, the next moves to make, and where new clients came from", caption: 'Today, the home screen. Sample practice, illustrative data.' },
+  overview: { alt: 'The monthly report: new clients, inquiries, caseload, response time, what needs attention, and each step of the system', caption: 'The monthly report. Sample practice, illustrative data.' },
+  crm: { alt: 'Inquiries: status counts, follow-ups due, and every inquiry with who it is with and where it stands', caption: 'Inquiries, with follow-ups due. Sample practice, illustrative data.' },
+  caseload: { alt: 'Caseload: the practice meter and a card for each counselor showing how full they are', caption: 'Caseload for each counselor. Sample practice, illustrative data.' },
+  referrals: { alt: 'Referral partners: active partners, follow-ups due, and each partner with their stage and the inquiries they sent', caption: 'Referral partners. Sample practice, illustrative data.' },
+  'seo-insights': { alt: 'Search rankings: each tracked search with its Google position, monthly searches, and eight weeks of movement', caption: 'Search rankings. Sample practice, illustrative data.' },
   'freedom-home': { alt: "Freedom Counseling Services' homepage, built by Counselor Marketing Co.", caption: "Freedom Counseling Services' live homepage." },
 };
 const files = import.meta.glob<{ default: ImageMetadata }>('../../assets/shots/*.{png,webp,jpg}', { eager: true });
