@@ -55,7 +55,7 @@ export default defineConfig({
     sitemap({
       // /admin/* is the internal, auth-gated admin area — never
       // public/indexable pages.
-      filter: (page) => !page.includes('/admin') && !Object.keys(redirects).some((from) => page.endsWith(from)),
+      filter: (page) => !page.includes('/admin') && !/\/audit\/?$/.test(page) && !Object.keys(redirects).some((from) => page.endsWith(from)),
     }),
   ],
   image: {

@@ -39,7 +39,7 @@ ${ADDONS.map((a) => `- ${a.name}: ${a.priceLabel}. ${a.text}`).join('\n')}
 - HIPAA: ${HIPAA_ANSWER}
 
 ## Next step
-Free Caseload Audit, written plan within 48 hours: ${root}${SITE.auditPath}
+Free Caseload Audit, ready in minutes: ${root}${SITE.auditPath}
 `;
   return new Response(body, { headers: { 'Content-Type': 'text/markdown; charset=utf-8' } });
 };

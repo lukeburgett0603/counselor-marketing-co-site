@@ -12,11 +12,11 @@ import { rootUrl, service } from '../lib/siteSchema';
 
 const path = '/free-caseload-audit';
 const description =
-  'A licensed counselor reviews how clients find, choose, and reach your practice, and shows where your next clients will come from. Written plan within 48 hours. Free.';
+  'Built on a licensed counselor\'s method: see how clients find, choose, and reach your practice, and what to fix first. Ready in minutes. Free.';
 
 const covers = [
-  'Where you rank for the searches that matter in your area, whether you appear on Google Maps, how complete your Google Business Profile is, and what the practices outranking you are doing differently. Real search data, not guesses.',
-  "Whether your site speaks to the clients you most want to see: how clearly it names their struggles and shows you can help, how easy the next step is, and where someone on their phone is likely to give up.",
+  'Where you rank for the searches that matter in your area, how your site compares with the practice at the top, and whether each of your specialties has its own page. Real search data, not guesses.',
+  "Whether your site speaks to the clients you most want to see: how it talks to them, whether it answers what they ask first (cost, availability, credentials), and how fast it loads on a phone.",
   'The kinds of local referral partners worth reaching out to in your area.',
   'How easy it is to reach you, and what happens after someone does.',
 ];
@@ -27,7 +27,11 @@ const faqs = [
   { q: 'Will you contact me afterward?', a: "We'll send your audit and one follow-up. That's it." },
   {
     q: "What if I don't have a website yet?",
-    a: 'Put your practice name and city in that field instead. The audit covers Google, Maps, and your referral options, and outlines what your first website needs.',
+    a: 'Put your practice name and city in that field instead. The audit covers where you rank on Google, who holds the top spots near you, and your referral options.',
+  },
+  {
+    q: 'How is it ready so fast?',
+    a: "It's built automatically from public information, using checks Luke designed as a licensed counselor. Luke gets a copy too, so if you'd like to talk it through, he'll already know your practice.",
   },
   { q: 'Is my information private?', a: 'Yes. We use it only to prepare your audit and never share it.' },
 ];
@@ -50,11 +54,11 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
         <h1 class="text-[clamp(36px,4.4vw,56px)] font-semibold leading-[1.05] tracking-[-0.035em] text-ink">
           Find out where your next clients will come from.
         </h1>
-        <p class="lede mt-6 max-w-[40ch]">A licensed counselor reviews how people find, choose, and reach your practice, and sends you a written plan. Free.</p>
+        <p class="lede mt-6 max-w-[40ch]">See how people find, choose, and reach your practice, and what to fix first. Built on a licensed counselor's method. Free.</p>
         <ul class="mt-8 space-y-3 text-[15px] text-muted">
-          <li class="flex gap-3"><Ph name="clock" class="mt-0.5 size-5 text-accent" />Written plan within 48 hours</li>
+          <li class="flex gap-3"><Ph name="clock" class="mt-0.5 size-5 text-accent" />Ready in minutes, and emailed to you</li>
           <li class="flex gap-3"><Ph name="seal-check" class="mt-0.5 size-5 text-accent" />Every finding checked, never guessed</li>
-          <li class="flex gap-3"><Ph name="certificate" class="mt-0.5 size-5 text-accent" />By {SITE.founder}, {SITE.credential}, {SITE.credentialLong}, {SITE.licenseState}</li>
+          <li class="flex gap-3"><Ph name="certificate" class="mt-0.5 size-5 text-accent" />Built on the method of {SITE.founder}, {SITE.credential}, {SITE.credentialLong}, {SITE.licenseState}</li>
         </ul>
       </div>
       <div id="form" class="space-y-4 scroll-mt-24">
@@ -64,7 +68,7 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
     </div>
   </section>
 
-  <Section title="What you'll get" intro="A written review of your practice, organized by the Full Caseload System.">
+  <Section title="What you'll get" intro="A personal review of your practice, organized by the Full Caseload System.">
     <ol class="border-t border-line">
       {STEPS.slice(0, 4).map((step, i) => (
         <li class="grid gap-3 border-b border-line py-6 md:grid-cols-[220px_1fr] md:gap-8">
@@ -80,7 +84,7 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
           <span class="grid size-9 place-items-center rounded-control bg-accent text-accent-ink"><Ph name="file-text" class="size-5" /></span>
           <h3 class="h3">Your plan</h3>
         </div>
-        <p class="max-w-[62ch] text-muted">The three changes most likely to bring you new clients first, and which plan (if any) fits your practice.</p>
+        <p class="max-w-[62ch] text-muted">The three changes most likely to bring you new clients first.</p>
       </li>
     </ol>
   </Section>
@@ -90,8 +94,8 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
       <h2 class="h2 lg:sticky lg:top-24 lg:self-start">Why it's worth your time</h2>
       <ul class="divide-y divide-line border-y border-line">
         {[
-          { i: 'magnifying-glass', t: 'Every finding is checked, never guessed.', d: "Rankings come from real search data. Maps results come from a live search. Your website platform is identified from your site's own code." },
-          { i: 'scales', t: 'Written by a counselor.', d: "Luke knows what you're allowed to say under your ethics code, so the advice never puts your license at risk." },
+          { i: 'magnifying-glass', t: 'Every finding is checked, never guessed.', d: "Rankings come from a live Google check and real search data. Speed comes from Google's own test. Everything about your site comes from its own code." },
+          { i: 'scales', t: 'Built on a counselor\'s method.', d: "Luke, a licensed counselor, wrote every finding with your ethics code in mind, so the advice never puts your license at risk." },
           { i: 'hand-heart', t: 'Yours to keep.', d: 'Use the plan with us, on your own, or with someone else.' },
           { i: 'chart-line-up', t: 'Proof, not promises.', d: `Freedom Counseling Services: ${FREEDOM_CONVERSION.rate} of inquiries became clients (${FREEDOM_CONVERSION.detail}).` },
         ].map((b) => (

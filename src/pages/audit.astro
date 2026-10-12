@@ -1,0 +1,156 @@
+---
+// A prospect's instant Caseload Audit: /audit?t=<token>. The page is
+// static; the report is fetched and rendered in the browser so each
+// prospect gets a private link without a rebuild. /audit?sample=1 shows
+// the fictional sample practice. Never indexed.
+import SiteLayout from '../layouts/SiteLayout.astro';
+import Ph from '../components/site/Ph.astro';
+import { withBase } from '../lib/url';
+import { SITE } from '../lib/site';
+
+const ICONS = ['magnifying-glass', 'star', 'handshake', 'lightning', 'check-circle', 'warning-circle', 'info', 'user-circle', 'x-circle', 'trophy'];
+---
+
+<SiteLayout
+  title="Your Caseload Audit | Counselor Marketing Co."
+  description="Your private Caseload Audit from Counselor Marketing Co."
+  path="/audit"
+  minimal
+  noindex
+>
+  <style is:global>
+    :root {
+      --good: #15803d;
+      --warn: #b45309;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme='light']) {
+        --good: #4ade80;
+        --warn: #fbbf24;
+      }
+    }
+    :root[data-theme='dark'] {
+      --good: #4ade80;
+      --warn: #fbbf24;
+    }
+    .audit-progress {
+      animation: audit-slide 1.6s ease-in-out infinite;
+    }
+    @keyframes audit-slide {
+      from {
+        transform: translateX(-100%);
+      }
+      to {
+        transform: translateX(300%);
+      }
+    }
+  </style>
+
+  {ICONS.map((name) => (
+    <template data-icon={name}><Ph name={name} class="size-6" /></template>
+  ))}
+
+  <div id="audit-sample-note" class="wrap pt-6" hidden>
+    <p class="rounded-control border border-line bg-surface px-4 py-3 text-sm text-muted">
+      This is a sample audit for a made-up practice, so you can see what yours will look like.
+      <a href={withBase(SITE.auditPath)} class="link-arrow">Get your own</a>
+    </p>
+  </div>
+
+  <div id="audit-root" data-contact={withBase('/contact')} data-pricing={withBase('/pricing')} data-phone="(303) 594-3897">
+    <section class="wrap pb-12 pt-10 sm:pt-14" aria-busy="true">
+      <div class="h-4 w-64 animate-pulse rounded bg-line"></div>
+      <div class="mt-5 h-12 w-full max-w-xl animate-pulse rounded bg-line"></div>
+      <div class="mt-5 h-5 w-full max-w-2xl animate-pulse rounded bg-line"></div>
+      <div class="mt-10 grid gap-4 sm:grid-cols-3">
+        <div class="card h-32 animate-pulse"></div>
+        <div class="card h-32 animate-pulse"></div>
+        <div class="card h-32 animate-pulse"></div>
+      </div>
+    </section>
+  </div>
+
+  <div id="audit-building" class="wrap py-20" hidden>
+    <h1 class="h2">Your audit is being put together.</h1>
+    <p class="lede mt-4 max-w-[52ch]">We're checking your website, running Google's speed test, and looking at who shows up when people search near you. It usually takes a minute or two. This page will update on its own, and we'll email you the link too.</p>
+    <div class="mt-8 h-1.5 w-full max-w-md overflow-hidden rounded-full bg-line"><div class="audit-progress h-full w-1/3 rounded-full bg-accent"></div></div>
+  </div>
+
+  <div id="audit-failed" class="wrap py-20" hidden>
+    <h1 class="h2">Your audit hit a snag.</h1>
+    <p class="lede mt-4 max-w-[52ch]">Something went wrong while we were putting it together. Luke has been told and will send your audit by email within one business day. Questions? Call (303) 594-3897.</p>
+  </div>
+
+  <div id="audit-missing" class="wrap py-20" hidden>
+    <h1 class="h2">We couldn't find this audit.</h1>
+    <p class="lede mt-4 max-w-[52ch]">The link may be incomplete. Try opening it again from your email, or call us at (303) 594-3897 and we'll send it again.</p>
+    <a href={withBase(SITE.auditPath)} class="btn-primary mt-8">Request a new audit</a>
+  </div>
+</SiteLayout>
+
+<script>
+  import { renderAudit, type Icons } from '../lib/audit/render';
+  import { SAMPLE_AUDIT } from '../lib/audit/sample';
+  import type { AuditData } from '../lib/audit/types';
+
+  const root = document.getElementById('audit-root')!;
+  const icons: Icons = {};
+  document.querySelectorAll<HTMLTemplateElement>('template[data-icon]').forEach((t) => {
+    icons[t.dataset.icon!] = t.innerHTML;
+  });
+
+  const show = (id: string) => {
+    root.hidden = true;
+    for (const other of ['audit-building', 'audit-failed', 'audit-missing']) document.getElementById(other)!.hidden = other !== id;
+  };
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  async function fetchAudit(token: string): Promise<{ status: string; data?: AuditData } | null> {
+    try {
+      const res = await fetch(`${import.meta.env.PUBLIC_SUPABASE_URL}/functions/v1/get-audit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: import.meta.env.PUBLIC_SUPABASE_ANON_KEY, Authorization: `Bearer ${import.meta.env.PUBLIC_SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ token }),
+      });
+      if (res.status === 404) return { status: 'missing' };
+      return res.ok ? await res.json() : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function load(): Promise<AuditData | null> {
+    const params = new URLSearchParams(location.search);
+    if (params.get('sample') === '1') {
+      document.getElementById('audit-sample-note')!.hidden = false;
+      return SAMPLE_AUDIT;
+    }
+    const token = params.get('t') ?? '';
+    if (!token) return show('audit-missing'), null;
+    // Poll while it's being built: every 4 seconds for up to 5 minutes.
+    for (let i = 0; i < 75; i++) {
+      const r = await fetchAudit(token);
+      if (r?.status === 'done' && r.data) return r.data;
+      if (r?.status === 'missing') return show('audit-missing'), null;
+      if (r?.status === 'failed') return show('audit-failed'), null;
+      if (r?.status === 'needs_city') return show('audit-missing'), null;
+      show('audit-building');
+      await sleep(4000);
+    }
+    // Still not finished: say so plainly rather than claim it failed.
+    document.querySelector('#audit-building .lede')!.textContent = "This one is taking longer than usual. We'll email you the link as soon as it's ready, so you can close this page.";
+    document.querySelector('#audit-building .audit-progress')?.parentElement?.remove();
+    return null;
+  }
+
+  load().then((data) => {
+    if (!data) return;
+    root.hidden = false;
+    for (const other of ['audit-building', 'audit-failed', 'audit-missing']) document.getElementById(other)!.hidden = true;
+    root.innerHTML = renderAudit(data, icons, {
+      contactHref: root.dataset.contact!,
+      pricingHref: root.dataset.pricing!,
+      phone: root.dataset.phone!,
+    });
+  });
+</script>

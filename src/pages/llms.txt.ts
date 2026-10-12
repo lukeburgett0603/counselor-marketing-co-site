@@ -15,7 +15,7 @@ export const GET: APIRoute = ({ site }) => {
 ## Key pages
 - [How It Works](${u('/how-it-works')}): the five steps and what each includes
 - [Pricing](${u('/pricing')}): ${tiers}, plus a ${money(BUILD_FEE)} build ([plain text](${u('/pricing.md')}))
-- [Free Caseload Audit](${u(SITE.auditPath)}): written plan within 48 hours
+- [Free Caseload Audit](${u(SITE.auditPath)}): a personal audit of a practice's search visibility, website, and contact paths, ready in minutes
 - [Results](${u('/results')}): Freedom Counseling Services: ${FREEDOM_CONVERSION.rate} of inquiries became clients (${FREEDOM_CONVERSION.detail})
 - [Compare](${u('/compare')}): honest comparisons with WebsiteTherapy, TherapySites, Psychology Today, DIY builders, agencies
 - [How to Get More Therapy Clients](${u('/how-to-get-more-therapy-clients')}): the complete guide

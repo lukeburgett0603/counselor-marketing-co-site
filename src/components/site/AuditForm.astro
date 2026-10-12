@@ -1,8 +1,10 @@
 ---
 // The one conversion on the site (rebuild/cro-review.md): three required
 // fields, then an optional step 2 on the confirmation screen that attaches
-// to the same lead (submit-lead's `details_for` path). Class selectors
-// only: this form can appear twice on a page.
+// to the same lead (submit-lead's `details_for` path). After the lead is
+// saved it starts the instant audit (request-audit), asking for the city
+// only when the practice's site doesn't say. Class selectors only: this
+// form can appear twice on a page.
 import { SITE } from '../../lib/site';
 import Ph from './Ph.astro';
 
@@ -11,7 +13,7 @@ interface Props {
   heading?: string;
   lead?: string;
 }
-const { sourcePage, heading = 'Get your free Caseload Audit', lead = 'A written plan for your practice within 48 hours.' } = Astro.props;
+const { sourcePage, heading = 'Get your free Caseload Audit', lead = 'A personal audit of your practice, ready in minutes.' } = Astro.props;
 ---
 
 <div class="audit-form rounded-card border border-line bg-surface p-6 shadow-card sm:p-7" data-source-page={sourcePage}>
@@ -40,7 +42,24 @@ const { sourcePage, heading = 'Get your free Caseload Audit', lead = 'A written 
       <span class="label">{SITE.auditCta}</span>
       <Ph name="arrow-right" class="size-4" />
     </button>
-    <p class="mt-3 text-[13px] leading-snug text-muted">Free. No obligation. A written plan within 48 hours.</p>
+    <p class="mt-3 text-[13px] leading-snug text-muted">Free. No obligation. Ready in minutes.</p>
+    <p class="status mt-2 text-sm text-ink" role="status" aria-live="polite"></p>
+  </form>
+
+  <form class="audit-city" hidden novalidate>
+    <h2 class="text-xl font-semibold tracking-[-0.02em] text-ink">One more thing: where's your practice?</h2>
+    <p class="mt-1 text-[15px] text-muted">We couldn't find your city on your website. Your audit checks the searches people make near you.</p>
+    <div class="mt-5 grid grid-cols-[1fr_96px] gap-3">
+      <label class="block">
+        <span class="mb-1.5 block text-sm font-medium text-ink">City</span>
+        <input name="city" required autocomplete="address-level2" class="field" />
+      </label>
+      <label class="block">
+        <span class="mb-1.5 block text-sm font-medium text-ink">State</span>
+        <input name="state" required autocomplete="address-level1" maxlength="20" placeholder="KY" class="field" />
+      </label>
+    </div>
+    <button type="submit" class="btn-primary mt-5 w-full"><span class="label">Start my audit</span></button>
     <p class="status mt-2 text-sm text-ink" role="status" aria-live="polite"></p>
   </form>
 
@@ -49,7 +68,9 @@ const { sourcePage, heading = 'Get your free Caseload Audit', lead = 'A written 
       <Ph name="seal-check" class="mt-0.5 size-6 text-accent" />
       <div>
         <h2 class="text-xl font-semibold tracking-[-0.02em] text-ink">Thanks. Your audit is on its way.</h2>
-        <p class="mt-1 text-[15px] text-muted">Want it tailored? These are optional.</p>
+        <p class="audit-ready mt-1 text-[15px] text-muted" hidden>It's being put together now and takes a minute or two. <a class="audit-link link-arrow" href="#">Open my audit</a></p>
+        <p class="audit-manual mt-1 text-[15px] text-muted" hidden>Luke will send your audit by email within one business day.</p>
+        <p class="mt-1 text-[15px] text-muted">Want to tell us more? These are optional.</p>
       </div>
     </div>
     <div class="mt-5 space-y-4">
@@ -87,7 +108,9 @@ const { sourcePage, heading = 'Get your free Caseload Audit', lead = 'A written 
       <Ph name="seal-check" class="mt-0.5 size-6 text-accent" />
       <div>
         <h2 class="text-xl font-semibold tracking-[-0.02em] text-ink">You're all set.</h2>
-        <p class="mt-1 text-[15px] text-muted">Your written plan will reach your inbox within 48 hours. If you don't see it, check your spam folder.</p>
+        <p class="audit-ready mt-1 text-[15px] text-muted" hidden>We've emailed you the link too. If you don't see it, check your spam folder.</p>
+        <p class="audit-manual mt-1 text-[15px] text-muted" hidden>Luke will send your audit by email within one business day. If you don't see it, check your spam folder.</p>
+        <a class="audit-link btn-primary mt-4" href="#" hidden>Open my audit</a>
       </div>
     </div>
   </div>
@@ -123,8 +146,8 @@ const { sourcePage, heading = 'Get your free Caseload Audit', lead = 'A written 
     group: 'Group Practice',
   };
 
-  async function post(payload: Record<string, unknown>) {
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/submit-lead`, {
+  async function post(payload: Record<string, unknown>, fn = 'submit-lead') {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/${fn}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
       body: JSON.stringify(payload),
@@ -135,14 +158,34 @@ const { sourcePage, heading = 'Get your free Caseload Audit', lead = 'A written 
 
   const plan = new URLSearchParams(location.search).get('plan') ?? '';
 
+  const AUDIT_PAGE = `${import.meta.env.BASE_URL.replace(/\/?$/, '/')}audit`;
+
   document.querySelectorAll<HTMLElement>('.audit-form').forEach((root) => {
     const step1 = root.querySelector<HTMLFormElement>('.audit-step1')!;
+    const cityForm = root.querySelector<HTMLFormElement>('.audit-city')!;
     const step2 = root.querySelector<HTMLFormElement>('.audit-step2')!;
     const done = root.querySelector<HTMLElement>('.audit-done')!;
     const planInput = step1.querySelector<HTMLInputElement>('[name="plan"]')!;
     if (PLAN_LABELS[plan]) planInput.value = PLAN_LABELS[plan];
     let leadId = '';
     let leadEmail = '';
+    let auditId = '';
+
+    // Show the audit link (or the by-hand fallback) wherever it appears.
+    const settle = (token: string | null) => {
+      root.querySelectorAll<HTMLElement>('.audit-ready').forEach((el) => (el.hidden = !token));
+      root.querySelectorAll<HTMLElement>('.audit-manual').forEach((el) => (el.hidden = !!token));
+      root.querySelectorAll<HTMLAnchorElement>('.audit-link').forEach((a) => {
+        if (token) a.href = `${AUDIT_PAGE}?t=${token}`;
+        a.hidden = !token;
+      });
+    };
+    const showStep2 = () => {
+      cityForm.hidden = true;
+      step2.hidden = false;
+      step2.querySelector<HTMLElement>('h2')?.setAttribute('tabindex', '-1');
+      step2.querySelector<HTMLElement>('h2')?.focus();
+    };
 
     step1.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -178,14 +221,46 @@ const { sourcePage, heading = 'Get your free Caseload Audit', lead = 'A written 
       }
       leadId = data.id ?? '';
       leadEmail = String(fd.get('email'));
-      step1.hidden = true;
-      if (leadId) {
-        step2.hidden = false;
-        step2.querySelector<HTMLElement>('h2')?.setAttribute('tabindex', '-1');
-        step2.querySelector<HTMLElement>('h2')?.focus();
-      } else {
+      if (!leadId) {
+        step1.hidden = true;
+        settle(null);
         done.hidden = false;
+        return;
       }
+      status.textContent = 'Starting your audit...';
+      const audit = await post({ lead_id: leadId, email: leadEmail, name: fd.get('name'), practice: fd.get('practice') }, 'request-audit');
+      status.textContent = '';
+      step1.hidden = true;
+      if (audit.ok && audit.data.needs_city) {
+        auditId = audit.data.audit_id;
+        cityForm.hidden = false;
+        cityForm.querySelector<HTMLInputElement>('[name="city"]')?.focus();
+        return;
+      }
+      settle(audit.ok && audit.data.token ? audit.data.token : null);
+      showStep2();
+    });
+
+    cityForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const status = cityForm.querySelector<HTMLElement>('.status')!;
+      const cityInput = cityForm.querySelector<HTMLInputElement>('[name="city"]')!;
+      const stateInput = cityForm.querySelector<HTMLInputElement>('[name="state"]')!;
+      if (!cityInput.value.trim() || !stateInput.value.trim()) {
+        status.textContent = 'Please add your city and state.';
+        return;
+      }
+      const button = cityForm.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+      button.disabled = true;
+      status.textContent = 'Starting your audit...';
+      const audit = await post({ audit_id: auditId, email: leadEmail, city: cityInput.value.trim(), state: stateInput.value.trim() }, 'request-audit');
+      button.disabled = false;
+      if (!audit.ok && audit.data.error === 'City and state required') {
+        status.textContent = 'Please use a US state, like KY or Kentucky.';
+        return;
+      }
+      settle(audit.ok && audit.data.token ? audit.data.token : null);
+      showStep2();
     });
 
     const finish = () => {

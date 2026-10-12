@@ -13,7 +13,7 @@ export const SITE = {
   linkedin: 'https://www.linkedin.com/in/luke-burgett-54b8b218b/',
   auditPath: '/free-caseload-audit',
   auditCta: 'Get My Free Caseload Audit',
-  auditTurnaround: 'a written plan within 48 hours',
+  auditTurnaround: 'ready in minutes',
 };
 
 // Freedom Counseling Services' lead-to-client rate, approved for publishing
