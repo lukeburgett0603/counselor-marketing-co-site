@@ -20,14 +20,14 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
     <p class="i-intro" id="i-intro">Every inquiry, who it's with, and where it stands.</p>
 
     <div class="i-toolbar">
-      <div class="i-seg" role="group" aria-label="Show">
+      <div class="i-seg cmc-hide" role="group" aria-label="Show">
         <button type="button" id="view-leads-button" class="view-toggle-button" data-view="leads" aria-pressed="true">Inquiries</button>
         <button type="button" id="view-contacts-button" class="view-toggle-button" data-view="contacts" aria-pressed="false">Guide downloads</button>
       </div>
       <div class="i-actions" data-practice-only>
         <button id="add-lead-button" type="button" class="a-btn a-btn-primary i-btn">+ Add inquiry</button>
         <button id="export-csv-button" type="button" class="a-btn i-btn">Export CSV</button>
-        <button id="ads-export-button" type="button" class="a-btn i-btn">Google Ads upload</button>
+        <button id="ads-export-button" type="button" class="a-btn i-btn cmc-hide">Google Ads upload</button>
       </div>
     </div>
 
@@ -71,7 +71,7 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
         <thead>
           <tr>
             <th>Person</th>
-            <th class="i-hide-sm" data-practice-only>With</th>
+            <th class="i-hide-sm cmc-hide" data-practice-only>With</th>
             <th class="i-hide-md">Source</th>
             <th>Status</th>
             <th class="i-hide-sm">Follow-up</th>
@@ -248,11 +248,11 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
             <select id="detail-assigned-select"></select>
             <span id="detail-assigned-status" class="i-hint"></span>
           </div>
-          <div class="i-field">
+          <div class="i-field cmc-hide">
             <span>Counselor they asked for</span>
             <b id="detail-counselor"></b>
           </div>
-          <div class="i-field">
+          <div class="i-field cmc-hide">
             <span>Session format</span>
             <b id="detail-session-format"></b>
           </div>
@@ -287,6 +287,16 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
     </div>
   </div>
 </AdminLayout>
+
+<!-- CMC-ONLY (keep when syncing from the template): CMC's inquiries are
+     practices asking for audits, so the counseling-practice extras are
+     hidden here: the Guide downloads toggle, Google Ads upload, the "With"
+     counselor column, and the counselor/session-format detail fields. -->
+<style is:global>
+  .cmc-hide {
+    display: none !important;
+  }
+</style>
 
 <script>
   import { supabase, initAdminAuth } from '../../lib/adminAuth';
@@ -565,7 +575,7 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
         return `
       <tr data-lead-id="${lead.id}" class="${lead.archived_at ? 'i-archived' : ''}">
         <td><div class="i-who"><span class="i-avatar">${escapeHtml(initials(lead.name))}</span><div><b>${escapeHtml(lead.name || '(no name)')}${lead.archived_at ? ' <span class="i-tag">Archived</span>' : ''}</b><small>${escapeHtml(contact)}${contact ? ' · ' : ''}${relative(lead.created_at)}</small></div></div></td>
-        <td class="i-hide-sm i-muted" data-practice-only>${counselor ? escapeHtml(counselor) : '<span class="i-faint">Not assigned</span>'}</td>
+        <td class="i-hide-sm i-muted cmc-hide" data-practice-only>${counselor ? escapeHtml(counselor) : '<span class="i-faint">Not assigned</span>'}</td>
         <td class="i-hide-md i-muted">${escapeHtml(sourceLabel(lead))}</td>
         <td data-no-row-click>${renderStatusSelect(lead.id, lead.status)}</td>
         <td class="i-hide-sm ${late ? 'i-late' : 'i-muted'}">${lead.follow_up_date ? shortDate(lead.follow_up_date) : ''}</td>
