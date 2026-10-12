@@ -31,6 +31,13 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
       </div>
     </div>
 
+    <!-- CMC-ONLY (keep when syncing): the sales pipeline total. -->
+    <div class="r-kpis" id="cmc-pipeline">
+      <div class="t-kpi"><span class="t-lbl">Open pipeline</span><span id="cmc-open" class="t-v a-num">—</span><span id="cmc-open-note" class="t-delta"></span></div>
+      <div class="t-kpi"><span class="t-lbl">Won this month</span><span id="cmc-won" class="t-v a-num">—</span><span id="cmc-won-note" class="t-delta"></span></div>
+      <div class="t-kpi"><span class="t-lbl">Prospects with a plan</span><span id="cmc-priced" class="t-v a-num">—</span><span class="t-delta">Waiting or contacted</span></div>
+    </div>
+
     <!-- Status counts double as the status filter. -->
     <div class="i-pipeline" id="i-pipeline" role="group" aria-label="Filter by status"></div>
 
@@ -229,6 +236,22 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
       </div>
 
       <aside class="i-detail-side">
+        <!-- CMC-ONLY (keep when syncing): the plan and value being discussed. -->
+        <section class="t-card i-fields" id="cmc-deal">
+          <h2>Deal</h2>
+          <div class="i-field">
+            <label for="cmc-deal-plan">Plan</label>
+            <select id="cmc-deal-plan"><option value="">Not discussed yet</option></select>
+          </div>
+          <div class="i-field">
+            <label for="cmc-deal-value">Monthly value ($)</label>
+            <input id="cmc-deal-value" type="number" min="0" step="1" inputmode="numeric" />
+          </div>
+          <div class="i-inline">
+            <button id="cmc-deal-save" type="button" class="a-btn a-btn-primary i-btn">Save</button>
+            <span id="cmc-deal-status" class="i-hint" role="status"></span>
+          </div>
+        </section>
         <section class="t-card i-fields">
           <div class="i-field">
             <span>Status</span>
@@ -243,7 +266,7 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
             </div>
             <span id="follow-up-status" class="i-hint"></span>
           </div>
-          <div id="detail-assigned-wrap" class="i-field hidden">
+          <div id="detail-assigned-wrap" class="i-field hidden cmc-hide">
             <label for="detail-assigned-select">With counselor</label>
             <select id="detail-assigned-select"></select>
             <span id="detail-assigned-status" class="i-hint"></span>
@@ -291,7 +314,7 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
 <!-- CMC-ONLY (keep when syncing from the template): CMC's inquiries are
      practices asking for audits, so the counseling-practice extras are
      hidden here: the Guide downloads toggle, Google Ads upload, the "With"
-     counselor column, and the counselor/session-format detail fields. -->
+     counselor column and field, and the counselor/session-format fields. -->
 <style is:global>
   .cmc-hide {
     display: none !important;
@@ -1027,6 +1050,8 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
     const lead = allLeads.find((l) => l.id === leadId);
     if (!lead) return;
     currentLeadId = leadId;
+    // CMC-ONLY (keep when syncing): tells the deal card below which lead is open.
+    document.dispatchEvent(new CustomEvent('cmc:lead-opened', { detail: leadId }));
 
     detailName.textContent = lead.name || '(no name)';
     document.getElementById('i-detail-avatar')!.textContent = initials(lead.name);
@@ -1279,3 +1304,82 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
     { allowedRoles: ['owner', 'agency', 'staff'] }
   );
 </script>
+
+<!-- CMC-ONLY (keep when syncing from the template): the sales pipeline.
+     Each prospect's plan and monthly value (leads.deal_plan / deal_value,
+     0102_cmc_pipeline_and_clients.sql), and the totals above the list. -->
+<script>
+  import { supabase } from '../../lib/adminAuth';
+  import { PLANS, money } from '../../lib/cmcPlans';
+
+  type Deal = { id: string; status: string | null; deal_plan: string | null; deal_value: number | null; scheduled_at: string | null; lead_magnet_id: string | null; archived_at: string | null };
+  let deals: Deal[] = [];
+  let current: string | null = null;
+
+  const plan = document.getElementById('cmc-deal-plan') as HTMLSelectElement;
+  const value = document.getElementById('cmc-deal-value') as HTMLInputElement;
+  const status = document.getElementById('cmc-deal-status')!;
+  plan.insertAdjacentHTML('beforeend', PLANS.map((p) => `<option value="${p.value}">${p.label}${p.price ? ` ($${p.price}/mo)` : ''}</option>`).join(''));
+
+  function renderTotals() {
+    const live = deals.filter((d) => !d.lead_magnet_id && !d.archived_at);
+    const open = live.filter((d) => ['new', 'contacted'].includes(d.status ?? 'new'));
+    const openValue = open.reduce((s, d) => s + (d.deal_value ?? 0), 0);
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const won = live.filter((d) => d.status === 'scheduled' && (d.scheduled_at ?? '') >= monthStart);
+    const wonValue = won.reduce((s, d) => s + (d.deal_value ?? 0), 0);
+    const priced = open.filter((d) => d.deal_value);
+    document.getElementById('cmc-open')!.textContent = `${money(openValue)}/mo`;
+    document.getElementById('cmc-open-note')!.textContent = `${open.length} open prospect${open.length === 1 ? '' : 's'}`;
+    document.getElementById('cmc-won')!.textContent = `${money(wonValue)}/mo`;
+    document.getElementById('cmc-won-note')!.textContent = `${won.length} new client${won.length === 1 ? '' : 's'}`;
+    document.getElementById('cmc-priced')!.textContent = `${priced.length} of ${open.length}`;
+  }
+
+  async function loadDeals() {
+    const { data } = await supabase.from('leads').select('id, status, deal_plan, deal_value, scheduled_at, lead_magnet_id, archived_at');
+    deals = (data ?? []) as Deal[];
+    renderTotals();
+  }
+
+  document.addEventListener('cmc:lead-opened', (e) => {
+    current = (e as CustomEvent<string>).detail;
+    const d = deals.find((x) => x.id === current);
+    plan.value = d?.deal_plan ?? '';
+    value.value = d?.deal_value != null ? String(d.deal_value) : '';
+    status.textContent = '';
+  });
+
+  // Picking a plan fills in its price, which can then be adjusted.
+  plan.addEventListener('change', () => {
+    const p = PLANS.find((x) => x.value === plan.value);
+    if (p?.price) value.value = String(p.price);
+  });
+
+  document.getElementById('cmc-deal-save')!.addEventListener('click', async () => {
+    if (!current) return;
+    const update = { deal_plan: plan.value || null, deal_value: value.value ? Math.max(0, Math.round(Number(value.value))) : null };
+    status.textContent = 'Saving...';
+    status.className = 'i-hint';
+    const { error } = await supabase.from('leads').update(update).eq('id', current);
+    if (error) {
+      status.textContent = 'Could not save: ' + error.message;
+      status.className = 'i-hint r-err';
+      return;
+    }
+    const d = deals.find((x) => x.id === current);
+    if (d) Object.assign(d, update);
+    status.textContent = 'Saved.';
+    status.className = 'i-hint r-ok';
+    renderTotals();
+  });
+
+  // Status changes elsewhere on this page move deals in and out of the
+  // pipeline, so refresh the totals whenever the user returns to the list.
+  document.getElementById('back-to-list-button')?.addEventListener('click', () => void loadDeals());
+  supabase.auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') void loadDeals();
+  });
+</script>
+

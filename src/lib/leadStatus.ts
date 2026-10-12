@@ -23,9 +23,11 @@ export const TERMINAL_LEAD_STATUSES: readonly string[] = ['scheduled', 'referred
 export const STATUS_LABELS: Record<string, string> = {
   new: 'Waiting',
   contacted: 'Contacted',
-  scheduled: 'Scheduled',
-  referred: 'Referred out',
-  withdrawn: 'Withdrawn',
+  // CMC-ONLY labels (keep when syncing from the template): CMC's leads are
+  // practices, so the stages read as a sales pipeline. Values are unchanged.
+  scheduled: 'Became a client',
+  referred: 'Not a fit',
+  withdrawn: 'Lost',
 };
 
 // Waiting is amber (needs action), contacted blue (in progress),

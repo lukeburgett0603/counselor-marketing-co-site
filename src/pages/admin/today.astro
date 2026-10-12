@@ -162,7 +162,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       { l: 'Inquiries this month', v: String(leads.filter((x) => x.created_at >= monthStart).length), d: `${leads.length} all time` },
       { l: 'Audits this month', v: String(audits.filter((x) => x.created_at >= monthStart).length), d: `${audits.length} all time` },
       { l: 'Audits opened', v: done.length ? `${Math.round((opened / done.length) * 100)}%` : '—', d: `${opened} of ${done.length} sent` },
-      { l: 'Audits that became clients', v: String(audits.filter((x) => x.lead?.status === 'scheduled').length), d: 'Inquiry marked Scheduled' },
+      { l: 'Audits that became clients', v: String(audits.filter((x) => x.lead?.status === 'scheduled').length), d: 'Inquiry marked Became a client' },
     ];
     const waiting = leads.filter((x) => x.status === 'new').length;
     $('t-headline').textContent = waiting

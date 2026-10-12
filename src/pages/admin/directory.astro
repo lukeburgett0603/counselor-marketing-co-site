@@ -1,15 +1,39 @@
 ---
-// Counselor Marketing Co.-only: a private directory of every client site's
-// admin, for jumping into a client's dashboard (see
-// supabase/migrations/0014_client_directory.sql). In CMC's own menu under
-// Clients since the 2026-10-12 admin redesign. Agency logins only (RLS).
+// Counselor Marketing Co.-only: CMC's client list. Each client's plan,
+// monthly price, monthly add-ons, start date and status, a one-click link
+// into their dashboard, and CMC's total monthly revenue (active clients:
+// plan price plus add-ons). Backed by client_sites (0014_client_directory.sql,
+// 0102_cmc_pipeline_and_clients.sql). Agency logins only (RLS).
 import AdminLayout from '../../layouts/AdminLayout.astro';
+import { MONTHLY_ADDONS, PLANS } from '../../lib/cmcPlans';
 ---
 
-<AdminLayout title="Client directory | Admin" current="directory">
-  <p class="i-intro">Every client's dashboard, one click away.</p>
+<AdminLayout title="Client list | Admin" current="directory">
+  <p class="i-intro">Your clients, what they're on, and what CMC brings in each month.</p>
+
+  <div class="r-kpis">
+    <div class="t-kpi">
+      <span class="t-lbl">Monthly revenue</span>
+      <span id="cd-mrr" class="t-v a-num">—</span>
+      <span id="cd-mrr-note" class="t-delta"></span>
+    </div>
+    <div class="t-kpi">
+      <span class="t-lbl">Active clients</span>
+      <span id="cd-active" class="t-v a-num">—</span>
+      <span id="cd-active-note" class="t-delta"></span>
+    </div>
+    <div class="t-kpi">
+      <span class="t-lbl">Average per client</span>
+      <span id="cd-avg" class="t-v a-num">—</span>
+      <span class="t-delta">Active clients, per month</span>
+    </div>
+  </div>
 
   <div class="i-filters">
+    <label class="i-check">
+      <input id="cd-show-ended" type="checkbox" />
+      <span>Show ended</span>
+    </label>
     <p id="cd-count" class="i-count"></p>
     <button id="cd-add-button" type="button" class="a-btn a-btn-primary i-btn">+ Add client</button>
   </div>
@@ -19,19 +43,21 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       <thead>
         <tr>
           <th>Client</th>
-          <th class="i-hide-sm">Notes</th>
+          <th class="i-hide-sm">Plan</th>
+          <th class="r-num">Monthly</th>
+          <th class="i-hide-md">Since</th>
           <th></th>
         </tr>
       </thead>
       <tbody id="cd-body"></tbody>
     </table>
-    <div id="cd-empty" class="t-empty" hidden><b>No clients listed yet.</b>Add each client's dashboard address (their site, then /admin) so you can jump in from here.</div>
+    <div id="cd-empty" class="t-empty" hidden><b>No clients listed yet.</b>Add each client with their plan and dashboard address, and your monthly revenue adds itself up.</div>
   </div>
 
   <div id="cd-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
-    <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+    <div class="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
       <div class="mb-4 flex items-center justify-between">
-        <p class="font-semibold text-brand-ink">Add a client</p>
+        <p id="cd-modal-title" class="font-semibold text-brand-ink">Add a client</p>
         <button id="cd-close" type="button" class="text-sm text-slate-500 hover:text-slate-800">Close</button>
       </div>
       <form id="cd-form" class="space-y-3">
@@ -43,12 +69,51 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           <label for="cd-url" class="block text-xs font-semibold text-slate-500">Dashboard address</label>
           <input id="cd-url" name="admin_url" type="url" required placeholder="https://clientdomain.com/admin" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
         </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="cd-plan" class="block text-xs font-semibold text-slate-500">Plan</label>
+            <select id="cd-plan" name="plan" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+              <option value="">Not set</option>
+              {PLANS.map((p) => <option value={p.value}>{p.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label for="cd-price" class="block text-xs font-semibold text-slate-500">Plan price per month ($)</label>
+            <input id="cd-price" name="monthly_price" type="number" min="0" step="1" inputmode="numeric" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+          </div>
+        </div>
+        <fieldset>
+          <legend class="block text-xs font-semibold text-slate-500">Monthly add-ons</legend>
+          {MONTHLY_ADDONS.map((a) => (
+            <label class="mt-1 flex items-center gap-2 text-sm text-slate-700">
+              <input type="checkbox" name="addons" value={a.value} />
+              {a.label} (+${a.price}/mo)
+            </label>
+          ))}
+        </fieldset>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="cd-start" class="block text-xs font-semibold text-slate-500">Client since</label>
+            <input id="cd-start" name="start_date" type="date" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label for="cd-status-select" class="block text-xs font-semibold text-slate-500">Status</label>
+            <select id="cd-status-select" name="status" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+              <option value="active">Active</option>
+              <option value="paused">Paused</option>
+              <option value="ended">Ended</option>
+            </select>
+          </div>
+        </div>
         <div>
           <label for="cd-notes" class="block text-xs font-semibold text-slate-500">Notes (optional)</label>
           <textarea id="cd-notes" name="notes" rows="2" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"></textarea>
         </div>
         <p id="cd-status" class="text-sm text-red-600"></p>
-        <button type="submit" class="a-btn a-btn-primary w-full">Add client</button>
+        <div class="flex gap-2">
+          <button type="submit" class="a-btn a-btn-primary flex-1">Save client</button>
+          <button id="cd-remove" type="button" class="a-btn i-danger" hidden>Remove</button>
+        </div>
       </form>
     </div>
   </div>
@@ -56,83 +121,144 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 
 <script>
   import { supabase, initAdminAuth } from '../../lib/adminAuth';
+  import { MONTHLY_ADDONS, PLANS, addonsTotal, money, planLabel } from '../../lib/cmcPlans';
 
-  type ClientSite = { id: string; name: string; admin_url: string; notes: string | null };
-  let sites: ClientSite[] = [];
+  type Client = {
+    id: string;
+    name: string;
+    admin_url: string;
+    notes: string | null;
+    plan: string | null;
+    monthly_price: number | null;
+    addons: string[];
+    start_date: string | null;
+    status: 'active' | 'paused' | 'ended';
+  };
+  let clients: Client[] = [];
+  let editing: string | null = null;
 
   const esc = (v: string) => {
     const d = document.createElement('div');
     d.textContent = v;
     return d.innerHTML;
   };
+  const monthly = (c: Client) => (c.monthly_price ?? 0) + addonsTotal(c.addons ?? []);
   const modal = document.getElementById('cd-modal')!;
   const form = document.getElementById('cd-form') as HTMLFormElement;
-  const status = document.getElementById('cd-status')!;
+  const formStatus = document.getElementById('cd-status')!;
+  const showEnded = document.getElementById('cd-show-ended') as HTMLInputElement;
 
   function render() {
-    document.getElementById('cd-count')!.textContent = `${sites.length} client${sites.length === 1 ? '' : 's'}`;
-    document.getElementById('cd-empty')!.hidden = sites.length > 0;
-    document.getElementById('cd-body')!.innerHTML = sites
-      .map((s) => {
-        const safe = /^https?:\/\//i.test(s.admin_url.trim());
-        let host = s.admin_url;
-        try {
-          host = new URL(s.admin_url).host;
-        } catch {
-          /* keep as typed */
-        }
-        return `<tr>
-          <td><div class="i-who"><div><b>${esc(s.name)}</b><small>${esc(host)}</small></div></div></td>
-          <td class="i-hide-sm i-muted">${esc(s.notes ?? '')}</td>
-          <td class="r-num"><span class="i-inline" style="justify-content:flex-end">${safe ? `<a class="a-btn a-btn-primary i-btn" href="${esc(s.admin_url.trim())}" target="_blank" rel="noopener">Open dashboard</a>` : ''}<button type="button" class="a-btn i-btn i-danger" data-remove="${s.id}">Remove</button></span></td>
+    const active = clients.filter((c) => c.status === 'active');
+    const mrr = active.reduce((s, c) => s + monthly(c), 0);
+    document.getElementById('cd-mrr')!.textContent = money(mrr);
+    document.getElementById('cd-mrr-note')!.textContent = `${money(mrr * 12)} a year at this rate`;
+    document.getElementById('cd-active')!.textContent = String(active.length);
+    const paused = clients.filter((c) => c.status === 'paused').length;
+    document.getElementById('cd-active-note')!.textContent = paused ? `${paused} paused` : 'None paused';
+    document.getElementById('cd-avg')!.textContent = active.length ? money(Math.round(mrr / active.length)) : '—';
+
+    const rows = clients.filter((c) => showEnded.checked || c.status !== 'ended');
+    document.getElementById('cd-count')!.textContent = `${rows.length} client${rows.length === 1 ? '' : 's'}`;
+    document.getElementById('cd-empty')!.hidden = rows.length > 0;
+    document.getElementById('cd-body')!.innerHTML = rows
+      .map((c) => {
+        const safe = /^https?:\/\//i.test(c.admin_url.trim());
+        const addons = (c.addons ?? []).map((a) => MONTHLY_ADDONS.find((x) => x.value === a)?.label).filter(Boolean);
+        const statusTag = c.status === 'active' ? '' : ` <span class="i-tag">${c.status === 'paused' ? 'Paused' : 'Ended'}</span>`;
+        return `<tr data-edit="${c.id}" class="cd-row ${c.status === 'ended' ? 'i-archived' : ''}">
+          <td><div class="i-who"><div><b>${esc(c.name)}${statusTag}</b><small>${esc(addons.length ? addons.join(', ') : c.notes ?? '')}</small></div></div></td>
+          <td class="i-hide-sm i-muted">${esc(planLabel(c.plan) || 'Not set')}</td>
+          <td class="r-num">${monthly(c) ? money(monthly(c)) : '<span class="i-faint">—</span>'}</td>
+          <td class="i-hide-md i-muted">${c.start_date ? new Date(c.start_date + 'T12:00').toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : ''}</td>
+          <td class="r-num" data-no-edit>${safe ? `<a class="a-btn i-btn" href="${esc(c.admin_url.trim())}" target="_blank" rel="noopener">Open dashboard</a>` : ''}</td>
         </tr>`;
       })
       .join('');
   }
 
-  document.getElementById('cd-body')!.addEventListener('click', async (e) => {
-    const id = (e.target as HTMLElement).closest<HTMLElement>('[data-remove]')?.dataset.remove;
-    if (!id) return;
-    const s = sites.find((x) => x.id === id);
-    if (!s || !window.confirm(`Remove ${s.name} from the directory? This only removes the shortcut, not their site.`)) return;
-    const { error } = await supabase.from('client_sites').delete().eq('id', id);
-    if (error) {
-      window.alert('Could not remove: ' + error.message);
-      return;
-    }
-    sites = sites.filter((x) => x.id !== id);
-    render();
-  });
-
-  document.getElementById('cd-add-button')!.addEventListener('click', () => {
+  function openForm(c: Client | null) {
+    editing = c?.id ?? null;
     form.reset();
-    status.textContent = '';
+    formStatus.textContent = '';
+    document.getElementById('cd-modal-title')!.textContent = c ? `Edit ${c.name}` : 'Add a client';
+    document.getElementById('cd-remove')!.hidden = !c;
+    if (c) {
+      const f = form.elements as unknown as Record<string, HTMLInputElement>;
+      f.name.value = c.name;
+      f.admin_url.value = c.admin_url;
+      f.plan.value = c.plan ?? '';
+      f.monthly_price.value = c.monthly_price != null ? String(c.monthly_price) : '';
+      f.start_date.value = c.start_date ?? '';
+      f.status.value = c.status;
+      f.notes.value = c.notes ?? '';
+      form.querySelectorAll<HTMLInputElement>('input[name="addons"]').forEach((x) => (x.checked = (c.addons ?? []).includes(x.value)));
+    }
     modal.classList.remove('hidden');
     modal.classList.add('flex');
-  });
-  document.getElementById('cd-close')!.addEventListener('click', () => {
+  }
+  const closeForm = () => {
     modal.classList.add('hidden');
     modal.classList.remove('flex');
+  };
+
+  // Picking a plan fills in its list price, which can then be adjusted
+  // (founder pricing, a custom group quote).
+  (document.getElementById('cd-plan') as HTMLSelectElement).addEventListener('change', (e) => {
+    const p = PLANS.find((x) => x.value === (e.target as HTMLSelectElement).value);
+    if (p?.price) (document.getElementById('cd-price') as HTMLInputElement).value = String(p.price);
   });
+
+  document.getElementById('cd-body')!.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-no-edit]')) return;
+    const id = target.closest<HTMLElement>('[data-edit]')?.dataset.edit;
+    const c = clients.find((x) => x.id === id);
+    if (c) openForm(c);
+  });
+  document.getElementById('cd-add-button')!.addEventListener('click', () => openForm(null));
+  document.getElementById('cd-close')!.addEventListener('click', closeForm);
+  showEnded.addEventListener('change', render);
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const data = new FormData(form);
+    const text = (k: string) => ((data.get(k) as string) ?? '').trim() || null;
     const row = {
-      name: ((data.get('name') as string) ?? '').trim(),
-      admin_url: ((data.get('admin_url') as string) ?? '').trim(),
-      notes: ((data.get('notes') as string) ?? '').trim() || null,
+      name: text('name') ?? '',
+      admin_url: text('admin_url') ?? '',
+      plan: text('plan'),
+      monthly_price: text('monthly_price') != null ? Math.max(0, Math.round(Number(text('monthly_price')))) : null,
+      addons: data.getAll('addons') as string[],
+      start_date: text('start_date'),
+      status: (data.get('status') as Client['status']) ?? 'active',
+      notes: text('notes'),
     };
     if (!row.name || !row.admin_url) return;
-    const { data: inserted, error } = await supabase.from('client_sites').insert(row).select().single();
+    const q = editing ? supabase.from('client_sites').update(row).eq('id', editing).select().single() : supabase.from('client_sites').insert(row).select().single();
+    const { data: saved, error } = await q;
     if (error) {
-      status.textContent = 'Could not add: ' + error.message;
+      formStatus.textContent = 'Could not save: ' + error.message;
       return;
     }
-    sites.push(inserted as ClientSite);
-    sites.sort((a, b) => a.name.localeCompare(b.name));
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
+    const s = saved as Client;
+    if (editing) Object.assign(clients.find((x) => x.id === editing)!, s);
+    else clients.push(s);
+    clients.sort((a, b) => a.name.localeCompare(b.name));
+    closeForm();
+    render();
+  });
+
+  document.getElementById('cd-remove')!.addEventListener('click', async () => {
+    const c = clients.find((x) => x.id === editing);
+    if (!c || !window.confirm(`Remove ${c.name} from your client list? To keep their history, set Status to Ended instead.`)) return;
+    const { error } = await supabase.from('client_sites').delete().eq('id', c.id);
+    if (error) {
+      formStatus.textContent = 'Could not remove: ' + error.message;
+      return;
+    }
+    clients = clients.filter((x) => x.id !== c.id);
+    closeForm();
     render();
   });
 
@@ -142,7 +268,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       document.getElementById('cd-count')!.textContent = 'Could not load: ' + error.message;
       return;
     }
-    sites = (data ?? []) as ClientSite[];
+    clients = (data ?? []) as Client[];
     render();
   }
 
