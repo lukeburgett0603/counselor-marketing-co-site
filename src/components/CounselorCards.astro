@@ -14,6 +14,7 @@
 // entirely — it's exclusive to the counselor's own profile page now —
 // and CounselorsOverview additionally shows Specialty pills, which this
 // card still doesn't (kept minimal to stay compact on the homepage).
+import { Image } from 'astro:assets';
 import StatusPill from './StatusPill.astro';
 import TelehealthPill from './TelehealthPill.astro';
 import { withBase } from '../lib/url';
@@ -45,9 +46,13 @@ function firstNameOf(title: string): string {
         <div class="rounded-lg border border-slate-200 p-6 text-center">
           <a href={withBase(`/${counselor.slug}`)} class="block hover:opacity-90">
             {counselor.images.headshot && (
-              <img
+              <Image
                 src={counselor.images.headshot.url}
                 alt={counselor.images.headshot.alt}
+                inferSize
+                widths={[96, 192]}
+                sizes="96px"
+                loading="lazy"
                 class="avatar-crop mx-auto mb-3 h-24 w-24 rounded-full object-cover"
               />
             )}

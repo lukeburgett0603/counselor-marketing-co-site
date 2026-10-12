@@ -197,6 +197,7 @@ const Wrapper = embedded ? 'div' : 'section';
 </Wrapper>
 
 <script>
+  import { loadTurnstileWhenNeeded, waitForTurnstileToken } from '../lib/turnstile';
   // A direct REST call instead of importing @supabase/supabase-js here:
   // the full SDK adds ~200KB of JS to every single page (this component can
   // appear more than once per page now), which drags down Core Web Vitals
@@ -208,19 +209,10 @@ const Wrapper = embedded ? 'div' : 'section';
   const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
   const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
-  // Cloudflare Turnstile's script does implicit auto-rendering of every
-  // .cf-turnstile element on the page once loaded, so it only needs
-  // loading once even though this component (and its .cf-turnstile div)
-  // can appear more than once per page — guarded here rather than in the
-  // markup so a page with two LeadGenerator instances doesn't inject the
-  // script twice, which would otherwise try to double-render each widget.
-  if (document.querySelector('.cf-turnstile') && !document.querySelector('script[src*="challenges.cloudflare.com/turnstile"]')) {
-    const turnstileScript = document.createElement('script');
-    turnstileScript.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
-    turnstileScript.async = true;
-    turnstileScript.defer = true;
-    document.head.appendChild(turnstileScript);
-  }
+  // Cloudflare Turnstile loads on first interaction with a form (or a few
+  // seconds after page load), not immediately: its challenge files were
+  // ~700 KB per widget and slowed mobile LCP badly. See lib/turnstile.ts.
+  loadTurnstileWhenNeeded();
 
   document.querySelectorAll<HTMLFormElement>('.lead-form').forEach((form) => {
     const status = form.querySelector<HTMLElement>('.lead-form-status');
@@ -230,6 +222,7 @@ const Wrapper = embedded ? 'div' : 'section';
       if (!status) return;
       const formData = new FormData(form);
       status.textContent = 'Sending...';
+      const turnstileToken = await waitForTurnstileToken(form);
 
       const payload: Record<string, unknown> = {
         name: formData.get('name'),
@@ -246,7 +239,7 @@ const Wrapper = embedded ? 'div' : 'section';
         // (Cloudflare's script inserts this hidden input itself inside
         // the .cf-turnstile div) — null when Turnstile isn't configured
         // for this client, which submit-lead treats as "skip the check."
-        turnstile_token: formData.get('cf-turnstile-response') || null,
+        turnstile_token: turnstileToken,
       };
       if (form.dataset.collectWebsite === 'true') {
         payload.existing_website_url = formData.get('existing_website_url') || null;

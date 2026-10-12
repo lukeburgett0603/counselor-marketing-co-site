@@ -12,6 +12,10 @@ interface Props {
   alt: string;
   class?: string;
   loading?: 'eager' | 'lazy';
+  // 'high' only on the one above-the-fold image that is the page's Largest
+  // Contentful Paint (the hero), so the browser fetches it ahead of
+  // everything else competing for a slow phone connection.
+  fetchpriority?: 'high' | 'low' | 'auto';
   widths?: number[];
   sizes?: string;
   // Required by Unsplash's API guidelines whenever a photo sourced through
@@ -30,7 +34,7 @@ interface Props {
   showCredit?: boolean;
 }
 
-const { src, alt, class: className, loading = 'lazy', widths, sizes, creditName, creditUrl, showCredit = true } =
+const { src, alt, class: className, loading = 'lazy', fetchpriority, widths, sizes, creditName, creditUrl, showCredit = true } =
   Astro.props;
 
 // Unsplash's API guidelines require utm_source to identify the actual
@@ -44,7 +48,7 @@ const unsplashAppName = import.meta.env.PUBLIC_UNSPLASH_APP_NAME || 'local-busin
 ---
 
 <div class="relative h-full w-full">
-  <Image src={src} alt={alt} inferSize class={className} loading={loading} widths={widths} sizes={sizes} />
+  <Image src={src} alt={alt} inferSize class={className} loading={loading} fetchpriority={fetchpriority} widths={widths} sizes={sizes} />
   {showCredit && creditName && creditUrl && (
     <a
       href={`${creditUrl}?utm_source=${unsplashAppName}&utm_medium=referral`}

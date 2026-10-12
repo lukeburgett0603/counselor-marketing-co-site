@@ -5,6 +5,7 @@ import Section from '../components/Section.astro';
 import CTA from '../components/CTA.astro';
 import LeadGenerator from '../components/LeadGenerator.astro';
 import LeadMagnet from '../components/LeadMagnet.astro';
+import { Image } from 'astro:assets';
 import StatusPill from '../components/StatusPill.astro';
 import TelehealthPill from '../components/TelehealthPill.astro';
 import SpecialtyPills from '../components/SpecialtyPills.astro';
@@ -49,9 +50,13 @@ const counselorPages = allPages
             class="block rounded-lg border border-slate-200 p-6 text-center hover:border-brand-primary hover:shadow-md"
           >
             {counselor.images.headshot && (
-              <img
+              <Image
                 src={counselor.images.headshot.url}
                 alt={counselor.images.headshot.alt}
+                inferSize
+                widths={[96, 192]}
+                sizes="96px"
+                loading="lazy"
                 class="avatar-crop mx-auto mb-3 h-24 w-24 rounded-full object-cover"
               />
             )}

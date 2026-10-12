@@ -2431,3 +2431,18 @@ and fixed in one pass. Treat "did I update CLAUDE.md" and "did I update
 the relevant reference file(s)" as the same checklist item, not two
 separate, easily-forgotten ones — a change that only lands in CLAUDE.md
 is only half-documented.
+
+## Mobile LCP fix synced from the template (2026-10-12)
+
+Same patches as the template's "Mobile LCP fix" (commit `378dee3` +
+`5f37b73` there): Turnstile loads on first form interaction or 4s after
+load (`src/lib/turnstile.ts`), counselor headshots go through
+`astro:assets` at 96/192px, hero `fetchpriority="high"`, non-blocking
+Google Fonts in `BaseLayout.astro`, lazy lead-magnet image. Applied as
+targeted patches because this repo's copies of `LeadGenerator`,
+`LeadMagnet`, `CounselorsOverview` and `BaseLayout` lag the template
+(no exit-export/ad-attribution bits yet). **Dormant here today**: none
+of the 53 built pages render these shared components (the rebuilt pages
+use their own layout, Geist is self-hosted, and the homepage already
+scores 100 / LCP 1.1s on Lighthouse mobile). It applies if a
+database-driven page ever renders through the old templates.
