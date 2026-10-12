@@ -21,7 +21,8 @@
 // AUDIT_DAILY_LIMIT (optional), AUDIT_PAGE_URL (optional).
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { locate, normalizeUrl, scanSite, siteName, nameFromTitle, stateAbbr, type SiteChecks } from './site.ts';
-import { authority, directoryName, findLocation, serp, volumes, type SerpResult } from './mangools.ts';
+import { authority, directoryName, findLocation, pace, serp, volumes, type SerpResult } from './mangools.ts';
+import { backlinks } from './links.ts';
 import { pagespeed } from './pagespeed.ts';
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
@@ -199,6 +200,9 @@ async function runAudit(id: string) {
 
     let yours = main?.organic.find((o) => domain && sameDomain(o.domain, domain))?.da ?? null;
     if (yours == null && a.url) yours = await authority(a.url);
+    const links = Date.now() - started < 110_000
+      ? await backlinks(domain, leaderRows.map((o, j) => ({ name: leaderNames[j], domain: o.domain })), pace)
+      : null;
 
     const [speed, compared] = await Promise.all([speedP, compareP]);
 
@@ -223,6 +227,7 @@ async function runAudit(id: string) {
       site: scan ? scan.checks : a.url ? { ...emptyChecks(), reachable: false } : null,
       speed: speed ? { score: speed.score, loadSeconds: speed.loadSeconds, screenshot: speed.screenshot } : null,
       accessibility: speed?.accessibility ?? null,
+      backlinks: links,
       compare:
         rival && compared && compared[0].checks.reachable
           ? {
@@ -251,7 +256,7 @@ function emptyChecks(): SiteChecks {
   return {
     reachable: false, title: null, description: null, hasBusinessSchema: null, weCount: null, youCount: null, phoneLink: null,
     contactForm: null, emailLink: null, bookingPlatform: null, mentionsFees: null, mentionsNewClients: null, mentionsTelehealth: null,
-    crisisLine: null, credentials: null, newestContent: null,
+    crisisLine: null, credentials: null, newestContent: null, platform: null, counselorCount: null, directoryProfiles: [],
   };
 }
 

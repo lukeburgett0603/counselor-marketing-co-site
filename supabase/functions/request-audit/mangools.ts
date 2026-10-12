@@ -6,6 +6,12 @@ const BASE = 'https://api.mangools.com/v3';
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 let last = 0;
+// Waits for this request's turn in the shared Mangools pacing.
+export async function pace() {
+  const wait = last + 2000 - Date.now();
+  if (wait > 0) await sleep(wait);
+  last = Date.now();
+}
 async function call(path: string, init: RequestInit = {}): Promise<unknown | null> {
   const key = Deno.env.get('MANGOOLS_API_KEY');
   if (!key) return null;

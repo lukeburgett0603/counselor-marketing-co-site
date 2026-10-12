@@ -9,7 +9,7 @@
 // - Second person, warm, plain. No em-dashes.
 // - Nothing that would be wrong for a counselor to act on under their
 //   ethics code (never suggest asking clients for reviews).
-import type { AuditData, AuditRanking, SiteChecks } from './types';
+import type { AuditData, AuditRanking, SiteChecks } from './types.ts';
 
 export type FindingStatus = 'good' | 'fix' | 'note';
 export type StepKey = 'found' | 'chosen' | 'referred' | 'booked';
@@ -46,6 +46,14 @@ export interface CheckValue {
   ok: boolean | null; // null = couldn't check
   text?: string; // shown instead of a mark, e.g. "6.8s"
 }
+
+// A specialty name mid-sentence: "anxiety", but "OCD" and "Christian
+// counseling" keep their capitals.
+export const specialtyText = (label: string) =>
+  label
+    .split(' ')
+    .map((w) => (/^[A-Z]{2,}$/.test(w) || /^Christian$/.test(w) ? w : w.toLowerCase()))
+    .join(' ');
 
 const fmt = (n: number) => n.toLocaleString('en-US');
 const q = (s: string) => `“${s}”`;
@@ -120,14 +128,14 @@ export function buildReport(d: AuditData): AuditReport {
     add({
       id: 'specialty-pages', step: 'found', status: 'fix', severity: best.volume && best.volume >= 30 ? 3 : 2,
       title: missing.length === 1 ? `${best.label} doesn’t have its own page.` : `${missing.length} of your specialties don’t have their own page.`,
-      body: `Your site mentions ${listJoin(d.specialties.map((s) => s.label.toLowerCase()))}, but ${withPage.length ? `only ${listJoin(withPage.map((s) => s.label.toLowerCase()))} ${withPage.length === 1 ? 'has' : 'have'} a page of its own` : 'none of them has a page of its own'}.${demand} Google ranks pages, not practices, so a specialty without its own page has very little chance of showing up when someone searches for it.`,
-      action: `Give ${best.label.toLowerCase()} its own page${best.keyword ? `, written for people searching ${q(best.keyword)}` : ''}.`,
+      body: `Your site mentions ${listJoin(d.specialties.map((s) => specialtyText(s.label)))}, but ${withPage.length ? `only ${listJoin(withPage.map((s) => specialtyText(s.label)))} ${withPage.length === 1 ? 'has' : 'have'} a page of its own` : 'none of them has a page of its own'}.${demand} Google ranks pages, not practices, so a specialty without its own page has very little chance of showing up when someone searches for it.`,
+      action: `Give ${specialtyText(best.label)} its own page${best.keyword ? `, written for people searching ${q(best.keyword)}` : ''}.`,
     });
   } else if (d.specialties.length) {
     add({
       id: 'specialty-pages', step: 'found', status: 'good', severity: 0,
       title: 'Each of your specialties has its own page.',
-      body: `That gives Google a clear page to show for each kind of help you offer: ${listJoin(d.specialties.map((s) => s.label.toLowerCase()))}.`,
+      body: `That gives Google a clear page to show for each kind of help you offer: ${listJoin(d.specialties.map((s) => specialtyText(s.label)))}.`,
     });
   }
 

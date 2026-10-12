@@ -16,3 +16,6 @@ verify_jwt = false
 # SUPABASE_SERVICE_ROLE_KEY instead.
 [functions.send-nurture-emails]
 verify_jwt = false
+
+[functions.unsubscribe-audit]
+verify_jwt = false

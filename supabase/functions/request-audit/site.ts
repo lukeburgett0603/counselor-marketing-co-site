@@ -23,6 +23,9 @@ export interface SiteChecks {
   crisisLine: string | null;
   credentials: string[] | null;
   newestContent: { date: string | null; hasArticles: boolean } | null;
+  platform: string | null; // website builder, e.g. "Squarespace"
+  directoryProfiles: string[]; // directory profiles their own site links to, e.g. ["psychology-today"]
+  counselorCount: number | null; // people with a credential on the team page (or homepage)
 }
 
 export interface SiteScan {
@@ -265,6 +268,26 @@ function parse(html: string): HTMLDocument | null {
   }
 }
 
+const PLATFORMS: [RegExp, string][] = [
+  [/static1\.squarespace\.com|squarespace-cdn|<!-- This is Squarespace/i, 'Squarespace'],
+  [/wixstatic\.com|static\.parastorage\.com|X-Wix/i, 'Wix'],
+  [/\/wp-content\/|\/wp-includes\/|content="WordPress/i, 'WordPress'],
+  [/showit\.(co|site)|showitcdn/i, 'Showit'],
+  [/webflow\.(com|io)|data-wf-site/i, 'Webflow'],
+  [/img1\.wsimg\.com|godaddy/i, 'GoDaddy'],
+  [/weebly\.com|editmysite\.com/i, 'Weebly'],
+  [/brightervision/i, 'Brighter Vision'],
+  [/therapysites\.com/i, 'TherapySites'],
+  [/irp-cdn\.multiscreensite\.com|dudamobile/i, 'Duda'],
+];
+
+// "Jane Smith, LPC" style names: one per person with a credential.
+const NAME_WITH_CREDENTIAL = /\b([A-Z][a-z]+(?:\s+[A-Z]\.)?(?:\s+[A-Z][a-zA-Z'-]+){1,2}),?\s+(?:LPCC-S|LPCC|LPC-S|LPCA|LPC|LCPC|LCSW-S|LCSW|LICSW|LMSW|LMFT|LMHC|LCMHC|LCADC|PsyD|Psy\.D\.|Ph\.D\.|PhD|EdD|MFT|CSW|NCC|MSW)\b/g;
+function countPeople(text: string): number {
+  // Keyed on the last two words, so "Meet Jane Smith" and "Jane Smith" are one person.
+  return new Set([...text.matchAll(NAME_WITH_CREDENTIAL)].map((m) => m[1].toLowerCase().split(/\s+/).slice(-2).join(' '))).size;
+}
+
 const FEES = /\b(fees?|rates?|insurance|in[- ]network|out[- ]of[- ]network|sliding[- ]scale|self[- ]pay|private pay|superbill|cost of (therapy|counseling|sessions))\b|\$\s?\d{2,3}\b/i;
 const NEW_CLIENTS = /\b(accepting|taking|welcoming)\s+(new\s+)?(clients|patients)\b|\bopenings?\s+(available|for new)\b|\bcurrently accepting\b|\bnow accepting\b/i;
 const TELEHEALTH = /\btele[- ]?health\b|\btele[- ]?therapy\b|\bonline (therapy|counseling|sessions)\b|\bvirtual (therapy|counseling|sessions|appointments)\b|\bvideo (sessions|appointments|therapy)\b/i;
@@ -276,7 +299,7 @@ export async function scanSite(startUrl: string, opts: { maxPages?: number } = {
     checks: {
       reachable: false, title: null, description: null, hasBusinessSchema: null, weCount: null, youCount: null, phoneLink: null,
       contactForm: null, emailLink: null, bookingPlatform: null, mentionsFees: null, mentionsNewClients: null, mentionsTelehealth: null,
-      crisisLine: null, credentials: null, newestContent: null,
+      crisisLine: null, credentials: null, newestContent: null, platform: null, counselorCount: null, directoryProfiles: [],
     },
     finalUrl: null, name: null, city: null, state: null, specialties: [],
   };
@@ -358,7 +381,29 @@ export async function scanSite(startUrl: string, opts: { maxPages?: number } = {
     crisisLine: crisis,
     credentials: creds,
     newestContent: await newestContent(base, hrefs),
+    platform: null,
+    counselorCount: null,
+    // A practice almost always links to its own directory profiles, which
+    // backlink data often misses (Psychology Today's links aren't indexed).
+    directoryProfiles: [
+      [/psychologytoday\.com/i, 'psychology-today'],
+      [/goodtherapy\.org/i, 'goodtherapy'],
+      [/therapyden\.com/i, 'therapyden'],
+      [/openpathcollective\.org/i, 'open-path'],
+    ].filter(([re]) => hrefs.some((h) => (re as RegExp).test(h))).map(([, k]) => k as string),
   };
+  // Counselors: names with a credential on the team page, else the homepage.
+  const teamLink = internal.find((l) => /team|staff|counselors|therapists|clinicians|providers|our-people|meet/i.test(l.url.pathname + ' ' + l.text));
+  const teamText = teamLink ? pages.find((p) => p.url.replace(/\/$/, '') === teamLink.url.toString().replace(/\/$/, '')) : undefined;
+  let people = 0;
+  if (teamLink) {
+    const doc2 = teamText?.doc ?? (await (async () => { const r = await fetchText(teamLink.url.toString(), 8000); return r && r.status < 400 ? parse(r.text) : null; })());
+    if (doc2) people = countPeople(bodyText(doc2));
+  }
+  if (!people) people = countPeople(homeText);
+  checks.counselorCount = people || null;
+  checks.platform = PLATFORMS.find(([re]) => re.test(home.text))?.[1] ?? null;
+
   return { checks, finalUrl: home.url, name: practiceName(doc, nodes), city, state, specialties };
 }
 

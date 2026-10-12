@@ -1,6 +1,6 @@
 // A fictional practice for /audit?sample=1: shows how a real audit reads
 // without anyone's real data. Every name and domain here is made up.
-import type { AuditData } from './types';
+import type { AuditData } from './types.ts';
 
 export const SAMPLE_AUDIT: AuditData = {
   id: 'sample',
@@ -55,6 +55,16 @@ export const SAMPLE_AUDIT: AuditData = {
     crisisLine: null,
     credentials: ['LCSW'],
     newestContent: { date: '2023-03-14', hasArticles: true },
+    platform: 'Squarespace',
+    counselorCount: 4,
+  },
+  backlinks: {
+    yours: [{ name: 'Psychology Today', domain: 'psychologytoday.com', url: 'https://www.psychologytoday.com/', category: 'directory' }],
+    gaps: [
+      { name: 'Springfield Area Chamber of Commerce', domain: 'springfieldchamber.example', url: 'https://springfieldchamber.example/members', category: 'chamber', leader: 'Prairie Path Therapy' },
+      { name: 'Springfield Public Library events', domain: 'springfieldlibrary.example', url: 'https://springfieldlibrary.example/events', category: 'community', leader: 'Lincoln Square Counseling' },
+    ],
+    press: [{ name: 'Springfield Daily News', leader: 'Prairie Path Therapy' }],
   },
   speed: { score: 41, loadSeconds: 6.8, screenshot: `${import.meta.env.BASE_URL.replace(/\/?$/, '/')}audit-sample-phone.jpg` },
   accessibility: { score: 72, issues: ['color-contrast', 'image-alt', 'label'] },

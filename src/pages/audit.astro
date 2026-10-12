@@ -8,7 +8,7 @@ import Ph from '../components/site/Ph.astro';
 import { withBase } from '../lib/url';
 import { SITE } from '../lib/site';
 
-const ICONS = ['magnifying-glass', 'star', 'handshake', 'lightning', 'check-circle', 'warning-circle', 'info', 'user-circle', 'x-circle', 'trophy'];
+const ICONS = ['magnifying-glass', 'star', 'handshake', 'lightning', 'check-circle', 'warning-circle', 'info', 'user-circle', 'x-circle', 'trophy', 'chart-line-up'];
 ---
 
 <SiteLayout
@@ -142,6 +142,20 @@ const ICONS = ['magnifying-glass', 'star', 'handshake', 'lightning', 'check-circ
     document.querySelector('#audit-building .audit-progress')?.parentElement?.remove();
     return null;
   }
+
+  // "Copy" buttons on the Ready to use templates.
+  root.addEventListener('click', async (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('.audit-copy');
+    if (!button) return;
+    const text = document.getElementById(button.dataset.copy!)?.textContent ?? '';
+    try {
+      await navigator.clipboard.writeText(text);
+      button.textContent = 'Copied';
+    } catch {
+      button.textContent = 'Select and copy';
+    }
+    setTimeout(() => (button.textContent = 'Copy'), 2000);
+  });
 
   load().then((data) => {
     if (!data) return;

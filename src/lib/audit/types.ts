@@ -38,6 +38,9 @@ export interface SiteChecks {
   crisisLine: string | null; // e.g. "988"; null = none found
   credentials: string[] | null; // on the homepage, e.g. ["LPC", "LCSW"]
   newestContent: { date: string | null; hasArticles: boolean } | null; // null = couldn't tell
+  platform?: string | null; // website builder, e.g. "Squarespace"
+  counselorCount?: number | null; // people with a credential on the team page
+  directoryProfiles?: string[]; // directory profiles their own site links to
 }
 
 export interface AuditData {
@@ -60,6 +63,13 @@ export interface AuditData {
     screenshot: string | null; // URL or data URI of the phone screenshot
   } | null;
   accessibility: { score: number | null; issues: string[] } | null; // Lighthouse audit ids, worst first
+  // Trusted sites linking to them, and to the top 2 practices but not to
+  // them (junk filtered out; see request-audit/links.ts). null = not checked.
+  backlinks?: {
+    yours: { name: string; domain: string; url: string; category: string }[];
+    gaps: { name: string; domain: string; url: string; category: string; leader: string }[];
+    press: { name: string; leader: string }[];
+  } | null;
   // The top practice for their main search (or the next one down, when
   // they're the top practice), run through the same site checks.
   compare: {
