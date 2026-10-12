@@ -1507,6 +1507,17 @@ replaced wholesale. That brought in three things:
 - **Address line 2 in the CAN-SPAM footer** (the template's 2026-09-15
   change): the footer now includes `business.street_address_2`
   (migration 0047, already on this database).
+- **Deployed and live-tested 2026-10-12**: a temporary magnet, step, and
+  lead (ZZTEST) went to a public Mailinator inbox. `{{ First_Name }}`
+  filled in both subject and body. The raw message carried both RFC 8058
+  headers, covered by the DKIM signature. A one-click-style POST to
+  `unsubscribe-lead` set `sequence_unsubscribed_at`. All test rows were
+  deleted afterward. Gmail's own Unsubscribe button was not seen
+  directly, since no Gmail inbox was used. CMC currently has 0 lead
+  magnets, so the daily cron job has nothing to send. The `business` row
+  also has no street address, so the CAN-SPAM footer shows no mailing
+  address. Fill it in (Website content, then Business info) before a
+  sequence goes live.
 
 ## Hub-and-spoke content (Content Pillar + Blog Post + Blog Index)
 
