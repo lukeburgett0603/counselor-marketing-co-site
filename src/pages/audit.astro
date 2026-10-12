@@ -105,12 +105,16 @@ const ICONS = ['magnifying-glass', 'star', 'handshake', 'lightning', 'check-circ
   };
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+  // ?preview=1 (Luke's copy email, the admin's Audits screen): show the
+  // audit without counting it as the prospect's view.
+  const preview = new URLSearchParams(location.search).get('preview') === '1';
+
   async function fetchAudit(token: string): Promise<{ status: string; data?: AuditData } | null> {
     try {
       const res = await fetch(`${import.meta.env.PUBLIC_SUPABASE_URL}/functions/v1/get-audit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', apikey: import.meta.env.PUBLIC_SUPABASE_ANON_KEY, Authorization: `Bearer ${import.meta.env.PUBLIC_SUPABASE_ANON_KEY}` },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify(preview ? { token, count: false } : { token }),
       });
       if (res.status === 404) return { status: 'missing' };
       return res.ok ? await res.json() : null;

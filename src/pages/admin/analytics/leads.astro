@@ -1,0 +1,454 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+---
+
+<!--
+  Split out of the old combined admin/leads.astro (which had grown to
+  mix leads, Cloudflare traffic, and Google Business Profile all on one
+  page) into its own "Leads" dashboard under the "Analytics Dashboards"
+  nav group — see AdminLayout.astro and CLAUDE.md's "Analytics
+  Dashboards reorg" section. Real-data proof-of-work dashboard, computed
+  entirely client-side from the same `leads` fetch the table below
+  already does — no second query, no new table. This exists so a client
+  can see their marketing is working without waiting on a monthly
+  report. Redesigned in phase 3 of the admin redesign (2026-10-07) as
+  "Inquiry trends": weekly chart shows how many became clients, the
+  month compares with the same point last month, and the full table is a
+  compact list that opens each inquiry in Inquiries.
+-->
+<AdminLayout title="Inquiry trends | Admin" current="analytics-leads">
+  <p class="i-intro">How many people reach out, how fast they hear back, and what brings them.</p>
+
+  <div class="m-kpis">
+    <div class="t-kpi"><span class="t-lbl">This month</span><span id="stat-this-month" class="t-v a-num">—</span><span id="stat-month-change" class="t-delta"></span></div>
+    <div class="t-kpi"><span class="t-lbl">Last month</span><span id="stat-last-month" class="t-v a-num">—</span><span class="t-delta" id="q-last-sub"></span></div>
+    <div class="t-kpi"><span class="t-lbl">All inquiries</span><span id="stat-total" class="t-v a-num">—</span><span class="t-delta">Since your site launched</span></div>
+    <!-- Scheduled = became a client. Full breakdown on Caseload. -->
+    <div class="t-kpi"><span class="t-lbl">Became clients</span><span id="stat-clients" class="t-v a-num">—</span><span id="stat-clients-rate" class="t-delta"></span></div>
+  </div>
+
+  <section class="t-card q-weekly">
+    <h2>Inquiries per week<span class="t-aside q-legend"><i class="q-key"></i>Inquiries <i class="q-key q-key-c"></i>Became clients</span></h2>
+    <div id="weekly-chart" class="q-chart"></div>
+  </section>
+
+  <div class="t-grid">
+    <!--
+      Speed to lead: form submission -> first time the inquiry leaves
+      "Waiting" (first_contacted_at, trigger-maintained, see
+      0067_lead_source_and_response_time.sql). Manually added inquiries are
+      excluded: they're logged after contact has already happened.
+    -->
+    <section class="t-card t-s7">
+      <h2>Speed to first contact<span class="t-aside">Last 30 days</span></h2>
+      <div class="q-trio">
+        <div><span>Median time</span><b id="speed-median" class="a-num">—</b></div>
+        <div><span>Within 24 hours</span><b id="speed-within-24" class="a-num">—</b></div>
+        <div><span>Waiting now</span><b id="speed-waiting" class="a-num">—</b></div>
+      </div>
+      <p class="i-hint q-note">Timed from when the form was sent to when the inquiry first moved out of <b>Waiting</b> in Inquiries.</p>
+    </section>
+
+    <!--
+      Deliberately separate from the inquiry stats, never added to them:
+      someone downloading a free guide is a much earlier-funnel signal than
+      someone asking to be matched with a counselor. See CLAUDE.md's
+      "Contacts vs. leads" section.
+    -->
+    <section id="contacts-widget" class="t-card t-s5 q-guides" hidden>
+      <h2>Guide downloads<span class="t-aside">Not counted as inquiries</span></h2>
+      <div class="q-trio q-duo">
+        <div><span>This month</span><b id="contacts-this-month" class="a-num">—</b></div>
+        <div><span>Last month</span><b id="contacts-last-month" class="a-num">—</b></div>
+      </div>
+      <p id="contacts-conversion" class="i-hint q-note">—</p>
+    </section>
+  </div>
+
+  <div class="t-grid">
+    <section class="t-card t-s7">
+      <h2>How they heard about you<span class="t-aside">All time, as they told you</span></h2>
+      <div id="by-source-list"></div>
+    </section>
+    <section class="t-card t-s5">
+      <h2>Which page they wrote from</h2>
+      <div id="by-page-list"></div>
+    </section>
+  </div>
+
+  <!--
+    Google Ads: inquiries carrying an ad click ID / paid UTM tags (tracked
+    automatically, see src/lib/adAttribution.ts), independent of the
+    self-reported "How they heard about you" answer.
+  -->
+  <section class="t-card q-section">
+    <h2>Google Ads</h2>
+    <p id="ads-empty" class="i-hint">
+      No inquiries from Google Ads yet. When ads run, anyone who clicks an ad and then reaches out shows up here automatically.
+    </p>
+    <div id="ads-content" hidden>
+      <div class="q-trio">
+        <div><span>Inquiries from ads</span><b id="ads-leads" class="a-num">—</b></div>
+        <div><span>Became clients</span><b id="ads-clients" class="a-num">—</b></div>
+        <div><span>Share of all inquiries</span><b id="ads-share" class="a-num">—</b></div>
+      </div>
+      <div class="q-ads">
+        <div><p class="m-sub">By campaign</p><div id="ads-by-campaign" class="q-groups"></div></div>
+        <div><p class="m-sub">By keyword</p><div id="ads-by-keyword" class="q-groups"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="t-card q-section q-list">
+    <h2>Every inquiry<span class="t-aside" id="leads-count"></span></h2>
+    <div class="q-table-wrap">
+      <table class="i-table">
+        <thead>
+          <tr>
+            <th>Person</th>
+            <th class="i-hide-md">Wrote from</th>
+            <th class="i-hide-sm">Heard about you</th>
+            <th class="i-hide-md">Asked for</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="leads-table-body"></tbody>
+      </table>
+    </div>
+  </section>
+</AdminLayout>
+
+<script>
+  import { supabase, initAdminAuth } from '../../../lib/adminAuth';
+  import { renderStatusSelect, initStatusSelectHandler } from '../../../lib/leadStatus';
+  import { formatHours, hoursToFirstContact, leadSourceLabel, median, renderSourceBars } from '../../../lib/leadSource';
+  import { withBase } from '../../../lib/url';
+  import { isGoogleAdsLead } from '../../../lib/adAttribution';
+
+  const tableBody = document.getElementById('leads-table-body')!;
+  const leadsCount = document.getElementById('leads-count')!;
+
+  function escapeHtml(value: string): string {
+    const div = document.createElement('div');
+    div.textContent = value;
+    return div.innerHTML;
+  }
+
+  type Lead = {
+    id: string;
+    created_at: string;
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+    message: string | null;
+    existing_website_url: string | null;
+    source_page: string | null;
+    status: string | null;
+    preferred_counselor_page_id: string | null;
+    preferred_session_format: string | null;
+    lead_magnet_id: string | null;
+    lead_source: string | null;
+    lead_source_detail: string | null;
+    first_contacted_at: string | null;
+    gclid: string | null;
+    gbraid: string | null;
+    wbraid: string | null;
+    utm_source: string | null;
+    utm_medium: string | null;
+    utm_campaign: string | null;
+    utm_term: string | null;
+  };
+
+  // Leads and clients per campaign/keyword. Untagged ad clicks (auto-tagging
+  // with no UTM campaign) are grouped honestly rather than guessed.
+  function renderAdsGroup(el: HTMLElement, leads: Lead[], key: 'utm_campaign' | 'utm_term', missingLabel: string) {
+    const groups = new Map<string, { leads: number; clients: number }>();
+    for (const l of leads) {
+      const name = l[key]?.trim() || missingLabel;
+      const g = groups.get(name) ?? { leads: 0, clients: 0 };
+      g.leads++;
+      if (l.status === 'scheduled') g.clients++;
+      groups.set(name, g);
+    }
+    el.innerHTML = [...groups.entries()]
+      .sort((a, b) => b[1].clients - a[1].clients || b[1].leads - a[1].leads)
+      .slice(0, 8)
+      .map(
+        ([name, g]) => `<div class="q-group"><span class="${name === missingLabel ? 'i-faint' : ''}">${escapeHtml(name)}</span><span>${g.leads} inquir${g.leads === 1 ? 'y' : 'ies'} · <b>${g.clients} client${g.clients === 1 ? '' : 's'}</b></span></div>`
+      )
+      .join('');
+  }
+
+  function renderAds(leads: Lead[]) {
+    const adLeads = leads.filter(isGoogleAdsLead);
+    document.getElementById('ads-empty')!.hidden = adLeads.length > 0;
+    document.getElementById('ads-content')!.hidden = adLeads.length === 0;
+    if (adLeads.length === 0) return;
+    document.getElementById('ads-leads')!.textContent = String(adLeads.length);
+    document.getElementById('ads-clients')!.textContent = String(adLeads.filter((l) => l.status === 'scheduled').length);
+    document.getElementById('ads-share')!.textContent = `${Math.round((adLeads.length / leads.length) * 100)}%`;
+    renderAdsGroup(document.getElementById('ads-by-campaign')!, adLeads, 'utm_campaign', 'Campaign not tagged');
+    renderAdsGroup(document.getElementById('ads-by-keyword')!, adLeads, 'utm_term', 'Keyword not tagged');
+  }
+
+  // Must match admin/crm.astro's MANUAL_SOURCE sentinel.
+  const MANUAL_SOURCE = 'Manually added';
+
+  function renderSpeedToLead(leads: Lead[]) {
+    const cutoff = Date.now() - 30 * 86_400_000;
+    // A lead that already left "New" but has no first_contacted_at was
+    // contacted before response-time tracking existed (0067 has no honest
+    // backfill), so it's left out entirely rather than counted as slow.
+    // A lead still sitting in "New" always counts: that one is really waiting.
+    const recent = leads.filter(
+      (l) =>
+        new Date(l.created_at).getTime() >= cutoff &&
+        l.source_page !== MANUAL_SOURCE &&
+        (l.first_contacted_at || (l.status ?? 'new') === 'new')
+    );
+    const contacted = recent.filter((l) => l.first_contacted_at);
+    const hours = contacted.map((l) => hoursToFirstContact(l.created_at, l.first_contacted_at!));
+    const med = median(hours);
+    document.getElementById('speed-median')!.textContent = med === null ? '—' : formatHours(med);
+
+    // Denominator: every recent lead that has either been contacted or had
+    // a full 24 hours, so a lead submitted an hour ago and not yet
+    // contacted doesn't count against the practice yet.
+    const dayOld = recent.filter(
+      (l) => l.first_contacted_at || Date.now() - new Date(l.created_at).getTime() >= 86_400_000
+    );
+    const within = dayOld.filter(
+      (l) => l.first_contacted_at && hoursToFirstContact(l.created_at, l.first_contacted_at) <= 24
+    ).length;
+    document.getElementById('speed-within-24')!.textContent =
+      dayOld.length === 0 ? '—' : `${Math.round((within / dayOld.length) * 100)}%`;
+
+    const waiting = leads.filter((l) => (l.status ?? 'new') === 'new' && l.source_page !== MANUAL_SOURCE).length;
+    const waitingEl = document.getElementById('speed-waiting')!;
+    waitingEl.textContent = String(waiting);
+    waitingEl.className = 'a-num' + (waiting > 0 ? ' r-warn' : '');
+  }
+
+  const SESSION_FORMAT_LABELS: Record<string, string> = {
+    in_person: 'In-Person',
+    telehealth: 'Telehealth',
+  };
+
+  // Populated in loadLeads() from a live query, not hardcoded — a
+  // counselor rename/removal is reflected automatically. Empty on any
+  // site that doesn't have collect_counselor_preference on, which is the
+  // common case, so this is a no-op cost there.
+  let counselorNames = new Map<string, string>();
+
+  function renderDashboard(leads: Lead[]) {
+    const now = new Date();
+    const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+    const thisMonthCount = leads.filter((l) => new Date(l.created_at) >= startOfThisMonth).length;
+    const lastMonthCount = leads.filter((l) => {
+      const d = new Date(l.created_at);
+      return d >= startOfLastMonth && d < startOfThisMonth;
+    }).length;
+    // A month in progress is compared with the same point last month,
+    // never the whole month (same rule as Today and Monthly report).
+    const samePoint = new Date(startOfLastMonth.getFullYear(), startOfLastMonth.getMonth(), now.getDate(), now.getHours(), now.getMinutes());
+    const lastMonthSoFar = leads.filter((l) => {
+      const d = new Date(l.created_at);
+      return d >= startOfLastMonth && d < (samePoint < startOfThisMonth ? samePoint : startOfThisMonth);
+    }).length;
+    document.getElementById('q-last-sub')!.textContent = startOfLastMonth.toLocaleDateString(undefined, { month: 'long' });
+
+    document.getElementById('stat-total')!.textContent = String(leads.length);
+    document.getElementById('stat-this-month')!.textContent = String(thisMonthCount);
+    document.getElementById('stat-last-month')!.textContent = String(lastMonthCount);
+
+    const clientCount = leads.filter((l) => l.status === 'scheduled').length;
+    document.getElementById('stat-clients')!.textContent = String(clientCount);
+    document.getElementById('stat-clients-rate')!.textContent =
+      leads.length > 0 ? `${Math.round((clientCount / leads.length) * 100)}% of all inquiries` : '';
+
+    const changeEl = document.getElementById('stat-month-change')!;
+    const diff = thisMonthCount - lastMonthSoFar;
+    changeEl.textContent =
+      diff === 0 ? `Same as this point last month (${lastMonthSoFar})` : `${diff > 0 ? '+' : ''}${diff} vs this point last month (${lastMonthSoFar})`;
+    changeEl.className = 't-delta' + (diff > 0 ? ' up' : diff < 0 ? ' down' : '');
+
+    // Weekly chart: last 10 Monday-start weeks, bucketed client-side — no
+    // SQL date_trunc needed for a dataset this small.
+    const WEEKS = 10;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dayOfWeek = (today.getDay() + 6) % 7; // Mon=0 ... Sun=6
+    const mondayThisWeek = new Date(today);
+    mondayThisWeek.setDate(today.getDate() - dayOfWeek);
+
+    const weekBuckets: { start: Date; end: Date; count: number; clients: number }[] = [];
+    for (let i = WEEKS - 1; i >= 0; i--) {
+      const start = new Date(mondayThisWeek);
+      start.setDate(mondayThisWeek.getDate() - i * 7);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 7);
+      weekBuckets.push({ start, end, count: 0, clients: 0 });
+    }
+    // Bucketed by when the inquiry arrived; "clients" are the ones from
+    // that week that are now Scheduled.
+    for (const lead of leads) {
+      const d = new Date(lead.created_at);
+      const bucket = weekBuckets.find((b) => d >= b.start && d < b.end);
+      if (bucket) {
+        bucket.count++;
+        if (lead.status === 'scheduled') bucket.clients++;
+      }
+    }
+    const maxWeekCount = Math.max(1, ...weekBuckets.map((b) => b.count));
+    const chartEl = document.getElementById('weekly-chart')!;
+    chartEl.innerHTML = weekBuckets
+      .map((b, i) => {
+        const h = b.count ? Math.max(Math.round((b.count / maxWeekCount) * 100), 6) : 0;
+        const c = b.count ? Math.round((b.clients / b.count) * 100) : 0;
+        const label = b.start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        const current = i === weekBuckets.length - 1;
+        return `<div class="q-col${current ? ' now' : ''}" title="Week of ${label}: ${b.count} inquir${b.count === 1 ? 'y' : 'ies'}, ${b.clients} became client${b.clients === 1 ? '' : 's'}">
+          <span class="q-n a-num">${b.count || ''}</span>
+          <div class="q-bar" style="--h:${h}%"><div class="q-cl" style="height:${c}%"></div></div>
+          <span class="q-x">${current ? 'This week' : label}</span>
+        </div>`;
+      })
+      .join('');
+
+    // Which pages are actually converting — ties lead volume back to
+    // specific content/SEO work, not just an undifferentiated total.
+    const byPage = new Map<string, number>();
+    for (const lead of leads) {
+      const key = lead.source_page || '(unknown page)';
+      byPage.set(key, (byPage.get(key) ?? 0) + 1);
+    }
+    const sorted = [...byPage.entries()].sort((a, b) => b[1] - a[1]);
+    const byPageEl = document.getElementById('by-page-list')!;
+    if (sorted.length === 0) {
+      byPageEl.innerHTML = '<p class="i-hint">No inquiries yet.</p>';
+    } else {
+      const maxPageCount = sorted[0][1];
+      byPageEl.innerHTML = `<div class="t-bars">${sorted
+        .slice(0, 8)
+        .map(
+          ([page, count]) =>
+            `<div class="t-bar"><span class="t-lbl" title="${escapeHtml(page)}">${escapeHtml(page)}</span><div class="t-track"><div class="t-fill" style="width:${Math.round((count / maxPageCount) * 100)}%"></div></div><span class="a-num">${count}</span></div>`
+        )
+        .join('')}</div>`;
+    }
+  }
+
+  // Guide downloads (lead_magnet_id set) get their own widget, entirely
+  // separate from renderDashboard() above — kept as raw submission counts
+  // for the month-over-month numbers (consistent with how the main lead
+  // stats count every submission, not distinct people), but the all-time
+  // conversion stat below deliberately dedupes by email, since "did this
+  // person convert" only makes sense once per person, not once per
+  // download.
+  function renderContactsWidget(contacts: Lead[], realLeads: Lead[]) {
+    const widget = document.getElementById('contacts-widget')!;
+    widget.hidden = contacts.length === 0;
+    if (contacts.length === 0) return;
+
+    const now = new Date();
+    const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const thisMonthCount = contacts.filter((c) => new Date(c.created_at) >= startOfThisMonth).length;
+    const lastMonthCount = contacts.filter((c) => {
+      const d = new Date(c.created_at);
+      return d >= startOfLastMonth && d < startOfThisMonth;
+    }).length;
+    document.getElementById('contacts-this-month')!.textContent = String(thisMonthCount);
+    document.getElementById('contacts-last-month')!.textContent = String(lastMonthCount);
+
+    // "Did this contact ever also become a real lead" — matched by email,
+    // deduplicated on both sides so someone who downloaded two different
+    // guides (two contact rows) or submitted the appointment form twice
+    // isn't double-counted in either direction.
+    const norm = (email: string | null) => (email ?? '').trim().toLowerCase();
+    const leadEmails = new Set(realLeads.map((l) => norm(l.email)).filter(Boolean));
+    const contactEmails = new Set(contacts.map((c) => norm(c.email)).filter(Boolean));
+    let converted = 0;
+    for (const email of contactEmails) {
+      if (leadEmails.has(email)) converted++;
+    }
+    const conversionEl = document.getElementById('contacts-conversion')!;
+    if (contactEmails.size === 0) {
+      conversionEl.textContent = '—';
+    } else {
+      const pct = Math.round((converted / contactEmails.size) * 100);
+      conversionEl.textContent = `All time: ${contactEmails.size} ${contactEmails.size === 1 ? 'person' : 'people'} downloaded a guide, and ${converted} (${pct}%) also sent an inquiry.`;
+    }
+  }
+
+  // Event delegation on the table body, not a per-row listener — rows are
+  // re-rendered wholesale on every loadLeads(), so a listener attached to
+  // individual <select> elements would need re-binding every time anyway.
+  initStatusSelectHandler(tableBody);
+
+  async function loadLeads() {
+    const { data, error } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
+
+    if (error) {
+      leadsCount.textContent = 'Could not load inquiries: ' + error.message;
+      return;
+    }
+
+    const { data: counselorPages } = await supabase
+      .from('pages')
+      .select('id, title')
+      .eq('page_type', 'Counselor Profile');
+    counselorNames = new Map((counselorPages ?? []).map((p) => [p.id, p.title]));
+
+    // A guide download (lead_magnet_id set) is a much earlier-funnel
+    // signal than someone asking to be matched with a counselor — kept
+    // out of every stat/chart/table on this page so "leads" here always
+    // means real appointment-request intent, not inflated by downloads.
+    // See admin/crm.astro for where those live day-to-day.
+    const realLeads = (data as Lead[]).filter((l) => !l.lead_magnet_id);
+    const contacts = (data as Lead[]).filter((l) => l.lead_magnet_id);
+
+    renderDashboard(realLeads);
+    renderSpeedToLead(realLeads);
+    renderAds(realLeads);
+    document.getElementById('by-source-list')!.innerHTML = renderSourceBars(
+      realLeads.map((l) => l.lead_source),
+      'No inquiries yet.'
+    );
+    renderContactsWidget(contacts, realLeads);
+
+    leadsCount.textContent = `${realLeads.length} total · click one to open it in Inquiries`;
+    tableBody.innerHTML = realLeads
+      .map((lead) => {
+        const heard = lead.lead_source ? leadSourceLabel(lead.lead_source) + (lead.lead_source_detail ? ` (${lead.lead_source_detail})` : '') : '';
+        const asked = [
+          lead.preferred_counselor_page_id ? (counselorNames.get(lead.preferred_counselor_page_id) ?? 'Unknown').split(',')[0] : '',
+          lead.preferred_session_format ? (SESSION_FORMAT_LABELS[lead.preferred_session_format] ?? lead.preferred_session_format) : '',
+        ]
+          .filter(Boolean)
+          .join(' · ');
+        const initials = ((lead.name ?? '').trim().split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('') || '?').toUpperCase();
+        return `
+      <tr data-lead-id="${lead.id}">
+        <td><div class="i-who"><span class="i-avatar">${escapeHtml(initials)}</span><div><b>${escapeHtml(lead.name || '(no name)')}</b><small>${new Date(lead.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</small></div></div></td>
+        <td class="i-hide-md i-muted">${escapeHtml(lead.source_page ?? '')}</td>
+        <td class="i-hide-sm i-muted">${escapeHtml(heard)}</td>
+        <td class="i-hide-md i-muted">${escapeHtml(asked)}</td>
+        <td data-no-row-click>${renderStatusSelect(lead.id, lead.status)}</td>
+      </tr>`;
+      })
+      .join('');
+  }
+
+  // A row opens that inquiry in Inquiries; the status picker stays inline.
+  tableBody.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement;
+    if (target.closest('[data-no-row-click]')) return;
+    const row = target.closest<HTMLElement>('tr[data-lead-id]');
+    if (row) window.location.href = `${withBase('/admin/crm')}?lead=${row.dataset.leadId}`;
+  });
+
+  initAdminAuth(loadLeads, { allowedRoles: ['owner', 'agency'] });
+</script>

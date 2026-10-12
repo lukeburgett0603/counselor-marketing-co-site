@@ -1,0 +1,239 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+---
+
+<!--
+  Owner/agency only, same as SEO Insights and Leads — a staff/counselor
+  login never sees this (see ROLE_NAV_ACCESS in adminAuth.ts). See
+  CLAUDE.md's "Blog analytics" section for the full design reasoning.
+  Moved here from admin/blog-analytics.astro as part of the "Analytics
+  Dashboards" nav reorg (see CLAUDE.md) — same content, just grouped
+  under the new nav folder alongside Leads/Traffic/GBP/SEO.
+
+  Unlike Tier 2/3/4's own "hide the whole section if the integration
+  isn't configured" discipline, this page shows partial data on purpose:
+  leads-per-post and CTA-clicks-per-post are both already-collected,
+  zero-external-dependency data (leads.source_page, page_cta_clicks) —
+  only the Pageviews column depends on Cloudflare being configured. A
+  missing/failed Cloudflare call degrades just that one column to "—"
+  rather than hiding real, working data the rest of the page has.
+
+  Redesigned in phase 3 of the admin redesign (2026-10-07): a top-article
+  highlight and a ranked article list (views as bars, button clicks,
+  inquiries, inquiries per 100 views). Same data sources and rules.
+-->
+<AdminLayout title="Blog analytics | Admin" current="analytics-blog">
+  <p class="i-intro">How your articles did over the last 30 days: who read them, and who reached out afterward.</p>
+
+  <div class="m-kpis">
+    <div class="t-kpi"><span class="t-lbl">Article views</span><span id="stat-pageviews" class="t-v a-num">—</span><span class="t-delta" id="b-posts-count"></span></div>
+    <div class="t-kpi"><span class="t-lbl">Button clicks</span><span id="stat-clicks" class="t-v a-num">—</span><span class="t-delta">Clicks on an article's call to action</span></div>
+    <div class="t-kpi"><span class="t-lbl">Inquiries from articles</span><span id="stat-leads" class="t-v a-num">—</span><span class="t-delta">Sent from an article's page</span></div>
+    <div class="t-kpi"><span class="t-lbl">Inquiries per 100 views</span><span id="b-rate" class="t-v a-num">—</span><span class="t-delta" id="b-rate-sub"></span></div>
+  </div>
+
+  <p id="pageviews-not-configured" class="v-warn b-warn" hidden>
+    Website traffic isn't connected, so article views can't be shown. Button clicks and inquiries are real either way.
+  </p>
+
+  <section class="t-card b-top" id="b-top" hidden></section>
+
+  <section class="t-card q-section">
+    <h2>By article<span class="t-aside">Most read first</span></h2>
+    <ul id="posts-table-body" class="b-list"></ul>
+    <p id="posts-empty" class="t-empty" hidden><b>No published articles yet.</b>Articles you publish from Blog posts show up here with their numbers.</p>
+  </section>
+</AdminLayout>
+
+<script>
+  import { supabase, initAdminAuth } from '../../../lib/adminAuth';
+  import { withBase } from '../../../lib/url';
+
+  function escapeHtml(value: string): string {
+    const div = document.createElement('div');
+    div.textContent = value;
+    return div.innerHTML;
+  }
+
+  // Cloudflare's requestPath and this app's own stored slug formats don't
+  // agree on leading/trailing slashes (see CLAUDE.md's "Blog analytics"
+  // section) — normalize both sides to the same bare form before matching.
+  function normalizeSlug(value: string): string {
+    return value.replace(/^\/+|\/+$/g, '').toLowerCase();
+  }
+
+  interface BlogPostRow {
+    id: string;
+    title: string;
+    slug: string;
+    date_published: string | null;
+  }
+
+  const statPageviews = document.getElementById('stat-pageviews')!;
+  const statLeads = document.getElementById('stat-leads')!;
+  const statClicks = document.getElementById('stat-clicks')!;
+  const pageviewsNotConfigured = document.getElementById('pageviews-not-configured')!;
+  const postsTableBody = document.getElementById('posts-table-body')!;
+  const postsEmpty = document.getElementById('posts-empty')!;
+
+  type Row = { post: BlogPostRow; views: number; leads: number; clicks: number };
+
+  function published(post: BlogPostRow): string {
+    return post.date_published
+      ? new Date(post.date_published + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+      : 'Not dated';
+  }
+
+  function renderTable(rows: Row[], hasViews: boolean) {
+    postsEmpty.hidden = rows.length > 0;
+    const maxViews = Math.max(1, ...rows.map((r) => r.views));
+    postsTableBody.innerHTML = rows
+      .map(({ post, views, leads, clicks }) => {
+        const rate = hasViews && views > 0 ? ((leads / views) * 100).toFixed(1) : '—';
+        const quiet = hasViews && views === 0;
+        return `<li class="b-row${quiet ? ' b-quiet' : ''}">
+          <div class="b-main">
+            <a href="${withBase('/' + post.slug.replace(/^\/+/, ''))}" target="_blank" rel="noopener">${escapeHtml(post.title)}</a>
+            <small>Published ${published(post)}${quiet ? ' · no views in the last 30 days' : ''}</small>
+          </div>
+          <div class="b-views">${
+            hasViews
+              ? `<div class="t-track"><div class="t-fill" style="width:${Math.round((views / maxViews) * 100)}%"></div></div><span class="a-num">${views.toLocaleString()}</span>`
+              : '<span class="i-faint">—</span>'
+          }</div>
+          <div class="b-num"><b class="a-num">${clicks.toLocaleString()}</b><small>clicks</small></div>
+          <div class="b-num"><b class="a-num${leads ? ' r-ok' : ''}">${leads.toLocaleString()}</b><small>inquiries</small></div>
+          <div class="b-num i-hide-sm"><b class="a-num">${rate}</b><small>per 100</small></div>
+        </li>`;
+      })
+      .join('');
+  }
+
+  // The one article doing the most for the practice right now: most
+  // inquiries, then most button clicks, then most views.
+  function renderTop(rows: Row[], hasViews: boolean) {
+    const el = document.getElementById('b-top')!;
+    const best = [...rows].sort((a, b) => b.leads - a.leads || b.clicks - a.clicks || b.views - a.views)[0];
+    if (!best || (best.leads === 0 && best.clicks === 0 && best.views === 0)) {
+      el.hidden = true;
+      return;
+    }
+    const why = best.leads
+      ? `${best.leads} inquir${best.leads === 1 ? 'y' : 'ies'} came from this article`
+      : best.clicks
+        ? `${best.clicks} reader${best.clicks === 1 ? '' : 's'} clicked its button`
+        : 'your most-read article';
+    el.hidden = false;
+    el.innerHTML = `<span class="b-badge">Top article</span>
+      <div class="b-top-main">
+        <a href="${withBase('/' + best.post.slug.replace(/^\/+/, ''))}" target="_blank" rel="noopener">${escapeHtml(best.post.title)}</a>
+        <p>${why} in the last 30 days${hasViews ? `, from ${best.views.toLocaleString()} views` : ''}. Worth building on: write about a related topic, or link to it from your service pages.</p>
+      </div>`;
+  }
+
+  async function loadPageviews(): Promise<Map<string, number> | null> {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
+      const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/get-blog-analytics`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${sessionData.session?.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) return null;
+      const result = await response.json();
+      const map = new Map<string, number>();
+      for (const row of result.byPath ?? []) {
+        const key = normalizeSlug(row.path);
+        map.set(key, (map.get(key) ?? 0) + row.pageviews);
+      }
+      return map;
+    } catch {
+      return null;
+    }
+  }
+
+  async function loadLeadsBySlug(): Promise<Map<string, number>> {
+    // Real leads only (lead_magnet_id null) — a guide download is a
+    // different, lower-intent signal, same distinction this project's
+    // dashboards already draw elsewhere (see CLAUDE.md's "Contacts vs.
+    // leads"). Raw rows, tallied client-side — the same "compute from
+    // data already being fetched" pattern the original leads dashboard
+    // established, proportionate at this data volume.
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const { data } = await supabase
+      .from('leads')
+      .select('source_page')
+      .is('lead_magnet_id', null)
+      .gte('created_at', thirtyDaysAgo.toISOString());
+    const map = new Map<string, number>();
+    for (const row of data ?? []) {
+      if (!row.source_page) continue;
+      const key = normalizeSlug(row.source_page);
+      map.set(key, (map.get(key) ?? 0) + 1);
+    }
+    return map;
+  }
+
+  async function loadClicksByPageId(): Promise<Map<string, number>> {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const { data } = await supabase.from('page_cta_clicks').select('page_id').gte('created_at', thirtyDaysAgo.toISOString());
+    const map = new Map<string, number>();
+    for (const row of data ?? []) {
+      map.set(row.page_id, (map.get(row.page_id) ?? 0) + 1);
+    }
+    return map;
+  }
+
+  async function loadPosts(): Promise<BlogPostRow[]> {
+    const { data } = await supabase
+      .from('pages')
+      .select('id, title, slug, date_published')
+      .eq('page_type', 'Blog Post')
+      .eq('status', 'content-complete');
+    return (data as BlogPostRow[]) ?? [];
+  }
+
+  initAdminAuth(
+    async () => {
+      const [posts, pageviewsBySlug, leadsBySlug, clicksByPageId] = await Promise.all([
+        loadPosts(),
+        loadPageviews(),
+        loadLeadsBySlug(),
+        loadClicksByPageId(),
+      ]);
+
+      pageviewsNotConfigured.hidden = pageviewsBySlug !== null;
+      const hasViews = pageviewsBySlug !== null;
+
+      const rows: Row[] = posts.map((post) => ({
+        post,
+        views: pageviewsBySlug?.get(normalizeSlug(post.slug)) ?? 0,
+        leads: leadsBySlug.get(normalizeSlug(post.slug)) ?? 0,
+        clicks: clicksByPageId.get(post.id) ?? 0,
+      }));
+      const totalPageviews = rows.reduce((sum, r) => sum + r.views, 0);
+      const totalLeads = rows.reduce((sum, r) => sum + r.leads, 0);
+      const totalClicks = rows.reduce((sum, r) => sum + r.clicks, 0);
+
+      statPageviews.textContent = hasViews ? totalPageviews.toLocaleString() : '—';
+      statLeads.textContent = totalLeads.toLocaleString();
+      statClicks.textContent = totalClicks.toLocaleString();
+      document.getElementById('b-posts-count')!.textContent = `Across ${posts.length} published article${posts.length === 1 ? '' : 's'}`;
+      document.getElementById('b-rate')!.textContent = hasViews && totalPageviews ? ((totalLeads / totalPageviews) * 100).toFixed(1) : '—';
+      document.getElementById('b-rate-sub')!.textContent = hasViews && totalPageviews ? `${totalLeads} from ${totalPageviews.toLocaleString()} views` : '';
+
+      // Most read first; without view data, most inquiries then clicks.
+      rows.sort((a, b) => (hasViews ? b.views - a.views : 0) || b.leads - a.leads || b.clicks - a.clicks);
+      renderTop(rows, hasViews);
+      renderTable(rows, hasViews);
+    },
+    { allowedRoles: ['owner', 'agency'] }
+  );
+</script>

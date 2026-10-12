@@ -1,0 +1,209 @@
+---
+// CMC-ONLY Today (2026-10-12): the home screen of Counselor Marketing Co.'s
+// own admin. The template's Today is built for a counseling practice
+// (caseload ring, counselors, availability); CMC's day is prospects:
+// inquiries waiting, instant audits just opened (the best moment to follow
+// up), audits that need Luke, follow-ups due, and link-building steps.
+// Same look as the template (t-* classes in styles/admin.css). Do not
+// overwrite with the template's today.astro when syncing.
+//
+// "Your next moves" is built only from real records, and a check circle
+// performs the real action (marking an inquiry contacted).
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Today | Admin" current="today" hideTitle>
+  <div id="today-root">
+    <section class="t-hello">
+      <small id="t-date"></small>
+      <h1 id="t-greeting">Welcome back.</h1>
+      <p id="t-headline">Getting today's numbers ready.</p>
+    </section>
+    <div class="t-grid" id="t-loading" aria-hidden="true">
+      <div class="t-skel t-s12" style="height:120px"></div>
+      <div class="t-skel t-s7" style="height:280px"></div>
+      <div class="t-skel t-s5" style="height:280px"></div>
+    </div>
+    <div class="t-grid" id="t-body" hidden></div>
+  </div>
+  <div class="t-toast" id="t-toast" role="status" aria-live="polite"></div>
+</AdminLayout>
+
+<script>
+  import { initAdminAuth, supabase, type AdminUser } from '../../lib/adminAuth';
+  import { withBase } from '../../lib/url';
+
+  type Lead = { id: string; name: string | null; created_at: string; status: string | null; follow_up_date: string | null; lead_magnet_id: string | null };
+  type Audit = {
+    id: string;
+    token: string;
+    name: string | null;
+    practice_name: string | null;
+    practice_input: string;
+    status: string;
+    created_at: string;
+    first_viewed_at: string | null;
+    lead_id: string | null;
+    lead: { status: string | null } | null;
+  };
+  type Link = { id: string; name: string; status: string; next_step_date: string | null };
+
+  const DAY = 86_400_000;
+  const $ = (id: string) => document.getElementById(id)!;
+  const esc = (v: string) => {
+    const d = document.createElement('div');
+    d.textContent = v;
+    return d.innerHTML;
+  };
+  const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
+  const DOT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4"/></svg>';
+
+  function ago(iso: string): string {
+    const h = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 3_600_000));
+    if (h < 1) return 'just now';
+    if (h < 24) return `${h} hour${h === 1 ? '' : 's'} ago`;
+    const d = Math.round(h / 24);
+    return `${d} day${d === 1 ? '' : 's'} ago`;
+  }
+
+  let toastTimer = 0;
+  function toast(title: string, sub: string, error = false) {
+    const t = $('t-toast');
+    t.classList.toggle('err', error);
+    t.innerHTML = `<span class="t-ok">${error ? '!' : CHECK}</span><span><b>${esc(title)}</b><small>${esc(sub)}</small></span>`;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(() => t.classList.remove('show'), 4200);
+  }
+
+  type Move = { title: string; sub: string; tag: string; warn?: boolean; link?: string; linkText?: string; check?: () => Promise<boolean> };
+
+  async function render(user: AdminUser) {
+    const now = new Date();
+    $('t-date').textContent = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+    const part = now.getHours() < 12 ? 'Good morning' : now.getHours() < 17 ? 'Good afternoon' : 'Good evening';
+    const first = (user.display_name ?? '').trim().split(/\s+/)[0];
+    $('t-greeting').textContent = first ? `${part}, ${first}.` : `${part}.`;
+
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const [l, a, k] = await Promise.all([
+      supabase.from('leads').select('id, name, created_at, status, follow_up_date, lead_magnet_id').is('archived_at', null).order('created_at', { ascending: false }).limit(500),
+      supabase.from('audits').select('id, token, name, practice_name, practice_input, status, created_at, first_viewed_at, lead_id, lead:leads(status)').order('created_at', { ascending: false }).limit(200),
+      supabase.from('link_opportunities').select('id, name, status, next_step_date'),
+    ]);
+    const leads = ((l.data ?? []) as Lead[]).filter((x) => !x.lead_magnet_id);
+    const audits = (a.data ?? []) as unknown as Audit[];
+    const links = (k.data ?? []) as Link[];
+    const crm = withBase('/admin/crm');
+    const nameOf = (x: { name: string | null }) => x.name?.trim() || 'Someone';
+    const practiceOf = (x: Audit) => x.practice_name ?? x.practice_input;
+    const closed = (s: string | null | undefined) => ['scheduled', 'referred', 'withdrawn'].includes(s ?? '');
+
+    // ------------------------------------------------------------ moves
+    const moves: Move[] = [];
+    async function setStatus(lead: Lead, status: string) {
+      const { error } = await supabase.from('leads').update({ status }).eq('id', lead.id);
+      if (error) {
+        toast('Could not update', error.message, true);
+        return false;
+      }
+      lead.status = status;
+      return true;
+    }
+    for (const x of leads.filter((y) => y.status === 'new').slice(0, 4)) {
+      moves.push({
+        title: `Reply to ${nameOf(x)}`,
+        sub: `Asked ${ago(x.created_at)}. Check it off once you've reached out.`,
+        tag: 'Inquiry',
+        warn: true,
+        link: `${crm}?lead=${x.id}`,
+        linkText: 'Open',
+        check: async () => (await setStatus(x, 'contacted')) && (toast(`${nameOf(x)} marked contacted`, 'Your reply time is counted from now.'), true),
+      });
+    }
+    // Opened in the last 7 days and not yet closed: the warmest follow-up.
+    for (const x of audits.filter((y) => y.first_viewed_at && Date.now() - Date.parse(y.first_viewed_at) < 7 * DAY && !closed(y.lead?.status)).slice(0, 3)) {
+      moves.push({
+        title: `${x.name ? nameOf(x) : practiceOf(x)} opened their audit`,
+        sub: `${practiceOf(x)}, opened ${ago(x.first_viewed_at!)}. A good moment to check in.`,
+        tag: 'Audit',
+        link: x.lead_id ? `${crm}?lead=${x.lead_id}` : withBase('/admin/audits'),
+        linkText: 'Open',
+      });
+    }
+    for (const x of audits.filter((y) => y.status === 'failed' || y.status === 'needs_city').slice(0, 2)) {
+      moves.push({
+        title: x.status === 'failed' ? `Send ${practiceOf(x)}'s audit by hand` : `${practiceOf(x)}'s audit is waiting on a city`,
+        sub: x.status === 'failed' ? `The automatic audit couldn't finish (${ago(x.created_at)}).` : "They didn't finish the form. Reach out if they don't come back.",
+        tag: 'Audit',
+        warn: x.status === 'failed',
+        link: withBase('/admin/audits'),
+        linkText: 'Open',
+      });
+    }
+    for (const x of leads.filter((y) => y.follow_up_date && y.follow_up_date <= today && y.status !== 'new' && !closed(y.status)).slice(0, 3)) {
+      moves.push({
+        title: `Follow up with ${nameOf(x)}`,
+        sub: x.follow_up_date! < today ? `Follow-up was due ${new Date(x.follow_up_date! + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : 'Follow-up due today',
+        tag: 'Inquiry',
+        link: `${crm}?lead=${x.id}`,
+        linkText: 'Open',
+      });
+    }
+    for (const x of links.filter((y) => y.next_step_date && y.next_step_date <= today && !['live', 'skipped'].includes(y.status)).slice(0, 2)) {
+      moves.push({ title: `Next step: ${x.name}`, sub: 'A link-building step is due.', tag: 'Links', link: withBase('/admin/links'), linkText: 'Open' });
+    }
+
+    // ------------------------------------------------------------ numbers
+    const done = audits.filter((x) => x.status === 'done');
+    const opened = done.filter((x) => x.first_viewed_at).length;
+    const kpis = [
+      { l: 'Inquiries this month', v: String(leads.filter((x) => x.created_at >= monthStart).length), d: `${leads.length} all time` },
+      { l: 'Audits this month', v: String(audits.filter((x) => x.created_at >= monthStart).length), d: `${audits.length} all time` },
+      { l: 'Audits opened', v: done.length ? `${Math.round((opened / done.length) * 100)}%` : '—', d: `${opened} of ${done.length} sent` },
+      { l: 'Audits that became clients', v: String(audits.filter((x) => x.lead?.status === 'scheduled').length), d: 'Inquiry marked Scheduled' },
+    ];
+    const waiting = leads.filter((x) => x.status === 'new').length;
+    $('t-headline').textContent = waiting
+      ? `${waiting} ${waiting === 1 ? 'inquiry is' : 'inquiries are'} waiting on a reply.`
+      : moves.length
+        ? `Nothing waiting on a reply. ${moves.length} ${moves.length === 1 ? 'thing' : 'things'} worth a look below.`
+        : "You're all caught up.";
+
+    const recent = audits.slice(0, 6);
+    const body = $('t-body');
+    body.innerHTML = `
+      <div class="t-s12 t-kpis">${kpis.map((k) => `<div class="t-kpi"><span class="t-lbl">${k.l}</span><div class="t-row"><span class="t-v a-num">${k.v}</span></div><span class="t-delta">${k.d}</span></div>`).join('')}</div>
+      <div class="t-card t-s7">
+        <h2>Your next moves<span class="t-aside">${moves.length ? `${moves.length} for today` : ''}</span></h2>
+        <div class="t-moves">
+          ${moves.length
+            ? moves.map((m, i) => `<div class="t-move">${m.check ? `<button type="button" class="t-chk" data-chk="${i}" aria-label="Done: ${esc(m.title)}">${CHECK}</button>` : `<span class="t-dot">${DOT}</span>`}<div class="t-t">${esc(m.title)}<small>${esc(m.sub)}</small></div><span class="t-tag${m.warn ? ' warn' : ''}">${m.tag}</span>${m.link ? `<a class="t-act" href="${m.link}">${m.linkText}</a>` : ''}</div>`).join('')
+            : `<div class="t-empty"><b>You're all caught up.</b>No inquiries waiting, no audits needing you, and no follow-ups due.</div>`}
+        </div>
+      </div>
+      <div class="t-card t-s5">
+        <h2>Recent audits<a class="t-aside" href="${withBase('/admin/audits')}">All audits</a></h2>
+        ${recent.length
+          ? `<div class="t-moves">${recent
+              .map((x) => `<div class="t-move"><span class="t-dot">${DOT}</span><div class="t-t">${esc(practiceOf(x))}<small>${x.status !== 'done' ? (x.status === 'failed' ? 'Failed' : 'Not finished') : x.first_viewed_at ? `Opened ${ago(x.first_viewed_at)}` : `Sent ${ago(x.created_at)}, not opened yet`}</small></div>${x.status === 'done' ? `<a class="t-act" href="${withBase('/audit')}?t=${x.token}&preview=1" target="_blank" rel="noopener">View</a>` : ''}</div>`)
+              .join('')}</div>`
+          : `<div class="t-empty"><b>No audits yet.</b>Requests from your Free Caseload Audit page show up here.</div>`}
+      </div>`;
+    $('t-loading').hidden = true;
+    body.hidden = false;
+
+    body.addEventListener('click', async (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-chk]');
+      if (!btn) return;
+      const move = moves[Number(btn.dataset.chk)];
+      if (!move?.check) return;
+      btn.disabled = true;
+      if (await move.check()) btn.closest('.t-move')?.classList.add('done');
+      else btn.disabled = false;
+    });
+  }
+
+  initAdminAuth(render, { allowedRoles: ['owner', 'agency'] });
+</script>

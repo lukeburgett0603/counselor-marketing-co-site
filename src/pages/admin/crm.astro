@@ -1,150 +1,133 @@
 ---
+// Inquiries (the Lead CRM), redesigned in phase 3 of the admin redesign
+// (2026-10-06). Same features and element ids as before; new layout:
+// a pipeline of status counts, follow-ups due, a person-first list, and
+// a two-column detail view.
+//
+// Owners/agency see every inquiry. A linked counselor sees "My
+// inquiries": only leads assigned to them (RLS 0073 + an explicit filter
+// below), can change status and follow-up date (0073's trigger enforces
+// that), read and add notes on their own inquiries (0076). Practice-level
+// tools (add, export, Google Ads upload, archive, delete, reassign,
+// source and partner edits) are hidden for them.
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import { LEAD_STATUSES } from '../../lib/leadStatus';
-
-function statusLabel(status: string): string {
-  return status[0].toUpperCase() + status.slice(1);
-}
+import { LEAD_STATUSES, STATUS_LABELS } from '../../lib/leadStatus';
+import { LEAD_SOURCES } from '../../lib/leadSource';
 ---
 
-<!--
-  Day-to-day lead management — notes, follow-up dates, a detail view,
-  search/filter, CSV export — kept deliberately separate from
-  admin/leads.astro. That page stays a clean, numbers-only dashboard a
-  client's own customers can point to as proof their marketing is
-  working; this page is the working tool for actually managing those
-  relationships. Same `leads` table, same owner/agency access level.
--->
-<AdminLayout title="Lead CRM | Admin" current="crm">
+<AdminLayout title="Inquiries | Admin" current="crm">
   <div id="crm-list-view">
-    <div id="due-section" class="mb-6 hidden rounded-lg border border-amber-200 bg-amber-50 p-4">
-      <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-800">Due this week</p>
-      <div id="due-list" class="space-y-1 text-sm"></div>
-    </div>
+    <p class="i-intro" id="i-intro">Every inquiry, who it's with, and where it stands.</p>
 
-    <!--
-      Leads vs. Contacts: a lead-magnet download is a much earlier-funnel
-      signal than an appointment request, so they're kept as two distinct
-      views rather than one mixed list — same reasoning as Leads and
-      analytics excluding downloads from its own counts. "All" isn't an
-      option here on purpose: the point is to never see them blended
-      together by default.
-    -->
-    <div class="mb-4 flex gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1 w-fit">
-      <button type="button" id="view-leads-button" class="view-toggle-button rounded-md px-4 py-1.5 text-sm font-semibold" data-view="leads">
-        Leads
-      </button>
-      <button type="button" id="view-contacts-button" class="view-toggle-button rounded-md px-4 py-1.5 text-sm font-semibold" data-view="contacts">
-        Contacts
-      </button>
-    </div>
-
-    <div class="mb-4 flex flex-wrap items-end gap-3">
-      <div>
-        <label class="block text-xs font-semibold text-slate-500">Search</label>
-        <input
-          id="filter-search"
-          type="text"
-          placeholder="Name, email, phone..."
-          class="rounded-md border border-slate-300 px-3 py-2 text-sm"
-        />
+    <div class="i-toolbar">
+      <div class="i-seg" role="group" aria-label="Show">
+        <button type="button" id="view-leads-button" class="view-toggle-button" data-view="leads" aria-pressed="true">Inquiries</button>
+        <button type="button" id="view-contacts-button" class="view-toggle-button" data-view="contacts" aria-pressed="false">Guide downloads</button>
       </div>
-      <div>
-        <label class="block text-xs font-semibold text-slate-500">Status</label>
-        <select id="filter-status" class="rounded-md border border-slate-300 px-3 py-2 text-sm">
-          <option value="all">All</option>
-          {LEAD_STATUSES.map((s) => <option value={s}>{statusLabel(s)}</option>)}
-        </select>
-      </div>
-      <div>
-        <label class="block text-xs font-semibold text-slate-500">Date</label>
-        <select id="filter-date" class="rounded-md border border-slate-300 px-3 py-2 text-sm">
-          <option value="all">All time</option>
-          <option value="7">Last 7 days</option>
-          <option value="30">Last 30 days</option>
-          <option value="90">Last 90 days</option>
-        </select>
-      </div>
-      <div>
-        <label class="block text-xs font-semibold text-slate-500">Source</label>
-        <select id="filter-source" class="rounded-md border border-slate-300 px-3 py-2 text-sm">
-          <option value="all">All sources</option>
-          <option value="contact-form">Contact form</option>
-          <option value="manual">Manually added</option>
-        </select>
-      </div>
-      <div class="flex items-center gap-2 pb-2">
-        <input id="filter-show-archived" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
-        <label for="filter-show-archived" class="text-sm text-slate-600">Show archived</label>
-      </div>
-      <div class="ml-auto flex gap-2">
-        <button
-          id="add-lead-button"
-          type="button"
-          class="rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
-        >
-          + Add lead
-        </button>
-        <button
-          id="export-csv-button"
-          type="button"
-          class="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-        >
-          Export CSV
-        </button>
+      <div class="i-actions" data-practice-only>
+        <button id="add-lead-button" type="button" class="a-btn a-btn-primary i-btn">+ Add inquiry</button>
+        <button id="export-csv-button" type="button" class="a-btn i-btn">Export CSV</button>
+        <button id="ads-export-button" type="button" class="a-btn i-btn">Google Ads upload</button>
       </div>
     </div>
 
-    <p id="leads-count" class="mb-3 text-sm text-slate-600"></p>
+    <!-- Status counts double as the status filter. -->
+    <div class="i-pipeline" id="i-pipeline" role="group" aria-label="Filter by status"></div>
 
-    <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-      <table class="w-full text-left text-sm">
-        <thead class="border-b border-slate-200 bg-slate-50">
+    <div id="due-section" class="t-card i-due hidden">
+      <h2>Follow-ups due<span class="t-aside" id="i-due-count"></span></h2>
+      <div id="due-list" class="i-due-list"></div>
+    </div>
+
+    <div class="i-filters">
+      <label class="i-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+        <input id="filter-search" type="text" placeholder="Search by name, email, or phone" aria-label="Search inquiries" />
+      </label>
+      <select id="filter-status" hidden aria-hidden="true" tabindex="-1">
+        <option value="all">All</option>
+        {LEAD_STATUSES.map((s) => <option value={s}>{STATUS_LABELS[s]}</option>)}
+      </select>
+      <select id="filter-date" aria-label="Received">
+        <option value="all">Any time</option>
+        <option value="7">Last 7 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="90">Last 90 days</option>
+      </select>
+      <select id="filter-source" aria-label="Source" data-practice-only>
+        <option value="all">All sources</option>
+        <option value="contact-form">Contact form</option>
+        <option value="manual">Manually added</option>
+      </select>
+      <label class="i-check" data-practice-only>
+        <input id="filter-show-archived" type="checkbox" />
+        <span>Show archived</span>
+      </label>
+      <p id="leads-count" class="i-count"></p>
+    </div>
+
+    <div class="i-list t-card">
+      <table class="i-table">
+        <thead>
           <tr>
-            <th class="px-4 py-3 font-semibold">Date</th>
-            <th class="px-4 py-3 font-semibold">Name</th>
-            <th class="px-4 py-3 font-semibold">Email</th>
-            <th class="px-4 py-3 font-semibold">Source</th>
-            <th class="px-4 py-3 font-semibold">Status</th>
-            <th class="px-4 py-3 font-semibold">Follow-up</th>
-            <th class="px-4 py-3 font-semibold">Notes</th>
-            <th class="px-4 py-3 font-semibold"></th>
+            <th>Person</th>
+            <th class="i-hide-sm" data-practice-only>With</th>
+            <th class="i-hide-md">Source</th>
+            <th>Status</th>
+            <th class="i-hide-sm">Follow-up</th>
+            <th class="i-hide-md">Notes</th>
+            <th data-practice-only><span class="sr-only">Actions</span></th>
           </tr>
         </thead>
         <tbody id="leads-table-body"></tbody>
       </table>
+      <div id="i-empty" class="t-empty" hidden></div>
     </div>
 
-    <!--
-      A single shared menu, not one per row — `position: fixed` and
-      appended outside the table's `overflow-x-auto` wrapper (rather than
-      absolutely positioned inside a row's own cell) so it can never be
-      clipped by that wrapper's scroll bounds. JS positions it against
-      whichever row's toggle button was clicked, flipping to open upward
-      when there isn't room below (see openActionsMenuFor).
-    -->
-    <div id="actions-menu" class="fixed z-50 hidden w-36 rounded-md border border-slate-200 bg-white py-1 text-left shadow-lg">
-      <button type="button" id="actions-menu-view" class="block w-full px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50">
-        View
-      </button>
-      <button type="button" id="actions-menu-archive" class="block w-full px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50">
-        Archive
-      </button>
-      <button type="button" id="actions-menu-delete" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-red-50">
-        Delete
-      </button>
+    <div id="actions-menu" class="i-menu hidden">
+      <button type="button" id="actions-menu-view">Open</button>
+      <button type="button" id="actions-menu-archive">Archive</button>
+      <button type="button" id="actions-menu-delete" class="i-danger">Delete</button>
     </div>
   </div>
 
-  <!--
-    For a lead that came in some way other than the site's own form (a
-    phone call, a walk-in, a referral) — inserted into the same `leads`
-    table with source_page set to a fixed 'Manually added' sentinel, so it
-    counts toward every stat on the Leads and analytics dashboard (total,
-    monthly trend, weekly chart) exactly like a real submission, and shows
-    up as its own clearly-labeled bucket in "Leads by page" there rather
-    than being silently misattributed to a real page.
-  -->
+  <div id="ads-export-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+    <div class="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
+      <div class="mb-3 flex items-center justify-between">
+        <p class="font-semibold text-brand-ink">Google Ads conversion upload</p>
+        <button id="ads-export-close" type="button" class="text-sm text-slate-500 hover:text-slate-800">Close</button>
+      </div>
+      <p class="text-sm text-slate-600">
+        Tells Google which ad clicks turned into real inquiries, so it can show your ads to more people like them. The
+        file contains only Google's own click IDs and times, never names or contact details.
+      </p>
+      <fieldset class="mt-4 space-y-2">
+        <legend class="mb-1 text-xs font-semibold uppercase text-slate-500">What to report</legend>
+        <label class="flex items-start gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm">
+          <input type="radio" name="ads-kind" value="request" checked class="mt-1" />
+          <span><span class="font-semibold">Appointment requests</span><br /><span class="text-slate-600">Every ad click that led to a form submission. Recommended.</span></span>
+        </label>
+        <label class="flex items-start gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm">
+          <input type="radio" name="ads-kind" value="booked" class="mt-1" />
+          <span><span class="font-semibold">Booked appointments</span><br /><span class="text-slate-600">Only ad clicks that became clients (marked Scheduled).</span></span>
+        </label>
+      </fieldset>
+      <p id="ads-booked-warning" class="mt-3 hidden rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+        This comes from your client records, not just your website: it tells Google which ad clicks became clients. Many
+        practices treat client status as protected health information, and Google does not sign HIPAA business associate
+        agreements. Check with your compliance advisor before uploading this one.
+      </p>
+      <div class="mt-4">
+        <label for="ads-conversion-name" class="block text-xs font-semibold uppercase text-slate-500">Conversion action name in Google Ads</label>
+        <input id="ads-conversion-name" type="text" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+        <p class="mt-1 text-xs text-slate-500">Must match the name of the conversion action in your Google Ads account exactly (Goals → Conversions → create one with the "Import" source, from clicks).</p>
+      </div>
+      <p class="mt-3 text-xs text-slate-500">Includes the last 90 days (Google's limit). Uploading the same file twice is safe: Google ignores duplicates.</p>
+      <p id="ads-export-status" class="mt-3 text-sm" role="status"></p>
+      <button id="ads-export-download" type="button" class="mt-3 w-full rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90">Download upload file</button>
+    </div>
+  </div>
+
   <div id="add-lead-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
     <div class="w-full max-w-md rounded-lg bg-white p-6">
       <div class="mb-4 flex items-center justify-between">
@@ -167,8 +150,21 @@ function statusLabel(status: string): string {
         <div>
           <label class="block text-xs font-semibold text-slate-500">Status</label>
           <select name="status" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
-            {LEAD_STATUSES.map((s) => <option value={s} selected={s === 'new'}>{statusLabel(s)}</option>)}
+            {LEAD_STATUSES.map((s) => <option value={s} selected={s === 'new'}>{STATUS_LABELS[s]}</option>)}
           </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500">How did they hear about you?</label>
+          <select name="lead_source" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+            <option value="">Not asked / unknown</option>
+            {LEAD_SOURCES.map((src) => <option value={src.value}>{src.label}</option>)}
+          </select>
+          <input
+            name="lead_source_detail"
+            type="text"
+            placeholder="Who referred them? (optional)"
+            class="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          />
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-500">Notes</label>
@@ -190,110 +186,115 @@ function statusLabel(status: string): string {
   </div>
 
   <div id="crm-detail-view" class="hidden">
-    <div class="mb-4 flex items-center justify-between">
-      <button id="back-to-list-button" type="button" class="text-sm text-brand-primary hover:underline">
-        &larr; Back to all leads
-      </button>
-      <div class="flex gap-2">
-        <button
-          id="detail-archive-button"
-          type="button"
-          class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-        >
-          Archive
-        </button>
-        <button
-          id="detail-delete-button"
-          type="button"
-          class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-50"
-        >
-          Delete
-        </button>
+    <div class="i-detail-top">
+      <button id="back-to-list-button" type="button" class="a-link">&larr; All inquiries</button>
+      <div class="i-detail-tools" data-practice-only>
+        <button id="detail-archive-button" type="button" class="a-btn i-btn">Archive</button>
+        <button id="detail-delete-button" type="button" class="a-btn i-btn i-danger">Delete</button>
       </div>
     </div>
 
-    <p id="detail-archived-banner" class="mb-4 hidden rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-700">
-      This lead is archived — hidden from the CRM's default list, but still counted on Leads and analytics.
+    <p id="detail-archived-banner" class="i-banner hidden">
+      Archived: hidden from this list, but still counted in your reports.
     </p>
 
-    <div class="mb-6 rounded-lg border border-black/5 bg-white p-5 shadow-sm">
-      <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 id="detail-name" class="font-[family-name:var(--font-heading)] text-xl font-bold text-brand-ink"></h2>
-          <p id="detail-submitted" class="text-xs text-slate-500"></p>
-        </div>
-        <div id="detail-status-container"></div>
-      </div>
-      <dl class="grid gap-3 text-sm sm:grid-cols-2">
-        <div>
-          <dt class="text-xs font-semibold uppercase text-slate-500">Email</dt>
-          <dd id="detail-email" class="mt-0.5"></dd>
-        </div>
-        <div>
-          <dt class="text-xs font-semibold uppercase text-slate-500">Phone</dt>
-          <dd id="detail-phone" class="mt-0.5"></dd>
-        </div>
-        <div>
-          <dt class="text-xs font-semibold uppercase text-slate-500">Current site</dt>
-          <dd id="detail-website" class="mt-0.5"></dd>
-        </div>
-        <div>
-          <dt class="text-xs font-semibold uppercase text-slate-500">Source</dt>
-          <dd id="detail-source" class="mt-0.5"></dd>
-        </div>
-        <div>
-          <dt class="text-xs font-semibold uppercase text-slate-500">Counselor preference</dt>
-          <dd id="detail-counselor" class="mt-0.5"></dd>
-        </div>
-        <div>
-          <dt class="text-xs font-semibold uppercase text-slate-500">Session format preference</dt>
-          <dd id="detail-session-format" class="mt-0.5"></dd>
-        </div>
-      </dl>
-      <div class="mt-4">
-        <dt class="text-xs font-semibold uppercase text-slate-500">Message</dt>
-        <dd id="detail-message" class="mt-0.5 whitespace-pre-wrap text-sm"></dd>
-      </div>
-      <div class="mt-5 flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4">
-        <div>
-          <label class="block text-xs font-semibold text-slate-500">Follow-up date</label>
-          <input id="detail-follow-up" type="date" class="rounded-md border border-slate-300 px-3 py-2 text-sm" />
-        </div>
-        <button
-          id="save-follow-up-button"
-          type="button"
-          class="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-        >
-          Save
-        </button>
-        <button id="clear-follow-up-button" type="button" class="text-sm text-slate-500 hover:underline">
-          Clear
-        </button>
-        <span id="follow-up-status" class="text-xs"></span>
-      </div>
-    </div>
+    <div class="i-detail">
+      <div class="i-detail-main">
+        <section class="t-card i-person">
+          <div class="i-person-head">
+            <span class="i-avatar" id="i-detail-avatar"></span>
+            <div>
+              <h2 id="detail-name"></h2>
+              <p id="detail-submitted"></p>
+            </div>
+          </div>
+          <div class="i-contact">
+            <div><span>Email</span><b id="detail-email"></b></div>
+            <div><span>Phone</span><b id="detail-phone"></b></div>
+          </div>
+          <div class="i-message">
+            <span>What they wrote</span>
+            <p id="detail-message"></p>
+          </div>
+        </section>
 
-    <div class="rounded-lg border border-black/5 bg-white p-5 shadow-sm">
-      <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Notes</p>
-      <div id="notes-list" class="mb-4 space-y-3"></div>
-      <form id="add-note-form" class="space-y-2">
-        <textarea
-          id="note-text"
-          rows="3"
-          placeholder="Called, left voicemail..."
-          required
-          class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"></textarea>
-        <button type="submit" class="rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
-          Add note
-        </button>
-      </form>
+        <section class="t-card">
+          <h2>Notes<span class="t-aside">Newest first</span></h2>
+          <form id="add-note-form" class="i-note-form">
+            <textarea id="note-text" rows="2" placeholder="Called and left a voicemail..." required aria-label="New note"></textarea>
+            <button type="submit" class="a-btn a-btn-primary i-btn">Add note</button>
+          </form>
+          <div id="notes-list" class="i-notes"></div>
+        </section>
+      </div>
+
+      <aside class="i-detail-side">
+        <section class="t-card i-fields">
+          <div class="i-field">
+            <span>Status</span>
+            <div id="detail-status-container"></div>
+          </div>
+          <div class="i-field">
+            <label for="detail-follow-up">Follow-up</label>
+            <div class="i-inline">
+              <input id="detail-follow-up" type="date" />
+              <button id="save-follow-up-button" type="button" class="a-btn i-btn">Save</button>
+              <button id="clear-follow-up-button" type="button" class="a-link">Clear</button>
+            </div>
+            <span id="follow-up-status" class="i-hint"></span>
+          </div>
+          <div id="detail-assigned-wrap" class="i-field hidden">
+            <label for="detail-assigned-select">With counselor</label>
+            <select id="detail-assigned-select"></select>
+            <span id="detail-assigned-status" class="i-hint"></span>
+          </div>
+          <div class="i-field">
+            <span>Counselor they asked for</span>
+            <b id="detail-counselor"></b>
+          </div>
+          <div class="i-field">
+            <span>Session format</span>
+            <b id="detail-session-format"></b>
+          </div>
+        </section>
+
+        <section class="t-card i-fields">
+          <div class="i-field">
+            <span>Came from</span>
+            <b id="detail-source"></b>
+            <span id="detail-ad" class="i-hint hidden"></span>
+          </div>
+          <div class="i-field">
+            <label for="detail-source-select">Heard about you</label>
+            <select id="detail-source-select">
+              <option value="">Not answered</option>
+              {LEAD_SOURCES.map((src) => <option value={src.value}>{src.label}</option>)}
+            </select>
+            <input id="detail-source-detail" type="text" placeholder="Who referred them? (optional)" aria-label="Who referred them" />
+            <span id="detail-source-status" class="i-hint"></span>
+          </div>
+          <div id="detail-partner-wrap" class="i-field hidden">
+            <label for="detail-partner-select">Referral partner</label>
+            <select id="detail-partner-select"></select>
+            <span id="detail-partner-status" class="i-hint"></span>
+          </div>
+          <div class="i-field">
+            <span>Their current website</span>
+            <b id="detail-website"></b>
+          </div>
+        </section>
+      </aside>
     </div>
   </div>
 </AdminLayout>
 
 <script>
   import { supabase, initAdminAuth } from '../../lib/adminAuth';
-  import { renderStatusSelect, initStatusSelectHandler, TERMINAL_LEAD_STATUSES } from '../../lib/leadStatus';
+  import { buildGoogleAdsUpload, isGoogleAdsLead, type ConversionKind } from '../../lib/adAttribution';
+  import { leadSourceLabel } from '../../lib/leadSource';
+  import { renderStatusSelect, initStatusSelectHandler, TERMINAL_LEAD_STATUSES, LEAD_STATUSES, STATUS_LABELS } from '../../lib/leadStatus';
+  import { withBase } from '../../lib/url';
+  import type { AdminUser } from '../../lib/adminAuth';
 
   function escapeHtml(value: string): string {
     const div = document.createElement('div');
@@ -315,7 +316,21 @@ function statusLabel(status: string): string {
     lead_magnet_id: string | null;
     archived_at: string | null;
     preferred_counselor_page_id: string | null;
+    assigned_counselor_page_id: string | null;
     preferred_session_format: string | null;
+    lead_source: string | null;
+    lead_source_detail: string | null;
+    referral_partner_id: string | null;
+    auto_reply_sent_at: string | null;
+    gclid: string | null;
+    gbraid: string | null;
+    wbraid: string | null;
+    utm_source: string | null;
+    utm_medium: string | null;
+    utm_campaign: string | null;
+    utm_term: string | null;
+    landing_page: string | null;
+    scheduled_at: string | null;
   };
 
   const SESSION_FORMAT_LABELS: Record<string, string> = {
@@ -347,6 +362,25 @@ function statusLabel(status: string): string {
   // for, if any — the menu itself has no per-row identity, so this is
   // how its View/Archive/Delete handlers know which lead to act on.
   let actionsMenuLeadId: string | null = null;
+  // A linked counselor working their own inquiries ("My inquiries").
+  let counselorMode = false;
+
+  function initials(name: string | null): string {
+    const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
+    return (parts.slice(0, 2).map((w) => w[0]).join('') || '?').toUpperCase();
+  }
+  function relative(iso: string): string {
+    const mins = (Date.now() - new Date(iso).getTime()) / 60_000;
+    if (mins < 60) return `${Math.max(1, Math.round(mins))} min ago`;
+    const hrs = mins / 60;
+    if (hrs < 24) return `${Math.round(hrs)} hr${Math.round(hrs) === 1 ? '' : 's'} ago`;
+    const days = Math.round(hrs / 24);
+    if (days < 14) return `${days} day${days === 1 ? '' : 's'} ago`;
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: new Date(iso).getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
+  }
+  function shortDate(ymd: string): string {
+    return new Date(ymd + 'T12:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
 
   const listView = document.getElementById('crm-list-view')!;
   const detailView = document.getElementById('crm-detail-view')!;
@@ -431,17 +465,13 @@ function statusLabel(status: string): string {
 
   function setView(view: 'leads' | 'contacts') {
     currentView = view;
-    const activeClasses = ['bg-white', 'text-brand-ink', 'shadow-sm'];
-    const inactiveClasses = ['text-slate-500'];
-    viewLeadsButton.classList.remove(...activeClasses, ...inactiveClasses);
-    viewContactsButton.classList.remove(...activeClasses, ...inactiveClasses);
-    (view === 'leads' ? viewLeadsButton : viewContactsButton).classList.add(...activeClasses);
-    (view === 'leads' ? viewContactsButton : viewLeadsButton).classList.add(...inactiveClasses);
+    viewLeadsButton.setAttribute('aria-pressed', String(view === 'leads'));
+    viewContactsButton.setAttribute('aria-pressed', String(view === 'contacts'));
     // A manually-added entry always has lead_magnet_id null, so it can
     // never show up in the Contacts view — offering the button there
     // would let someone add a row they'd then not see without switching
     // views back, which is more confusing than just hiding it.
-    addLeadButtonRef.classList.toggle('hidden', view === 'contacts');
+    addLeadButtonRef.hidden = view === 'contacts' || counselorMode;
     updateSourceFilterOptions();
     sourceFilter.value = 'all';
     renderList();
@@ -472,15 +502,14 @@ function statusLabel(status: string): string {
       return;
     }
     dueSection.classList.remove('hidden');
+    document.getElementById('i-due-count')!.textContent = `${due.length} in the next 7 days`;
     dueList.innerHTML = due
       .map((lead) => {
         const dueDate = new Date(lead.follow_up_date + 'T00:00:00');
         const isOverdue = dueDate < today;
-        return `
-      <button type="button" data-lead-id="${lead.id}" class="due-item flex w-full items-center justify-between rounded-md border border-amber-200 bg-white px-3 py-2 text-left hover:bg-amber-100">
-        <span class="font-medium text-brand-ink">${escapeHtml(lead.name || '(no name)')}</span>
-        <span class="text-xs font-semibold ${isOverdue ? 'text-red-600' : 'text-amber-700'}">${isOverdue ? 'Overdue — ' : ''}${dueDate.toLocaleDateString()}</span>
-      </button>`;
+        const isToday = dueDate.getTime() === today.getTime();
+        const when = isOverdue ? `Overdue · was due ${shortDate(lead.follow_up_date!)}` : isToday ? 'Due today' : `Due ${shortDate(lead.follow_up_date!)}`;
+        return `<button type="button" data-lead-id="${lead.id}" class="due-item"><span class="i-avatar sm">${escapeHtml(initials(lead.name))}</span><span class="i-due-name">${escapeHtml(lead.name || '(no name)')}</span><span class="i-due-when${isOverdue ? ' late' : ''}">${when}</span></button>`;
       })
       .join('');
   }
@@ -491,32 +520,71 @@ function statusLabel(status: string): string {
     openDetail(button.dataset.leadId!);
   });
 
+  // Status counts for the current view (and archived setting), which
+  // double as the status filter.
+  function renderPipeline() {
+    const showArchived = showArchivedFilter.checked;
+    const pool = allLeads.filter(
+      (l) => (currentView === 'leads' ? !l.lead_magnet_id : !!l.lead_magnet_id) && (showArchived || !l.archived_at)
+    );
+    const current = statusFilter.value;
+    const chip = (value: string, label: string, n: number) =>
+      `<button type="button" class="i-chip i-chip-${value}" data-status="${value}" aria-pressed="${current === value}"><span>${label}</span><b class="a-num">${n}</b></button>`;
+    document.getElementById('i-pipeline')!.innerHTML =
+      chip('all', 'All', pool.length) + LEAD_STATUSES.map((s) => chip(s, STATUS_LABELS[s], pool.filter((l) => (l.status ?? 'new') === s).length)).join('');
+  }
+  document.getElementById('i-pipeline')!.addEventListener('click', (event) => {
+    const chip = (event.target as HTMLElement).closest<HTMLElement>('[data-status]');
+    if (!chip) return;
+    statusFilter.value = chip.dataset.status!;
+    renderList();
+  });
+
   function renderList() {
+    renderPipeline();
     const filtered = applyFilters(allLeads);
-    const noun = currentView === 'contacts' ? 'contact' : 'lead';
-    leadsCount.textContent = `${filtered.length} ${noun}${filtered.length === 1 ? '' : 's'}`;
+    const noun = currentView === 'contacts' ? 'download' : 'inquiry';
+    leadsCount.textContent = `${filtered.length} ${filtered.length === 1 ? noun : noun === 'inquiry' ? 'inquiries' : 'downloads'}`;
+    const empty = document.getElementById('i-empty')!;
+    empty.hidden = filtered.length > 0;
+    if (!filtered.length) {
+      const filtering = searchInput.value.trim() || statusFilter.value !== 'all' || dateFilter.value !== 'all' || sourceFilter.value !== 'all';
+      empty.innerHTML = filtering
+        ? '<b>Nothing matches these filters.</b>Try a different status or search.'
+        : counselorMode
+          ? "<b>No inquiries assigned to you yet.</b>When one is assigned to you, it shows up here."
+          : '<b>No inquiries yet.</b>New ones from your website show up here the moment they arrive.';
+    }
     tableBody.innerHTML = filtered
-      .map(
-        (lead) => `
-      <tr class="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50 ${lead.archived_at ? 'opacity-60' : ''}" data-lead-id="${lead.id}">
-        <td class="px-4 py-3 whitespace-nowrap">${new Date(lead.created_at).toLocaleDateString()}</td>
-        <td class="px-4 py-3">${escapeHtml(lead.name ?? '')}${lead.archived_at ? ' <span class="ml-1 rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-600">Archived</span>' : ''}</td>
-        <td class="px-4 py-3">${escapeHtml(lead.email ?? '')}</td>
-        <td class="px-4 py-3 text-slate-500">${escapeHtml(sourceLabel(lead))}</td>
-        <td class="px-4 py-3" data-no-row-click>${renderStatusSelect(lead.id, lead.status)}</td>
-        <td class="px-4 py-3 whitespace-nowrap">${lead.follow_up_date ? new Date(lead.follow_up_date + 'T00:00:00').toLocaleDateString() : ''}</td>
-        <td class="px-4 py-3">${noteCounts.get(lead.id) ?? 0}</td>
-        <td class="px-4 py-3 text-right" data-no-row-click>
-          <button type="button" class="actions-toggle rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50" data-lead-id="${lead.id}">
-            Actions ▾
-          </button>
-        </td>
-      </tr>`
-      )
+      .map((lead) => {
+        const counselor = lead.assigned_counselor_page_id ? (counselorNames.get(lead.assigned_counselor_page_id) ?? '').split(',')[0] : '';
+        const contact = lead.email || lead.phone || '';
+        const today = new Date().toISOString().slice(0, 10);
+        const late = lead.follow_up_date && lead.follow_up_date < today && !TERMINAL_LEAD_STATUSES.includes(lead.status ?? 'new');
+        const notes = noteCounts.get(lead.id) ?? 0;
+        return `
+      <tr data-lead-id="${lead.id}" class="${lead.archived_at ? 'i-archived' : ''}">
+        <td><div class="i-who"><span class="i-avatar">${escapeHtml(initials(lead.name))}</span><div><b>${escapeHtml(lead.name || '(no name)')}${lead.archived_at ? ' <span class="i-tag">Archived</span>' : ''}</b><small>${escapeHtml(contact)}${contact ? ' · ' : ''}${relative(lead.created_at)}</small></div></div></td>
+        <td class="i-hide-sm i-muted" data-practice-only>${counselor ? escapeHtml(counselor) : '<span class="i-faint">Not assigned</span>'}</td>
+        <td class="i-hide-md i-muted">${escapeHtml(sourceLabel(lead))}</td>
+        <td data-no-row-click>${renderStatusSelect(lead.id, lead.status)}</td>
+        <td class="i-hide-sm ${late ? 'i-late' : 'i-muted'}">${lead.follow_up_date ? shortDate(lead.follow_up_date) : ''}</td>
+        <td class="i-hide-md i-muted">${notes ? `<span class="i-notes-count">${notes}</span>` : ''}</td>
+        <td class="i-right" data-no-row-click data-practice-only><button type="button" class="actions-toggle i-more" data-lead-id="${lead.id}" aria-label="More actions for ${escapeHtml(lead.name || 'this inquiry')}">···</button></td>
+      </tr>`;
+      })
       .join('');
+    applyCounselorMode();
   }
 
-  const ACTIONS_MENU_WIDTH = 144; // matches the menu's w-36
+  // Hide practice-level controls for a counselor login. Re-run after
+  // every render, since rows are rebuilt.
+  function applyCounselorMode() {
+    if (!counselorMode) return;
+    document.querySelectorAll<HTMLElement>('[data-practice-only]').forEach((el) => (el.hidden = true));
+  }
+
+  const ACTIONS_MENU_WIDTH = 160; // matches .i-menu's width
 
   function closeActionsMenu() {
     actionsMenu.classList.add('hidden');
@@ -537,7 +605,7 @@ function statusLabel(status: string): string {
     actionsMenuLeadId = leadId;
 
     const rect = button.getBoundingClientRect();
-    const estimatedMenuHeight = 116; // three items ~36px each + padding
+    const estimatedMenuHeight = 128; // three items ~38px each + padding
     const openUpward = window.innerHeight - rect.bottom < estimatedMenuHeight;
 
     const left = Math.max(8, Math.min(rect.right - ACTIONS_MENU_WIDTH, window.innerWidth - ACTIONS_MENU_WIDTH - 8));
@@ -618,6 +686,7 @@ function statusLabel(status: string): string {
     const lead = allLeads.find((l) => l.id === leadId);
     if (lead) lead.status = newStatus;
     renderDueThisWeek();
+    renderPipeline();
   });
 
   [searchInput, statusFilter, dateFilter, sourceFilter, showArchivedFilter].forEach((el) => {
@@ -635,7 +704,7 @@ function statusLabel(status: string): string {
   // export to match what's on screen.
   exportButton.addEventListener('click', () => {
     const filtered = applyFilters(allLeads);
-    const header = ['Date', 'Name', 'Email', 'Phone', 'Status', 'Follow-up date', 'Source', 'Counselor preference', 'Session format preference', 'Archived', 'Message'];
+    const header = ['Date', 'Name', 'Email', 'Phone', 'Status', 'Follow-up date', 'Source', 'Counselor preference', 'Assigned counselor', 'Heard about us', 'Referred by', 'Referral partner', 'Session format preference', 'Came from Google Ads', 'Ad campaign', 'Ad keyword', 'Landing page', 'Archived', 'Message'];
     const rows = filtered.map((lead) => [
       new Date(lead.created_at).toLocaleDateString(),
       lead.name ?? '',
@@ -645,7 +714,15 @@ function statusLabel(status: string): string {
       lead.follow_up_date ?? '',
       sourceLabel(lead),
       lead.preferred_counselor_page_id ? (counselorNames.get(lead.preferred_counselor_page_id) ?? 'Unknown') : '',
+      lead.assigned_counselor_page_id ? (counselorNames.get(lead.assigned_counselor_page_id) ?? 'Unknown') : '',
+      lead.lead_source ? leadSourceLabel(lead.lead_source) : '',
+      lead.lead_source_detail ?? '',
+      lead.referral_partner_id ? (partnerOptions.find((p) => p.id === lead.referral_partner_id)?.name ?? '') : '',
       lead.preferred_session_format ? (SESSION_FORMAT_LABELS[lead.preferred_session_format] ?? lead.preferred_session_format) : '',
+      isGoogleAdsLead(lead) ? 'Yes' : '',
+      lead.utm_campaign ?? '',
+      lead.utm_term ?? '',
+      lead.landing_page ?? '',
       lead.archived_at ? 'Yes' : '',
       lead.message ?? '',
     ]);
@@ -659,6 +736,79 @@ function statusLabel(status: string): string {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  });
+
+  // --- Google Ads offline conversion upload ---
+  const adsModal = document.getElementById('ads-export-modal')!;
+  const adsNameInput = document.getElementById('ads-conversion-name') as HTMLInputElement;
+  const adsStatus = document.getElementById('ads-export-status')!;
+  const adsWarning = document.getElementById('ads-booked-warning')!;
+  let adsNames: { id: string; request: string; booked: string } | null = null;
+
+  function adsKind(): ConversionKind {
+    return (document.querySelector<HTMLInputElement>('input[name="ads-kind"]:checked')?.value as ConversionKind) ?? 'request';
+  }
+
+  function syncAdsKind() {
+    const kind = adsKind();
+    adsWarning.classList.toggle('hidden', kind !== 'booked');
+    if (adsNames) adsNameInput.value = kind === 'request' ? adsNames.request : adsNames.booked;
+    adsStatus.textContent = '';
+  }
+
+  document.querySelectorAll<HTMLInputElement>('input[name="ads-kind"]').forEach((r) => r.addEventListener('change', syncAdsKind));
+
+  document.getElementById('ads-export-button')!.addEventListener('click', async () => {
+    if (!adsNames) {
+      const { data } = await supabase.from('business').select('id, ads_request_conversion_name, ads_booked_conversion_name').single();
+      if (data) adsNames = { id: data.id, request: data.ads_request_conversion_name, booked: data.ads_booked_conversion_name };
+    }
+    syncAdsKind();
+    adsModal.classList.remove('hidden');
+    adsModal.classList.add('flex');
+  });
+  document.getElementById('ads-export-close')!.addEventListener('click', () => {
+    adsModal.classList.add('hidden');
+    adsModal.classList.remove('flex');
+  });
+
+  document.getElementById('ads-export-download')!.addEventListener('click', async () => {
+    const kind = adsKind();
+    const name = adsNameInput.value.trim();
+    if (!name) {
+      adsStatus.textContent = 'Enter the conversion action name first.';
+      adsStatus.className = 'mt-3 text-sm text-red-600';
+      return;
+    }
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const { csv, count, skippedNoGclid } = buildGoogleAdsUpload(allLeads, kind, name, timeZone);
+    if (count === 0) {
+      adsStatus.textContent =
+        'No leads from Google Ads to report in the last 90 days' + (kind === 'booked' ? ' that are marked Scheduled.' : '.');
+      adsStatus.className = 'mt-3 text-sm text-slate-600';
+      return;
+    }
+    // Remember the name so it matches next time without retyping.
+    if (adsNames) {
+      const column = kind === 'request' ? 'ads_request_conversion_name' : 'ads_booked_conversion_name';
+      if ((kind === 'request' ? adsNames.request : adsNames.booked) !== name) {
+        const { error } = await supabase.from('business').update({ [column]: name }).eq('id', adsNames.id);
+        if (!error) adsNames[kind === 'request' ? 'request' : 'booked'] = name;
+      }
+    }
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `google-ads-${kind === 'request' ? 'appointment-requests' : 'booked-appointments'}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    adsStatus.textContent = `Downloaded ${count} conversion${count === 1 ? '' : 's'}.${
+      skippedNoGclid ? ` ${skippedNoGclid} ad lead${skippedNoGclid === 1 ? '' : 's'} tagged only by UTM or an iPhone click ID couldn't be included (the file format needs a Google Click ID).` : ''
+    } Upload it in Google Ads under Goals → Conversions → Uploads.`;
+    adsStatus.className = 'mt-3 text-sm text-emerald-700';
   });
 
   // --- Archive / delete (shared by the row Actions menu and the detail view) ---
@@ -707,6 +857,70 @@ function statusLabel(status: string): string {
   const detailWebsite = document.getElementById('detail-website')!;
   const detailCounselor = document.getElementById('detail-counselor')!;
   const detailSessionFormat = document.getElementById('detail-session-format')!;
+  const detailAssignedWrap = document.getElementById('detail-assigned-wrap')!;
+  const detailAssignedSelect = document.getElementById('detail-assigned-select') as HTMLSelectElement;
+  const detailAssignedStatus = document.getElementById('detail-assigned-status')!;
+  const detailSourceSelect = document.getElementById('detail-source-select') as HTMLSelectElement;
+  const detailSourceDetail = document.getElementById('detail-source-detail') as HTMLInputElement;
+  const detailSourceStatus = document.getElementById('detail-source-status')!;
+
+  // Saves on change (select) or blur (text), same inline-save feel as the
+  // status and assigned-counselor selects.
+  async function saveLeadSource() {
+    if (!currentLeadId) return;
+    const lead = allLeads.find((l) => l.id === currentLeadId);
+    if (!lead) return;
+    const next = {
+      lead_source: detailSourceSelect.value || null,
+      lead_source_detail: detailSourceDetail.value.trim() || null,
+    };
+    if (next.lead_source === lead.lead_source && next.lead_source_detail === lead.lead_source_detail) return;
+    const { error } = await supabase.from('leads').update(next).eq('id', lead.id);
+    if (error) {
+      detailSourceStatus.textContent = 'Could not save: ' + error.message;
+      detailSourceStatus.className = 'text-xs text-red-600';
+      return;
+    }
+    Object.assign(lead, next);
+    detailSourceStatus.textContent = 'Saved.';
+    detailSourceStatus.className = 'text-xs text-emerald-700';
+  }
+  detailSourceSelect.addEventListener('change', saveLeadSource);
+
+  const detailPartnerWrap = document.getElementById('detail-partner-wrap')!;
+  const detailPartnerSelect = document.getElementById('detail-partner-select') as HTMLSelectElement;
+  const detailPartnerStatus = document.getElementById('detail-partner-status')!;
+  let partnerOptions: { id: string; name: string; archived_at: string | null }[] = [];
+
+  function renderPartnerSelect(lead: Lead) {
+    detailPartnerWrap.classList.toggle('hidden', partnerOptions.length === 0);
+    // Archived partners stay listed only when this lead already points at
+    // one, so an old link never silently shows as "None".
+    const visible = partnerOptions.filter((p) => !p.archived_at || p.id === lead.referral_partner_id);
+    detailPartnerSelect.innerHTML =
+      '<option value="">None</option>' +
+      visible
+        .map((p) => `<option value="${p.id}" ${p.id === lead.referral_partner_id ? 'selected' : ''}>${escapeHtml(p.name)}</option>`)
+        .join('');
+    detailPartnerStatus.textContent = '';
+  }
+
+  detailPartnerSelect.addEventListener('change', async () => {
+    const lead = allLeads.find((l) => l.id === currentLeadId);
+    if (!lead) return;
+    const next = detailPartnerSelect.value || null;
+    const { error } = await supabase.from('leads').update({ referral_partner_id: next }).eq('id', lead.id);
+    if (error) {
+      detailPartnerSelect.value = lead.referral_partner_id ?? '';
+      detailPartnerStatus.textContent = 'Could not save: ' + error.message;
+      detailPartnerStatus.className = 'mt-1 text-xs text-red-600';
+      return;
+    }
+    lead.referral_partner_id = next;
+    detailPartnerStatus.textContent = 'Saved.';
+    detailPartnerStatus.className = 'mt-1 text-xs text-emerald-700';
+  });
+  detailSourceDetail.addEventListener('blur', saveLeadSource);
   const detailSource = document.getElementById('detail-source')!;
   const detailMessage = document.getElementById('detail-message')!;
   const detailFollowUp = document.getElementById('detail-follow-up') as HTMLInputElement;
@@ -724,9 +938,57 @@ function statusLabel(status: string): string {
     const lead = allLeads.find((l) => l.id === leadId);
     if (lead) lead.status = newStatus;
     renderDueThisWeek();
+    if (lead) renderAssignedHint(lead);
+  });
+
+  // In a group practice, a Scheduled client with no counselor can't be
+  // credited to anyone's caseload — say so right where it can be fixed.
+  // A solo practice (one counselor) never needs this.
+  function renderAssignedHint(lead: Lead) {
+    if (lead.status === 'scheduled' && !lead.assigned_counselor_page_id && counselorNames.size > 1) {
+      detailAssignedStatus.textContent = 'Assign a counselor so this new client counts toward their caseload.';
+      detailAssignedStatus.className = 'mt-1 text-xs text-amber-700';
+    } else {
+      detailAssignedStatus.textContent = '';
+    }
+  }
+
+  function renderAssignedSelect(lead: Lead) {
+    detailAssignedWrap.classList.toggle('hidden', counselorNames.size === 0);
+    const options = [...counselorNames.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+    detailAssignedSelect.innerHTML =
+      `<option value="">Not assigned</option>` +
+      options
+        .map(([id, name]) => `<option value="${id}" ${id === lead.assigned_counselor_page_id ? 'selected' : ''}>${escapeHtml(name)}</option>`)
+        .join('');
+    renderAssignedHint(lead);
+  }
+
+  detailAssignedSelect.addEventListener('change', async () => {
+    if (!currentLeadId) return;
+    const lead = allLeads.find((l) => l.id === currentLeadId);
+    if (!lead) return;
+    const previous = lead.assigned_counselor_page_id;
+    const next = detailAssignedSelect.value || null;
+    detailAssignedSelect.disabled = true;
+    const { error } = await supabase.from('leads').update({ assigned_counselor_page_id: next }).eq('id', lead.id);
+    detailAssignedSelect.disabled = false;
+    if (error) {
+      detailAssignedSelect.value = previous ?? '';
+      detailAssignedStatus.textContent = 'Could not save: ' + error.message;
+      detailAssignedStatus.className = 'mt-1 text-xs text-red-600';
+      return;
+    }
+    lead.assigned_counselor_page_id = next;
+    renderAssignedHint(lead);
+    if (!detailAssignedStatus.textContent) {
+      detailAssignedStatus.textContent = 'Saved.';
+      detailAssignedStatus.className = 'mt-1 text-xs text-emerald-700';
+    }
   });
 
   backButton.addEventListener('click', () => {
+    history.replaceState(null, '', window.location.pathname);
     showList();
     renderList();
   });
@@ -757,10 +1019,13 @@ function statusLabel(status: string): string {
     currentLeadId = leadId;
 
     detailName.textContent = lead.name || '(no name)';
-    detailSubmitted.textContent = `Submitted ${new Date(lead.created_at).toLocaleString()}`;
+    document.getElementById('i-detail-avatar')!.textContent = initials(lead.name);
+    detailSubmitted.textContent =
+      `Reached out ${relative(lead.created_at)} (${new Date(lead.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })})` +
+      (lead.auto_reply_sent_at ? ' · Automatic reply sent' : '');
     detailStatusContainer.innerHTML = renderStatusSelect(lead.id, lead.status);
-    detailEmail.textContent = lead.email ?? '—';
-    detailPhone.textContent = lead.phone ?? '—';
+    detailEmail.innerHTML = lead.email ? `<a class="a-link" href="mailto:${escapeHtml(lead.email)}">${escapeHtml(lead.email)}</a>` : '<span class="i-faint">Not given</span>';
+    detailPhone.innerHTML = lead.phone ? `<a class="a-link" href="tel:${escapeHtml(lead.phone.replace(/[^\d+]/g, ''))}">${escapeHtml(lead.phone)}</a>` : '<span class="i-faint">Not given</span>';
     detailWebsite.innerHTML = lead.existing_website_url
       ? `<a href="${escapeHtml(lead.existing_website_url)}" target="_blank" rel="noopener" class="text-brand-primary hover:underline">${escapeHtml(lead.existing_website_url)}</a>`
       : '—';
@@ -769,19 +1034,36 @@ function statusLabel(status: string): string {
     // read "Manually added — Manually added".
     const pageSuffix = lead.source_page && lead.source_page !== MANUAL_SOURCE ? ` — ${lead.source_page}` : '';
     detailSource.textContent = `${sourceLabel(lead)}${pageSuffix}`;
+    const detailAd = document.getElementById('detail-ad')!;
+    const adParts = [lead.utm_campaign && `campaign "${lead.utm_campaign}"`, lead.utm_term && `keyword "${lead.utm_term}"`].filter(Boolean);
+    detailAd.classList.toggle('hidden', !isGoogleAdsLead(lead));
+    detailAd.textContent = `Clicked a Google ad${adParts.length ? `: ${adParts.join(', ')}` : ''}${lead.landing_page ? ` (landed on ${lead.landing_page})` : ''}`;
     detailCounselor.textContent = lead.preferred_counselor_page_id
       ? (counselorNames.get(lead.preferred_counselor_page_id) ?? 'Unknown')
       : 'No preference (Help me choose)';
+    renderAssignedSelect(lead);
+    detailSourceSelect.value = lead.lead_source ?? '';
+    detailSourceDetail.value = lead.lead_source_detail ?? '';
+    detailSourceStatus.textContent = '';
+    renderPartnerSelect(lead);
     detailSessionFormat.textContent = lead.preferred_session_format
       ? (SESSION_FORMAT_LABELS[lead.preferred_session_format] ?? lead.preferred_session_format)
       : 'No preference stated';
-    detailMessage.textContent = lead.message ?? '—';
+    detailMessage.textContent = lead.message?.trim() || 'No message.';
     detailFollowUp.value = lead.follow_up_date ?? '';
     followUpStatus.textContent = '';
     detailArchiveButton.textContent = lead.archived_at ? 'Unarchive' : 'Archive';
     detailArchivedBanner.classList.toggle('hidden', !lead.archived_at);
 
+    if (counselorMode) {
+      // Counselors can change status, follow-up, and notes only (0073).
+      detailSourceSelect.disabled = true;
+      detailSourceDetail.disabled = true;
+      detailAssignedWrap.classList.add('hidden');
+      detailPartnerWrap.classList.add('hidden');
+    }
     showDetail();
+    history.replaceState(null, '', `?lead=${leadId}`);
     await loadNotes(leadId);
   }
 
@@ -811,7 +1093,7 @@ function statusLabel(status: string): string {
   });
 
   async function loadNotes(leadId: string) {
-    notesList.innerHTML = '<p class="text-sm text-slate-500">Loading notes...</p>';
+    notesList.innerHTML = '<div class="t-skel" style="height:56px"></div>';
     const { data, error } = await supabase
       .from('lead_notes')
       .select('*')
@@ -825,16 +1107,13 @@ function statusLabel(status: string): string {
     const notes = data as LeadNote[];
     noteCounts.set(leadId, notes.length);
     if (notes.length === 0) {
-      notesList.innerHTML = '<p class="text-sm text-slate-500">No notes yet.</p>';
+      notesList.innerHTML = '<p class="i-faint">No notes yet. Add the first one above.</p>';
       return;
     }
     notesList.innerHTML = notes
       .map(
         (note) => `
-      <div class="rounded-md border border-slate-100 bg-slate-50 p-3">
-        <p class="whitespace-pre-wrap text-sm text-slate-800">${escapeHtml(note.note)}</p>
-        <p class="mt-1 text-xs text-slate-400">${new Date(note.created_at).toLocaleString()}</p>
-      </div>`
+      <div class="i-note"><p>${escapeHtml(note.note)}</p><small>${relative(note.created_at)}</small></div>`
       )
       .join('');
   }
@@ -899,6 +1178,8 @@ function statusLabel(status: string): string {
       // "(unknown page)" on Leads and analytics, indistinguishable from a
       // real data gap).
       source_page: MANUAL_SOURCE,
+      lead_source: (formData.get('lead_source') as string) || null,
+      lead_source_detail: (formData.get('lead_source_detail') as string).trim() || null,
       lead_magnet_id: null,
       existing_website_url: null,
     };
@@ -927,6 +1208,11 @@ function statusLabel(status: string): string {
     updateSourceFilterOptions();
   }
 
+  async function loadPartners() {
+    const { data } = await supabase.from('referral_partners').select('id, name, archived_at').order('name');
+    partnerOptions = data ?? [];
+  }
+
   async function loadCounselors() {
     const { data } = await supabase.from('pages').select('id, title').eq('page_type', 'Counselor Profile');
     counselorNames = new Map((data ?? []).map((p) => [p.id, p.title]));
@@ -940,8 +1226,11 @@ function statusLabel(status: string): string {
     }
   }
 
+  let myPageId: string | null = null;
   async function loadLeads() {
-    const { data, error } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
+    let query = supabase.from('leads').select('*').order('created_at', { ascending: false });
+    if (counselorMode && myPageId) query = query.eq('assigned_counselor_page_id', myPageId);
+    const { data, error } = await query;
     if (error) {
       leadsCount.textContent = 'Could not load leads: ' + error.message;
       return;
@@ -953,12 +1242,30 @@ function statusLabel(status: string): string {
   }
 
   initAdminAuth(
-    async () => {
-      await loadLeadMagnets();
+    async (user: AdminUser) => {
+      if (user.role === 'staff') {
+        // Only a linked counselor has inquiries of their own.
+        if (!user.linked_counselor_page_id) {
+          window.location.href = withBase('/admin/today');
+          return;
+        }
+        counselorMode = true;
+        myPageId = user.linked_counselor_page_id;
+        document.querySelector('.a-title')!.textContent = 'My inquiries';
+        document.getElementById('i-intro')!.textContent = 'Inquiries assigned to you. Reply fast: people often reach out to more than one counselor.';
+        viewContactsButton.parentElement!.hidden = true;
+        applyCounselorMode();
+      } else {
+        await loadLeadMagnets();
+        await loadPartners();
+      }
       await loadCounselors();
       await loadLeads();
       setView('leads');
+      // Deep link from Today: /admin/crm?lead=<id>
+      const linked = new URLSearchParams(window.location.search).get('lead');
+      if (linked && allLeads.some((l) => l.id === linked)) openDetail(linked);
     },
-    { allowedRoles: ['owner', 'agency'] }
+    { allowedRoles: ['owner', 'agency', 'staff'] }
   );
 </script>

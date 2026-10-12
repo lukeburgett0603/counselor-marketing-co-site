@@ -1,0 +1,521 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { withBase } from '../../../lib/url';
+---
+
+<!--
+  Owner/agency only — never staff, including a linked-counselor staff
+  session (see initAdminAuth's allowedRoles below and ROLE_NAV_ACCESS in
+  adminAuth.ts). This is agency SEO strategy, not counselor
+  self-service. The target-keyword list itself is agency-managed only —
+  the owner sees every section below in view-only form, with zero edit
+  controls anywhere on this page. See CLAUDE.md's "SEO Insights
+  dashboard" section.
+
+  Redesigned in phase 3 of the admin redesign (2026-10-07) as "Search
+  rankings": a position badge, eight-check history line and change per
+  search, sorted by priority then position; content gaps and competitor
+  opportunities with "Plan it". Same data, roles and modal.
+-->
+<AdminLayout title="Search rankings | Admin" current="analytics-seo">
+  <p class="i-intro">Where your website shows up when people search Google for the help you offer.</p>
+
+  <div class="m-kpis">
+    <div class="t-kpi"><span class="t-lbl">Tracked searches</span><span id="stat-total-keywords" class="t-v a-num">—</span><span id="s-moved" class="t-delta"></span></div>
+    <div class="t-kpi"><span class="t-lbl">In the top 3</span><span id="stat-top3" class="t-v a-num">—</span><span class="t-delta">The first results people see</span></div>
+    <div class="t-kpi"><span class="t-lbl">On page one</span><span id="stat-ranking-top10" class="t-v a-num">—</span><span class="t-delta">Positions 1 to 10</span></div>
+    <div class="t-kpi"><span class="t-lbl">Not ranking yet</span><span id="stat-not-ranking" class="t-v a-num">—</span><span class="t-delta">Not in the top 100 yet</span></div>
+  </div>
+
+  <section class="t-card">
+    <h2>
+      Your searches<span class="t-aside" id="s-checked"></span>
+      <button id="add-keyword-button" type="button" class="a-btn a-btn-primary i-btn s-add" hidden>+ Add search</button>
+    </h2>
+    <ul id="keywords-table-body" class="s-list"></ul>
+    <p id="keywords-empty" class="t-empty" hidden><b>No tracked searches yet.</b>Your agency picks the searches that matter most for your practice and tracks them weekly.</p>
+    <p class="i-hint s-legend">
+      <span class="s-pos s-top">3</span> top 3 <span class="s-pos s-p1">8</span> page one <span class="s-pos s-p2">14</span> pages two and three <span class="s-pos">40</span> further back. The line shows the last eight weekly checks: rising means moving up. Dashes mark the edge of page one.
+    </p>
+  </section>
+
+  <div class="t-grid">
+    <section class="t-card t-s5">
+      <h2>No page yet<span class="t-aside" id="s-gap-count"></span></h2>
+      <p class="i-hint s-sub">Tracked searches with no page written for them. A dedicated page is usually the biggest step toward ranking.</p>
+      <ul id="content-gap-list" class="s-rows"></ul>
+      <p id="content-gap-empty" class="i-hint" hidden>Every tracked search has a page.</p>
+    </section>
+    <section class="t-card t-s7">
+      <h2>Competitor opportunities<span class="t-aside">From the latest weekly check</span></h2>
+      <p class="i-hint s-sub">Searches a nearby competitor ranks for and you don't yet. "Plan it" adds an article idea to your <a href={withBase('/admin/content-plan')}>Content plan</a>.</p>
+      <ul id="gap-table-body" class="s-rows"></ul>
+      <p id="gap-empty" class="i-hint" hidden>No competitor data yet. It fills in after the first weekly check.</p>
+    </section>
+  </div>
+
+  <!-- One shared row menu (agency only), positioned against the clicked row. -->
+  <div id="actions-menu" class="i-menu hidden">
+    <button type="button" id="actions-menu-edit">Edit</button>
+    <button type="button" id="actions-menu-delete" class="i-danger">Delete</button>
+  </div>
+
+  <!-- Add/Edit keyword modal — agency-only, one shared form for both. -->
+  <div id="keyword-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+    <div class="w-full max-w-md rounded-lg bg-white p-6">
+      <div class="mb-4 flex items-center justify-between">
+        <h3 id="keyword-modal-title" class="font-[family-name:var(--font-heading)] text-lg font-bold text-brand-ink">Add a search</h3>
+        <button id="keyword-modal-close-button" type="button" class="text-sm text-slate-500 hover:text-slate-800">Close</button>
+      </div>
+      <form id="keyword-form" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500">Search (keyword)</label>
+          <input name="keyword" type="text" required class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500">Priority</label>
+            <select name="priority" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+              <option value="high">High</option>
+              <option value="medium" selected>Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500">Status</label>
+            <select name="status" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+              <option value="active" selected>Active</option>
+              <option value="paused">Paused</option>
+              <option value="achieved">Achieved</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500">Search volume (monthly, from Mangools)</label>
+          <input name="search_volume" type="number" min="0" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500">Mangools tracked-keyword ID</label>
+          <input name="mangools_tracked_keyword_id" type="text" placeholder="Set once this keyword is added to the client's SerpWatcher tracking" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500">Notes</label>
+          <textarea name="notes" rows="2" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"></textarea>
+        </div>
+        <p id="keyword-form-status" class="text-sm text-red-600"></p>
+        <button type="submit" class="a-btn a-btn-primary w-full">Save</button>
+      </form>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  import { supabase, initAdminAuth } from '../../../lib/adminAuth';
+  import { withBase } from '../../../lib/url';
+  import {
+    normalizeKeyword,
+    keywordsWithNoPage,
+    latestGapBatch,
+    type TargetKeyword,
+    type RankSnapshot,
+    type GapSnapshot,
+  } from '../../../lib/seoInsights';
+
+  function escapeHtml(value: string): string {
+    const div = document.createElement('div');
+    div.textContent = value;
+    return div.innerHTML;
+  }
+
+  type PageRow = { id: string; title: string; slug: string; focus_keyword: string | null };
+
+  let isAgency = false;
+  let targetKeywords: TargetKeyword[] = [];
+  let rankSnapshots: RankSnapshot[] = [];
+  let gapSnapshots: GapSnapshot[] = [];
+  let pages: PageRow[] = [];
+  let editingKeywordId: string | null = null;
+  let actionsMenuKeywordId: string | null = null;
+
+  const addKeywordButton = document.getElementById('add-keyword-button') as HTMLButtonElement;
+  const keywordsList = document.getElementById('keywords-table-body')!;
+  const keywordsEmpty = document.getElementById('keywords-empty')!;
+  const contentGapList = document.getElementById('content-gap-list')!;
+  const contentGapEmpty = document.getElementById('content-gap-empty')!;
+  const gapList = document.getElementById('gap-table-body')!;
+  const gapEmpty = document.getElementById('gap-empty')!;
+  const actionsMenu = document.getElementById('actions-menu')!;
+  const keywordModal = document.getElementById('keyword-modal')!;
+  const keywordModalTitle = document.getElementById('keyword-modal-title')!;
+  const keywordForm = document.getElementById('keyword-form') as HTMLFormElement;
+  const keywordFormStatus = document.getElementById('keyword-form-status')!;
+
+  const PRIORITY_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
+  const HISTORY = 8;
+
+  function pageForKeyword(keyword: string): PageRow | undefined {
+    const normalized = normalizeKeyword(keyword);
+    return pages.find((p) => p.focus_keyword && normalizeKeyword(p.focus_keyword) === normalized);
+  }
+
+  // Every check per search, newest first.
+  function historyByKeyword(): Map<string, RankSnapshot[]> {
+    const map = new Map<string, RankSnapshot[]>();
+    for (const snap of rankSnapshots) {
+      const list = map.get(snap.target_keyword_id) ?? [];
+      list.push(snap);
+      map.set(snap.target_keyword_id, list);
+    }
+    for (const list of map.values()) list.sort((a, b) => new Date(b.checked_at).getTime() - new Date(a.checked_at).getTime());
+    return map;
+  }
+
+  const posClass = (p: number | null) => (p == null ? 's-none' : p <= 3 ? 's-top' : p <= 10 ? 's-p1' : p <= 30 ? 's-p2' : '');
+
+  // Position history as a small line: better positions higher, gaps where
+  // the site wasn't ranking. Each line uses its own range so the direction
+  // is visible; the dashed line marks page one (position 10) when in range.
+  function sparkline(history: RankSnapshot[]): string {
+    const pts = history.slice(0, HISTORY).reverse();
+    const ranked = pts.filter((p) => p.position != null) as (RankSnapshot & { position: number })[];
+    if (ranked.length < 2) return '<span class="s-spark s-spark-empty"></span>';
+    const W = 120, H = 34, P = 3;
+    const lo = Math.max(1, Math.min(...ranked.map((p) => p.position)) - 2);
+    const hi = Math.max(...ranked.map((p) => p.position)) + 2;
+    const x = (i: number) => P + (i / Math.max(pts.length - 1, 1)) * (W - 2 * P);
+    const y = (pos: number) => P + ((pos - lo) / Math.max(hi - lo, 1)) * (H - 2 * P);
+    let d = '';
+    let pen = false;
+    pts.forEach((p, i) => {
+      if (p.position == null) {
+        pen = false;
+        return;
+      }
+      d += `${pen ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.position).toFixed(1)} `;
+      pen = true;
+    });
+    const last = pts.length - 1;
+    const lastPos = pts[last].position;
+    const end = lastPos != null ? `<circle cx="${x(last).toFixed(1)}" cy="${y(lastPos).toFixed(1)}" r="2.6" class="s-end"/>` : '';
+    return `<svg class="s-spark" viewBox="0 0 ${W} ${H}" aria-hidden="true">${10 > lo && 10 < hi ? `<line x1="0" x2="${W}" y1="${y(10).toFixed(1)}" y2="${y(10).toFixed(1)}" class="s-p1line"/>` : ''}<path d="${d.trim()}" class="s-path"/>${end}</svg>`;
+  }
+
+  function changeChip(history: RankSnapshot[]): string {
+    const [cur, prev] = history;
+    if (!cur) return '<span class="s-chg">Not checked yet</span>';
+    if (cur.position == null) return '<span class="s-chg">—</span>';
+    if (!prev || prev.position == null) return '<span class="s-chg s-new">New</span>';
+    const diff = prev.position - cur.position;
+    if (diff === 0) return '<span class="s-chg">Same</span>';
+    return diff > 0
+      ? `<span class="s-chg s-up" title="Up ${diff} since the last check">▲ ${diff}</span>`
+      : `<span class="s-chg s-down" title="Down ${-diff} since the last check">▼ ${-diff}</span>`;
+  }
+
+  function renderKeywords() {
+    const history = historyByKeyword();
+    const latestPos = (id: string) => history.get(id)?.[0]?.position ?? null;
+
+    const active = targetKeywords.filter((tk) => tk.status !== 'paused');
+    const positions = active.map((tk) => latestPos(tk.id));
+    document.getElementById('stat-total-keywords')!.textContent = String(targetKeywords.length);
+    document.getElementById('stat-top3')!.textContent = String(positions.filter((p) => p != null && p <= 3).length);
+    document.getElementById('stat-ranking-top10')!.textContent = String(positions.filter((p) => p != null && p <= 10).length);
+    document.getElementById('stat-not-ranking')!.textContent = String(positions.filter((p) => p == null).length);
+    let up = 0;
+    let down = 0;
+    for (const tk of active) {
+      const [cur, prev] = history.get(tk.id) ?? [];
+      if (cur?.position != null && prev?.position != null) {
+        if (cur.position < prev.position) up++;
+        else if (cur.position > prev.position) down++;
+      }
+    }
+    const moved = document.getElementById('s-moved')!;
+    moved.textContent = up || down ? `${up} moved up, ${down} down since the last check` : 'No movement since the last check';
+    moved.className = 't-delta' + (up > down ? ' up' : down > up ? ' down' : '');
+    const lastCheck = rankSnapshots.reduce<string | null>((m, s) => (!m || s.checked_at > m ? s.checked_at : m), null);
+    document.getElementById('s-checked')!.textContent = lastCheck
+      ? `Last checked ${new Date(lastCheck).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
+      : '';
+
+    // Active first, by priority, then best position (not ranking last).
+    const sorted = [...targetKeywords].sort((a, b) => {
+      const sa = a.status === 'active' ? 0 : 1;
+      const sb = b.status === 'active' ? 0 : 1;
+      if (sa !== sb) return sa - sb;
+      const pa = PRIORITY_ORDER[a.priority] ?? 3;
+      const pb = PRIORITY_ORDER[b.priority] ?? 3;
+      if (pa !== pb) return pa - pb;
+      return (latestPos(a.id) ?? 999) - (latestPos(b.id) ?? 999);
+    });
+
+    keywordsEmpty.hidden = targetKeywords.length > 0;
+    keywordsList.innerHTML = sorted
+      .map((tk) => {
+        const h = history.get(tk.id) ?? [];
+        const pos = h[0]?.position ?? null;
+        const page = pageForKeyword(tk.keyword);
+        const tag = tk.status === 'achieved' ? '<span class="i-tag s-tag-good">Achieved</span>' : tk.status === 'paused' ? '<span class="i-tag">Paused</span>' : '';
+        const meta = [
+          tk.search_volume != null ? `${tk.search_volume.toLocaleString()} searches a month` : '',
+          `${tk.priority.charAt(0).toUpperCase()}${tk.priority.slice(1)} priority`,
+        ]
+          .filter(Boolean)
+          .join(' · ');
+        const pageLink = page
+          ? `<a href="${withBase('/' + page.slug)}" target="_blank" rel="noopener">${escapeHtml(page.title)}</a>`
+          : '<span class="s-nopage">No page yet</span>';
+        return `<li class="s-row${tk.status === 'paused' ? ' s-paused' : ''}" data-keyword-id="${tk.id}">
+          <span class="s-pos ${posClass(pos)}" title="${pos == null ? 'Not in the top 100 yet' : `Position ${pos} on Google`}">${pos ?? '—'}</span>
+          <div class="s-main"><b>${escapeHtml(tk.keyword)} ${tag}</b><small>${meta} · ${pageLink}</small></div>
+          ${sparkline(h)}
+          ${changeChip(h)}
+          ${isAgency ? `<button type="button" class="actions-toggle i-more" data-keyword-id="${tk.id}" aria-label="Actions for ${escapeHtml(tk.keyword)}">···</button>` : ''}
+        </li>`;
+      })
+      .join('');
+  }
+
+  // "+ Plan it" state: which searches already have a content plan item.
+  let plannedTargetKeywordIds = new Set<string>();
+  let plannedGapTitles = new Set<string>();
+
+  function planItButton(kind: 'gap' | 'competitor', opts: { targetKeywordId?: string; keyword: string; searchVolume: number | null; priority?: string; sourceNote?: string }): string {
+    const already =
+      kind === 'gap'
+        ? !!opts.targetKeywordId && plannedTargetKeywordIds.has(opts.targetKeywordId)
+        : plannedGapTitles.has(normalizeKeyword(opts.keyword));
+    if (already) return '<span class="i-tag s-tag-good">Planned</span>';
+    return `<button type="button" class="plan-it-button a-btn i-btn"
+      data-kind="${kind}"
+      data-target-keyword-id="${opts.targetKeywordId ?? ''}"
+      data-keyword="${escapeHtml(opts.keyword)}"
+      data-search-volume="${opts.searchVolume ?? ''}"
+      data-priority="${opts.priority ?? ''}"
+      data-source-note="${escapeHtml(opts.sourceNote ?? '')}"
+    >+ Plan it</button>`;
+  }
+
+  function renderContentGap() {
+    const missing = keywordsWithNoPage(
+      targetKeywords.filter((tk) => tk.status !== 'paused'),
+      pages.map((p) => p.focus_keyword)
+    );
+    contentGapEmpty.hidden = missing.length > 0;
+    document.getElementById('s-gap-count')!.textContent = missing.length ? String(missing.length) : '';
+    contentGapList.innerHTML = missing
+      .map(
+        (tk) => `<li><div><b>${escapeHtml(tk.keyword)}</b><small>${tk.search_volume != null ? `${tk.search_volume.toLocaleString()} a month · ` : ''}${escapeHtml(tk.priority)} priority</small></div>${planItButton('gap', { targetKeywordId: tk.id, keyword: tk.keyword, searchVolume: tk.search_volume, priority: tk.priority })}</li>`
+      )
+      .join('');
+  }
+
+  function renderGapTable() {
+    const latest = [...latestGapBatch(gapSnapshots)].sort((a, b) => (b.search_volume ?? 0) - (a.search_volume ?? 0));
+    gapEmpty.hidden = latest.length > 0;
+    gapList.innerHTML = latest
+      .map(
+        (g) => `<li><div><b>${escapeHtml(g.keyword)}</b><small>${g.search_volume != null ? `${g.search_volume.toLocaleString()} a month · ` : ''}${escapeHtml(g.competitor_domain)} ranks for it</small></div>${planItButton('competitor', { keyword: g.keyword, searchVolume: g.search_volume, sourceNote: `Competitor gap: ${g.competitor_domain} ranks for this` })}</li>`
+      )
+      .join('');
+  }
+
+  async function loadPlannedState() {
+    const { data } = await supabase.from('content_plan_items').select('target_keyword_id, title');
+    plannedTargetKeywordIds = new Set((data ?? []).map((r) => r.target_keyword_id).filter((v): v is string => !!v));
+    plannedGapTitles = new Set((data ?? []).map((r) => normalizeKeyword(r.title as string)));
+  }
+
+  async function handlePlanItClick(button: HTMLButtonElement) {
+    const kind = button.dataset.kind as 'gap' | 'competitor';
+    const keyword = button.dataset.keyword!;
+    const targetKeywordId = button.dataset.targetKeywordId || null;
+    const searchVolume = button.dataset.searchVolume ? Number(button.dataset.searchVolume) : null;
+    const priority = button.dataset.priority || null;
+    const sourceNote = button.dataset.sourceNote || null;
+
+    button.disabled = true;
+    const { error } = await supabase.from('content_plan_items').insert({
+      title: keyword,
+      keyword,
+      target_keyword_id: targetKeywordId,
+      search_volume: searchVolume,
+      priority,
+      source_note: sourceNote,
+    });
+    if (error) {
+      window.alert('Could not add to content plan: ' + error.message);
+      button.disabled = false;
+      return;
+    }
+    if (targetKeywordId) plannedTargetKeywordIds.add(targetKeywordId);
+    plannedGapTitles.add(normalizeKeyword(keyword));
+    if (kind === 'gap') renderContentGap();
+    else renderGapTable();
+  }
+
+  [contentGapList, gapList].forEach((list) =>
+    list.addEventListener('click', (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>('.plan-it-button');
+      if (button) handlePlanItClick(button);
+    })
+  );
+
+  // --- Add/edit (agency only: owners never see these controls) ---
+
+  function openModal(keywordId: string | null) {
+    editingKeywordId = keywordId;
+    keywordForm.reset();
+    keywordFormStatus.textContent = '';
+    const tk = keywordId ? targetKeywords.find((k) => k.id === keywordId) : null;
+    keywordModalTitle.textContent = tk ? 'Edit search' : 'Add a search';
+    if (tk) {
+      const f = keywordForm.elements;
+      (f.namedItem('keyword') as HTMLInputElement).value = tk.keyword;
+      (f.namedItem('priority') as HTMLSelectElement).value = tk.priority;
+      (f.namedItem('status') as HTMLSelectElement).value = tk.status;
+      (f.namedItem('search_volume') as HTMLInputElement).value = tk.search_volume != null ? String(tk.search_volume) : '';
+      (f.namedItem('mangools_tracked_keyword_id') as HTMLInputElement).value = tk.mangools_tracked_keyword_id ?? '';
+      (f.namedItem('notes') as HTMLTextAreaElement).value = tk.notes ?? '';
+    }
+    keywordModal.classList.remove('hidden');
+    keywordModal.classList.add('flex');
+  }
+
+  function closeKeywordModal() {
+    keywordModal.classList.add('hidden');
+    keywordModal.classList.remove('flex');
+    editingKeywordId = null;
+  }
+
+  addKeywordButton.addEventListener('click', () => openModal(null));
+  document.getElementById('keyword-modal-close-button')!.addEventListener('click', closeKeywordModal);
+
+  keywordForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    keywordFormStatus.textContent = '';
+    const formData = new FormData(keywordForm);
+    const keyword = (formData.get('keyword') as string).trim();
+    if (!keyword) return;
+    const searchVolumeRaw = (formData.get('search_volume') as string).trim();
+    const payload = {
+      keyword,
+      priority: formData.get('priority') as string,
+      status: formData.get('status') as string,
+      search_volume: searchVolumeRaw ? Number(searchVolumeRaw) : null,
+      mangools_tracked_keyword_id: (formData.get('mangools_tracked_keyword_id') as string).trim() || null,
+      notes: (formData.get('notes') as string).trim() || null,
+    };
+    const submitButton = keywordForm.querySelector('button[type="submit"]') as HTMLButtonElement;
+    submitButton.disabled = true;
+    const { error } = editingKeywordId
+      ? await supabase.from('target_keywords').update(payload).eq('id', editingKeywordId)
+      : await supabase.from('target_keywords').insert(payload);
+    submitButton.disabled = false;
+    if (error) {
+      keywordFormStatus.textContent = 'Could not save: ' + error.message;
+      return;
+    }
+    closeKeywordModal();
+    await loadKeywordsAndSnapshots();
+  });
+
+  // --- Row menu (agency only) ---
+
+  function closeActionsMenu() {
+    actionsMenu.classList.add('hidden');
+    actionsMenuKeywordId = null;
+  }
+
+  function openActionsMenuFor(button: HTMLElement, keywordId: string) {
+    actionsMenuKeywordId = keywordId;
+    const rect = button.getBoundingClientRect();
+    const openUpward = window.innerHeight - rect.bottom < 90;
+    const menuWidth = 160;
+    actionsMenu.style.left = `${Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8))}px`;
+    if (openUpward) {
+      actionsMenu.style.top = 'auto';
+      actionsMenu.style.bottom = `${window.innerHeight - rect.top + 4}px`;
+    } else {
+      actionsMenu.style.bottom = 'auto';
+      actionsMenu.style.top = `${rect.bottom + 4}px`;
+    }
+    actionsMenu.classList.remove('hidden');
+  }
+
+  document.addEventListener('click', (event) => {
+    if (actionsMenu.classList.contains('hidden')) return;
+    const target = event.target as HTMLElement;
+    if (target.closest('#actions-menu') || target.closest('.actions-toggle')) return;
+    closeActionsMenu();
+  });
+  window.addEventListener('scroll', closeActionsMenu, true);
+  window.addEventListener('resize', closeActionsMenu);
+
+  keywordsList.addEventListener('click', (event) => {
+    const toggle = (event.target as HTMLElement).closest<HTMLElement>('.actions-toggle');
+    if (!toggle) return;
+    const id = toggle.dataset.keywordId!;
+    if (actionsMenuKeywordId === id && !actionsMenu.classList.contains('hidden')) closeActionsMenu();
+    else openActionsMenuFor(toggle, id);
+  });
+
+  document.getElementById('actions-menu-edit')!.addEventListener('click', () => {
+    const id = actionsMenuKeywordId;
+    closeActionsMenu();
+    if (id) openModal(id);
+  });
+
+  document.getElementById('actions-menu-delete')!.addEventListener('click', async () => {
+    const id = actionsMenuKeywordId;
+    closeActionsMenu();
+    const tk = targetKeywords.find((k) => k.id === id);
+    if (!tk) return;
+    if (!window.confirm(`Delete "${tk.keyword}"? This also removes its rank history. This cannot be undone.`)) return;
+    const { error } = await supabase.from('target_keywords').delete().eq('id', tk.id);
+    if (error) {
+      window.alert('Could not delete: ' + error.message);
+      return;
+    }
+    await loadKeywordsAndSnapshots();
+  });
+
+  // --- Loading ---
+
+  async function loadPages() {
+    const { data } = await supabase.from('pages').select('id, title, slug, focus_keyword');
+    pages = (data as PageRow[]) ?? [];
+  }
+
+  async function loadKeywordsAndSnapshots() {
+    const [{ data: keywordsData, error }, { data: snapshotsData }] = await Promise.all([
+      supabase.from('target_keywords').select('*').order('keyword', { ascending: true }),
+      supabase.from('keyword_rank_snapshots').select('*').order('checked_at', { ascending: false }),
+    ]);
+    if (error) {
+      keywordsList.innerHTML = `<li class="i-hint r-err">Could not load tracked searches: ${escapeHtml(error.message)}</li>`;
+      return;
+    }
+    targetKeywords = (keywordsData as TargetKeyword[]) ?? [];
+    rankSnapshots = (snapshotsData as RankSnapshot[]) ?? [];
+    renderKeywords();
+    renderContentGap();
+  }
+
+  async function loadGapSnapshots() {
+    const { data } = await supabase.from('keyword_gap_snapshots').select('*').order('checked_at', { ascending: false });
+    gapSnapshots = (data as GapSnapshot[]) ?? [];
+    renderGapTable();
+  }
+
+  initAdminAuth(
+    async (adminUser) => {
+      isAgency = adminUser.role === 'agency';
+      addKeywordButton.hidden = !isAgency;
+      await Promise.all([loadPages(), loadPlannedState()]);
+      await Promise.all([loadKeywordsAndSnapshots(), loadGapSnapshots()]);
+    },
+    { allowedRoles: ['owner', 'agency'] }
+  );
+</script>

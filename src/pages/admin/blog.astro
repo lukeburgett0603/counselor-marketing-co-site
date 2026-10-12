@@ -6,34 +6,36 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
 
 <AdminLayout title="Blog posts | Admin" current="blog">
   <div id="blog-list-view">
-    <div class="mb-4 flex items-center justify-between">
-      <p id="blog-count" class="text-sm text-slate-600"></p>
-      <button id="new-post-button" class="rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
-        New post
-      </button>
+    <p class="i-intro">Write, schedule and publish articles for your website.</p>
+    <div class="i-toolbar">
+      <div class="i-seg" role="group" aria-label="Show" id="bp-filter">
+        <button type="button" data-filter="all" aria-pressed="true">All <b class="a-num" id="bp-n-all"></b></button>
+        <button type="button" data-filter="published" aria-pressed="false">Published <b class="a-num" id="bp-n-pub"></b></button>
+        <button type="button" data-filter="draft" aria-pressed="false">Drafts <b class="a-num" id="bp-n-draft"></b></button>
+      </div>
+      <div class="i-actions">
+        <label class="i-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+          <input id="bp-search" type="text" placeholder="Search posts" aria-label="Search posts" />
+        </label>
+        <button id="new-post-button" type="button" class="a-btn a-btn-primary i-btn">+ New post</button>
+      </div>
     </div>
-    <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-      <table class="w-full text-left text-sm">
-        <thead class="border-b border-slate-200 bg-slate-50">
-          <tr>
-            <th class="px-4 py-3 font-semibold">Title</th>
-            <th class="px-4 py-3 font-semibold">Category</th>
-            <th class="px-4 py-3 font-semibold">Author</th>
-            <th class="px-4 py-3 font-semibold">Status</th>
-            <th class="px-4 py-3 font-semibold">Date</th>
-            <th class="px-4 py-3 font-semibold"></th>
-          </tr>
-        </thead>
-        <tbody id="blog-table-body"></tbody>
-      </table>
-    </div>
+    <section class="t-card bp-listcard">
+      <h2>Posts<span class="t-aside" id="blog-count"></span></h2>
+      <ul id="blog-table-body" class="bp-list"></ul>
+      <div id="bp-empty" class="t-empty" hidden></div>
+    </section>
   </div>
 
-  <div id="blog-edit-view" class="hidden max-w-2xl">
-    <button id="back-to-list-button" class="mb-4 text-sm text-brand-primary hover:underline">&larr; Back to all posts</button>
-    <h2 id="edit-heading" class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold text-brand-ink">New post</h2>
-    <p id="not-your-post-note" class="mb-4 hidden text-sm text-amber-700">
-      This post was created by someone else — you can view it, but only its owner or the site owner can edit it.
+  <div id="blog-edit-view" class="hidden">
+    <div class="i-detail-top">
+      <button id="back-to-list-button" type="button" class="a-link">&larr; All posts</button>
+      <span class="bp-state" id="bp-state"></span>
+    </div>
+    <h2 id="edit-heading" class="sr-only">New post</h2>
+    <p id="not-your-post-note" class="i-banner hidden">
+      Someone else wrote this post. You can read it, but only its author or the practice owner can edit it.
     </p>
     <!--
       Shown only when this drafting session came from a Content Plan
@@ -44,14 +46,14 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
       closed. See admin/content-plan.astro's startBlogDraftHandoff() and
       applyDraftHandoffIfPresent() below.
     -->
-    <div id="plan-context-panel" class="hidden mb-4 rounded-lg border border-brand-primary/30 bg-brand-neutral p-4">
-      <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-brand-primary">Drafting from Content Plan</p>
-      <p id="plan-context-title" class="mb-2 font-[family-name:var(--font-heading)] text-base font-bold text-brand-ink"></p>
-      <p id="plan-context-keyword-row" class="mb-2 text-sm text-slate-700"></p>
-      <p id="plan-context-question" class="mb-3 hidden text-sm italic text-slate-600"></p>
-      <details class="text-xs text-slate-600">
-        <summary class="cursor-pointer font-semibold text-brand-primary">How to work the keyword in naturally</summary>
-        <ul class="mt-2 list-disc space-y-1 pl-4">
+    <div id="plan-context-panel" class="hidden t-card bp-plan">
+      <p class="bp-plan-k">Drafting from your Content plan</p>
+      <p id="plan-context-title" class="bp-plan-t"></p>
+      <p id="plan-context-keyword-row" class="bp-plan-kw"></p>
+      <p id="plan-context-question" class="hidden bp-plan-q"></p>
+      <details class="r-rules">
+        <summary>How to work the keyword in naturally</summary>
+        <ul>
           <li>Work the keyword's core topic words into the post title — title tags are one of the strongest on-page SEO signals, and the first thing both search engines and AI answer engines match against. Skip the literal "near me"/long-tail wording in the headline itself; keep the substantive topic words instead.</li>
           <li>Use the exact phrase once in a heading, only if it fits naturally there.</li>
           <li>State the core fact plainly within the first ~100 words.</li>
@@ -61,87 +63,81 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
         </ul>
       </details>
     </div>
-    <form id="post-form" class="space-y-4">
-      <div>
-        <label class="mb-1 block text-sm font-semibold text-slate-700">Title</label>
-        <input id="field-title" name="title" type="text" required class="w-full rounded-md border border-slate-300 px-4 py-2" />
-      </div>
-      <div>
-        <label class="mb-1 block text-sm font-semibold text-slate-700">Slug</label>
-        <div class="flex items-center gap-1 text-sm text-slate-500">
-          <span>/</span>
-          <input id="field-slug" name="slug" type="text" required class="w-full rounded-md border border-slate-300 px-4 py-2" />
-        </div>
-      </div>
-      <div>
-        <label class="mb-1 block text-sm font-semibold text-slate-700">Category</label>
-        <select id="field-category" name="category" required class="w-full rounded-md border border-slate-300 px-4 py-2"></select>
-      </div>
-      <div>
-        <label class="mb-1 block text-sm font-semibold text-slate-700">Hero image (optional)</label>
-        <div class="flex flex-wrap items-center gap-2">
-          <button
-            id="search-unsplash-button"
-            type="button"
-            class="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            Search Unsplash
-          </button>
-          <span class="text-xs text-slate-400">or</span>
-          <label
-            for="field-image-file"
-            class="inline-block cursor-pointer rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            Choose File
-          </label>
-          <input id="field-image-file" type="file" accept="image/*" class="sr-only" />
-        </div>
-        <p id="field-image-status" class="mt-2 text-xs text-slate-500"></p>
-        <img id="field-image-preview" class="mt-2 hidden h-32 w-auto rounded-md border border-slate-200 object-cover" />
-        <input id="field-image-alt" name="imageAlt" type="text" placeholder="Describe what's in the photo" class="mt-2 w-full rounded-md border border-slate-300 px-4 py-2 text-sm" />
-      </div>
-      <div>
-        <label class="mb-1 block text-sm font-semibold text-slate-700">Meta description</label>
-        <textarea id="field-meta" name="metaDescription" rows="2" required class="w-full rounded-md border border-slate-300 px-4 py-2"></textarea>
-      </div>
-      <div>
-        <label class="mb-1 block text-sm font-semibold text-slate-700">Post content</label>
-        <RichTextEditor
-          id="field-copy"
-          helpText="Heading 1 is reserved for the post title — use Heading 2 and Heading 3 for section headings within the post."
-        />
-      </div>
-      <div>
-        <label class="mb-1 block text-sm font-semibold text-slate-700">Key takeaways (one per line, optional)</label>
-        <textarea id="field-takeaways" name="takeaways" rows="3" class="w-full rounded-md border border-slate-300 px-4 py-2"></textarea>
-      </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label class="mb-1 block text-sm font-semibold text-slate-700">Author name</label>
-          <input id="field-author" name="author" type="text" required class="w-full rounded-md border border-slate-300 px-4 py-2" />
-        </div>
-        <div>
-          <label class="mb-1 block text-sm font-semibold text-slate-700">Credentials</label>
-          <input id="field-credentials" name="credentials" type="text" placeholder="LPC, LMFT" class="w-full rounded-md border border-slate-300 px-4 py-2" />
-        </div>
-      </div>
-      <div>
-        <label class="mb-1 block text-sm font-semibold text-slate-700">Publish date</label>
-        <input id="field-date" name="datePublished" type="date" required class="w-full rounded-md border border-slate-300 px-4 py-2" />
+    <form id="post-form" class="bp-form">
+      <div class="bp-main">
+        <section class="t-card bp-write">
+          <input id="field-title" name="title" type="text" required placeholder="Post title" aria-label="Title" class="bp-title" />
+          <div class="bp-slug">
+            <span>Web address: /</span>
+            <input id="field-slug" name="slug" type="text" required aria-label="Web address" />
+          </div>
+          <div class="bp-copy">
+            <RichTextEditor
+              id="field-copy"
+              helpText="Heading 1 is reserved for the post title. Use Heading 2 and Heading 3 for sections within the post."
+            />
+          </div>
+        </section>
+        <section class="t-card">
+          <h2>Key takeaways<span class="t-aside">Optional, one per line</span></h2>
+          <textarea id="field-takeaways" name="takeaways" rows="3" class="bp-area" placeholder="Shown as a short summary box at the top of the post"></textarea>
+        </section>
       </div>
 
-      <div class="flex items-center gap-3 pt-2">
-        <button id="save-draft-button" type="button" class="rounded-md border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-          Save draft
-        </button>
-        <button id="publish-button" type="button" class="rounded-md bg-brand-accent px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90">
-          Publish
-        </button>
-        <button id="delete-post-button" type="button" class="ml-auto hidden text-sm text-red-600 hover:underline">
-          Delete post
-        </button>
-      </div>
-      <p id="post-form-status" class="text-sm" role="status"></p>
+      <aside class="bp-side">
+        <section class="t-card i-fields">
+          <div class="i-field">
+            <label for="field-date">Publish date</label>
+            <input id="field-date" name="datePublished" type="date" required />
+          </div>
+          <div class="i-field">
+            <label for="field-category">Category</label>
+            <select id="field-category" name="category" required></select>
+          </div>
+          <div class="i-field">
+            <label for="field-author">Author</label>
+            <input id="field-author" name="author" type="text" required />
+          </div>
+          <div class="i-field">
+            <label for="field-credentials">Credentials</label>
+            <input id="field-credentials" name="credentials" type="text" placeholder="LPC, LMFT" />
+          </div>
+          <div class="bp-actions">
+            <button id="publish-button" type="button" class="a-btn a-btn-primary">Publish</button>
+            <button id="save-draft-button" type="button" class="a-btn">Save draft</button>
+          </div>
+          <p id="post-form-status" class="i-hint" role="status"></p>
+          <button id="delete-post-button" type="button" class="a-link i-danger hidden bp-delete">Delete post</button>
+        </section>
+
+        <section class="t-card i-fields">
+          <h2>Hero image<span class="t-aside">Optional</span></h2>
+          <img id="field-image-preview" class="hidden bp-img" alt="" />
+          <div class="i-inline">
+            <button id="search-unsplash-button" type="button" class="a-btn i-btn">Search Unsplash</button>
+            <label for="field-image-file" class="a-btn i-btn">Upload</label>
+            <input id="field-image-file" type="file" accept="image/*" class="sr-only" />
+          </div>
+          <p id="field-image-status" class="i-hint"></p>
+          <div class="i-field">
+            <label for="field-image-alt">Describe the photo</label>
+            <input id="field-image-alt" name="imageAlt" type="text" placeholder="For screen readers and Google" />
+          </div>
+        </section>
+
+        <section class="t-card i-fields">
+          <h2>Google preview</h2>
+          <div class="bp-serp" aria-hidden="true">
+            <span class="bp-serp-url" id="bp-serp-url"></span>
+            <span class="bp-serp-t" id="bp-serp-t"></span>
+            <span class="bp-serp-d" id="bp-serp-d"></span>
+          </div>
+          <div class="i-field">
+            <label for="field-meta">Search description <span class="bp-count" id="bp-meta-count"></span></label>
+            <textarea id="field-meta" name="metaDescription" rows="3" required class="bp-area"></textarea>
+          </div>
+        </section>
+      </aside>
     </form>
   </div>
 
@@ -153,6 +149,7 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
   import { initRichTextEditor } from '../../lib/richTextEditor';
   import { triggerRebuild } from '../../lib/publishFunction';
   import { initUnsplashSearchModal, type UnsplashPhoto } from '../../lib/unsplashSearch';
+  import { withBase } from '../../lib/url';
 
   type BlogPost = {
     id: string;
@@ -290,21 +287,84 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
       return;
     }
     posts = data as BlogPost[];
-    blogCount.textContent = `${posts.length} post${posts.length === 1 ? '' : 's'}`;
-    tableBody.innerHTML = posts
-      .map(
-        (post) => `
-      <tr class="border-b border-slate-100 last:border-0">
-        <td class="px-4 py-3">${escapeHtml(post.title)}</td>
-        <td class="px-4 py-3">${escapeHtml(post.category ?? '')}</td>
-        <td class="px-4 py-3">${escapeHtml(post.author_name ?? '')}</td>
-        <td class="px-4 py-3">${post.status === 'content-complete' ? '<span class="text-emerald-700">Published</span>' : '<span class="text-slate-500">Draft</span>'}</td>
-        <td class="px-4 py-3">${post.date_published ?? ''}</td>
-        <td class="px-4 py-3 text-right"><button data-edit-id="${post.id}" class="edit-post-button text-brand-primary hover:underline">Edit</button></td>
-      </tr>`
-      )
+    renderList();
+  }
+
+  // --- List (admin redesign): filter + search over the loaded posts ---
+  let listFilter: 'all' | 'published' | 'draft' = 'all';
+  const isPublished = (p: BlogPost) => p.status === 'content-complete';
+  const searchField = document.getElementById('bp-search') as HTMLInputElement;
+
+  function postDate(p: BlogPost): string {
+    return p.date_published
+      ? new Date(p.date_published + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+      : 'No date';
+  }
+
+  function renderList() {
+    const pub = posts.filter(isPublished).length;
+    document.getElementById('bp-n-all')!.textContent = String(posts.length);
+    document.getElementById('bp-n-pub')!.textContent = String(pub);
+    document.getElementById('bp-n-draft')!.textContent = String(posts.length - pub);
+    const q = searchField.value.trim().toLowerCase();
+    const rows = posts.filter(
+      (p) =>
+        (listFilter === 'all' || (listFilter === 'published') === isPublished(p)) &&
+        (!q || [p.title, p.category ?? '', p.author_name ?? ''].some((v) => v.toLowerCase().includes(q)))
+    );
+    blogCount.textContent = `${rows.length} post${rows.length === 1 ? '' : 's'}`;
+    const empty = document.getElementById('bp-empty')!;
+    empty.hidden = rows.length > 0;
+    empty.innerHTML = posts.length
+      ? '<b>No posts match.</b>Try a different filter or search.'
+      : '<b>No posts yet.</b>Start one with New post, or draft one from an idea in your Content plan.';
+    tableBody.innerHTML = rows
+      .map((post) => {
+        const img = post.images?.hero?.url;
+        const today = new Date().toISOString().slice(0, 10);
+        const scheduled = isPublished(post) && post.date_published && post.date_published > today;
+        const state = !isPublished(post) ? '<span class="bp-pill">Draft</span>' : scheduled ? '<span class="bp-pill bp-pill-s">Scheduled</span>' : '<span class="bp-pill bp-pill-p">Published</span>';
+        return `<li class="bp-row" data-edit-id="${post.id}" tabindex="0">
+          <span class="bp-thumb">${img ? `<img src="${escapeHtml(img)}" alt="" loading="lazy" />` : `<span>${escapeHtml((post.title.trim()[0] ?? '?').toUpperCase())}</span>`}</span>
+          <div class="bp-row-main"><b>${escapeHtml(post.title)}</b><small>${escapeHtml([post.category, post.author_name].filter(Boolean).join(' · '))}</small></div>
+          ${state}
+          <span class="bp-date i-hide-sm">${postDate(post)}</span>
+        </li>`;
+      })
       .join('');
   }
+
+  document.getElementById('bp-filter')!.addEventListener('click', (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLElement>('[data-filter]');
+    if (!button) return;
+    listFilter = button.dataset.filter as typeof listFilter;
+    document.querySelectorAll('#bp-filter [data-filter]').forEach((b) => b.setAttribute('aria-pressed', String(b === button)));
+    renderList();
+  });
+  searchField.addEventListener('input', renderList);
+
+  // --- Editor extras: state chip and live Google preview ---
+  const stateChip = document.getElementById('bp-state')!;
+  function renderState(post: BlogPost | null) {
+    stateChip.innerHTML = !post
+      ? '<span class="bp-pill">New post</span>'
+      : isPublished(post)
+        ? `<span class="bp-pill bp-pill-p">Published</span> <a class="a-link" href="${withBase('/' + post.slug.replace(/^\/+/, ''))}" target="_blank" rel="noopener">View post</a>`
+        : '<span class="bp-pill">Draft</span>';
+  }
+
+  function renderSerp() {
+    const title = titleField.value.trim() || 'Post title';
+    document.getElementById('bp-serp-t')!.textContent = `${title} | Blog`;
+    document.getElementById('bp-serp-url')!.textContent = `${location.host}${withBase('/' + (slugField.value.trim() || 'post-address'))}`;
+    const meta = metaField.value.trim();
+    document.getElementById('bp-serp-d')!.textContent = meta || 'Your search description shows here. Write one or two sentences about what the reader will learn.';
+    // Google typically shows about 150-160 characters of a description.
+    const count = document.getElementById('bp-meta-count')!;
+    count.textContent = `${meta.length} / 160`;
+    count.className = 'bp-count' + (meta.length > 160 ? ' r-warn' : '');
+  }
+  [titleField, slugField, metaField].forEach((f) => f.addEventListener('input', renderSerp));
 
   function showList() {
     editView.classList.add('hidden');
@@ -336,6 +396,8 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
     editHeading.textContent = 'New post';
     dateField.value = new Date().toISOString().slice(0, 10);
     setFormReadOnly(false);
+    renderState(null);
+    renderSerp();
   }
 
   // Staff can view any post (the list itself, and the pages SELECT
@@ -394,6 +456,8 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
     editHeading.textContent = 'Edit post';
     deleteButton.classList.remove('hidden');
     setFormReadOnly(!canEditPost(post));
+    renderState(post);
+    renderSerp();
   }
 
   newPostButton.addEventListener('click', () => {
@@ -451,15 +515,18 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
 
   backButton.addEventListener('click', showList);
 
-  tableBody.addEventListener('click', (event) => {
-    const target = event.target as HTMLElement;
-    if (!target.classList.contains('edit-post-button')) return;
-    const id = target.dataset.editId!;
-    const post = posts.find((p) => p.id === id);
+  function openPostFrom(target: HTMLElement) {
+    const row = target.closest<HTMLElement>('[data-edit-id]');
+    const post = row && posts.find((p) => p.id === row.dataset.editId);
     if (post) {
       loadPostIntoForm(post);
       showEdit();
+      window.scrollTo(0, 0);
     }
+  }
+  tableBody.addEventListener('click', (event) => openPostFrom(event.target as HTMLElement));
+  tableBody.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') openPostFrom(event.target as HTMLElement);
   });
 
   imageFileField.addEventListener('change', async () => {
@@ -510,12 +577,12 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
     const validationError = validate();
     if (validationError) {
       formStatus.textContent = validationError;
-      formStatus.className = 'text-sm text-red-600';
+      formStatus.className = 'i-hint r-err';
       return;
     }
 
     formStatus.textContent = publish ? 'Publishing...' : 'Saving...';
-    formStatus.className = 'text-sm text-slate-600';
+    formStatus.className = 'i-hint';
     saveDraftButton.setAttribute('disabled', 'true');
     publishButton.setAttribute('disabled', 'true');
 
@@ -586,7 +653,7 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
 
     if (error) {
       formStatus.textContent = 'Could not save: ' + error.message;
-      formStatus.className = 'text-sm text-red-600';
+      formStatus.className = 'i-hint r-err';
       saveDraftButton.removeAttribute('disabled');
       publishButton.removeAttribute('disabled');
       return;
@@ -611,19 +678,21 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
       const result = await triggerRebuild();
       if (result.ok) {
         formStatus.textContent = 'Published! Your blog post will be live on your site shortly.';
-        formStatus.className = 'text-sm text-emerald-700';
+        formStatus.className = 'i-hint r-ok';
       } else {
         formStatus.textContent = "Saved, but we couldn't start an update automatically — your post will go live the next time the site updates.";
-        formStatus.className = 'text-sm text-amber-700';
+        formStatus.className = 'i-hint r-warn';
       }
     } else {
       formStatus.textContent = 'Draft saved.';
-      formStatus.className = 'text-sm text-emerald-700';
+      formStatus.className = 'i-hint r-ok';
     }
 
     saveDraftButton.removeAttribute('disabled');
     publishButton.removeAttribute('disabled');
     await loadPosts();
+    renderState(posts.find((p) => p.id === editingId) ?? null);
+    deleteButton.classList.remove('hidden');
   }
 
   saveDraftButton.addEventListener('click', () => savePost(false));

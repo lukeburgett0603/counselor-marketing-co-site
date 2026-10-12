@@ -1,149 +1,150 @@
 ---
-// Counselor Marketing Co.-only — a private directory of every client
-// site's admin URL. Not part of the shared template (see
-// supabase/migrations/0014_client_directory.sql), and deliberately not
-// added to AdminLayout's shared nav — reachable by URL, bookmarked.
+// Counselor Marketing Co.-only: a private directory of every client site's
+// admin, for jumping into a client's dashboard (see
+// supabase/migrations/0014_client_directory.sql). In CMC's own menu under
+// Clients since the 2026-10-12 admin redesign. Agency logins only (RLS).
 import AdminLayout from '../../layouts/AdminLayout.astro';
 ---
 
 <AdminLayout title="Client directory | Admin" current="directory">
-  <div class="max-w-2xl space-y-10">
-    <section>
-      <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold text-brand-ink">Client sites</h2>
-      <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-        <table class="w-full text-left text-sm">
-          <thead class="border-b border-slate-200 bg-slate-50">
-            <tr>
-              <th class="px-4 py-3 font-semibold">Name</th>
-              <th class="px-4 py-3 font-semibold">Admin URL</th>
-              <th class="px-4 py-3 font-semibold">Notes</th>
-              <th class="px-4 py-3 font-semibold"></th>
-            </tr>
-          </thead>
-          <tbody id="directory-table-body"></tbody>
-        </table>
-      </div>
-    </section>
+  <p class="i-intro">Every client's dashboard, one click away.</p>
 
-    <section>
-      <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold text-brand-ink">Add a client</h2>
-      <form id="add-form" class="space-y-4">
+  <div class="i-filters">
+    <p id="cd-count" class="i-count"></p>
+    <button id="cd-add-button" type="button" class="a-btn a-btn-primary i-btn">+ Add client</button>
+  </div>
+
+  <div class="i-list t-card">
+    <table class="i-table">
+      <thead>
+        <tr>
+          <th>Client</th>
+          <th class="i-hide-sm">Notes</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="cd-body"></tbody>
+    </table>
+    <div id="cd-empty" class="t-empty" hidden><b>No clients listed yet.</b>Add each client's dashboard address (their site, then /admin) so you can jump in from here.</div>
+  </div>
+
+  <div id="cd-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+    <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+      <div class="mb-4 flex items-center justify-between">
+        <p class="font-semibold text-brand-ink">Add a client</p>
+        <button id="cd-close" type="button" class="text-sm text-slate-500 hover:text-slate-800">Close</button>
+      </div>
+      <form id="cd-form" class="space-y-3">
         <div>
-          <label class="mb-1 block text-sm font-semibold text-slate-700">Name</label>
-          <input id="add-name" type="text" required class="w-full rounded-md border border-slate-300 px-4 py-2" />
+          <label for="cd-name" class="block text-xs font-semibold text-slate-500">Name</label>
+          <input id="cd-name" name="name" type="text" required placeholder="Freedom Counseling Services" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
         </div>
         <div>
-          <label class="mb-1 block text-sm font-semibold text-slate-700">Admin URL</label>
-          <input
-            id="add-url"
-            type="url"
-            placeholder="https://clientdomain.com/admin/leads"
-            required
-            class="w-full rounded-md border border-slate-300 px-4 py-2"
-          />
+          <label for="cd-url" class="block text-xs font-semibold text-slate-500">Dashboard address</label>
+          <input id="cd-url" name="admin_url" type="url" required placeholder="https://clientdomain.com/admin" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
         </div>
         <div>
-          <label class="mb-1 block text-sm font-semibold text-slate-700">Notes (optional)</label>
-          <textarea id="add-notes" rows="2" class="w-full rounded-md border border-slate-300 px-4 py-2"></textarea>
+          <label for="cd-notes" class="block text-xs font-semibold text-slate-500">Notes (optional)</label>
+          <textarea id="cd-notes" name="notes" rows="2" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"></textarea>
         </div>
-        <button
-          id="add-button"
-          type="button"
-          class="rounded-md bg-brand-primary px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90"
-        >
-          Add
-        </button>
-        <p id="add-status" class="text-sm" role="status"></p>
+        <p id="cd-status" class="text-sm text-red-600"></p>
+        <button type="submit" class="a-btn a-btn-primary w-full">Add client</button>
       </form>
-    </section>
+    </div>
   </div>
 </AdminLayout>
 
 <script>
   import { supabase, initAdminAuth } from '../../lib/adminAuth';
 
-  type ClientSite = {
-    id: string;
-    name: string;
-    admin_url: string;
-    notes: string | null;
+  type ClientSite = { id: string; name: string; admin_url: string; notes: string | null };
+  let sites: ClientSite[] = [];
+
+  const esc = (v: string) => {
+    const d = document.createElement('div');
+    d.textContent = v;
+    return d.innerHTML;
   };
+  const modal = document.getElementById('cd-modal')!;
+  const form = document.getElementById('cd-form') as HTMLFormElement;
+  const status = document.getElementById('cd-status')!;
 
-  const tableBody = document.getElementById('directory-table-body')!;
-  const addName = document.getElementById('add-name') as HTMLInputElement;
-  const addUrl = document.getElementById('add-url') as HTMLInputElement;
-  const addNotes = document.getElementById('add-notes') as HTMLTextAreaElement;
-  const addButton = document.getElementById('add-button')!;
-  const addStatus = document.getElementById('add-status')!;
-
-  function escapeHtml(value: string): string {
-    const div = document.createElement('div');
-    div.textContent = value;
-    return div.innerHTML;
-  }
-
-  async function loadDirectory() {
-    const { data, error } = await supabase.from('client_sites').select('*').order('name');
-    if (error) {
-      tableBody.innerHTML = `<tr><td colspan="4" class="px-4 py-3 text-sm text-red-600">Could not load: ${escapeHtml(error.message)}</td></tr>`;
-      return;
-    }
-    const sites = (data ?? []) as ClientSite[];
-    tableBody.innerHTML = sites
-      .map(
-        (site) => `
-      <tr class="border-b border-slate-100 last:border-0">
-        <td class="px-4 py-3">${escapeHtml(site.name)}</td>
-        <td class="px-4 py-3"><a href="${escapeHtml(site.admin_url)}" target="_blank" rel="noopener" class="text-brand-primary hover:underline">${escapeHtml(site.admin_url)}</a></td>
-        <td class="px-4 py-3 text-slate-600">${escapeHtml(site.notes ?? '')}</td>
-        <td class="px-4 py-3 text-right"><button data-remove-id="${site.id}" class="remove-button text-red-600 hover:underline">Remove</button></td>
-      </tr>`
-      )
+  function render() {
+    document.getElementById('cd-count')!.textContent = `${sites.length} client${sites.length === 1 ? '' : 's'}`;
+    document.getElementById('cd-empty')!.hidden = sites.length > 0;
+    document.getElementById('cd-body')!.innerHTML = sites
+      .map((s) => {
+        const safe = /^https?:\/\//i.test(s.admin_url.trim());
+        let host = s.admin_url;
+        try {
+          host = new URL(s.admin_url).host;
+        } catch {
+          /* keep as typed */
+        }
+        return `<tr>
+          <td><div class="i-who"><div><b>${esc(s.name)}</b><small>${esc(host)}</small></div></div></td>
+          <td class="i-hide-sm i-muted">${esc(s.notes ?? '')}</td>
+          <td class="r-num"><span class="i-inline" style="justify-content:flex-end">${safe ? `<a class="a-btn a-btn-primary i-btn" href="${esc(s.admin_url.trim())}" target="_blank" rel="noopener">Open dashboard</a>` : ''}<button type="button" class="a-btn i-btn i-danger" data-remove="${s.id}">Remove</button></span></td>
+        </tr>`;
+      })
       .join('');
   }
 
-  tableBody.addEventListener('click', async (event) => {
-    const target = event.target as HTMLElement;
-    const removeId = target.dataset.removeId;
-    if (!removeId) return;
-    if (!window.confirm('Remove this client from the directory?')) return;
-    const { error } = await supabase.from('client_sites').delete().eq('id', removeId);
+  document.getElementById('cd-body')!.addEventListener('click', async (e) => {
+    const id = (e.target as HTMLElement).closest<HTMLElement>('[data-remove]')?.dataset.remove;
+    if (!id) return;
+    const s = sites.find((x) => x.id === id);
+    if (!s || !window.confirm(`Remove ${s.name} from the directory? This only removes the shortcut, not their site.`)) return;
+    const { error } = await supabase.from('client_sites').delete().eq('id', id);
     if (error) {
       window.alert('Could not remove: ' + error.message);
       return;
     }
-    await loadDirectory();
+    sites = sites.filter((x) => x.id !== id);
+    render();
   });
 
-  addButton.addEventListener('click', async () => {
-    const name = addName.value.trim();
-    const url = addUrl.value.trim();
-    if (!name || !url) {
-      addStatus.textContent = 'Name and admin URL are required.';
-      addStatus.className = 'text-sm text-red-600';
-      return;
-    }
-    const { error } = await supabase.from('client_sites').insert({
-      name,
-      admin_url: url,
-      notes: addNotes.value.trim() || null,
-    });
+  document.getElementById('cd-add-button')!.addEventListener('click', () => {
+    form.reset();
+    status.textContent = '';
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  });
+  document.getElementById('cd-close')!.addEventListener('click', () => {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = new FormData(form);
+    const row = {
+      name: ((data.get('name') as string) ?? '').trim(),
+      admin_url: ((data.get('admin_url') as string) ?? '').trim(),
+      notes: ((data.get('notes') as string) ?? '').trim() || null,
+    };
+    if (!row.name || !row.admin_url) return;
+    const { data: inserted, error } = await supabase.from('client_sites').insert(row).select().single();
     if (error) {
-      addStatus.textContent = 'Could not add: ' + error.message;
-      addStatus.className = 'text-sm text-red-600';
+      status.textContent = 'Could not add: ' + error.message;
       return;
     }
-    addStatus.textContent = 'Added.';
-    addStatus.className = 'text-sm text-emerald-700';
-    addName.value = '';
-    addUrl.value = '';
-    addNotes.value = '';
-    await loadDirectory();
+    sites.push(inserted as ClientSite);
+    sites.sort((a, b) => a.name.localeCompare(b.name));
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    render();
   });
 
-  async function onAuthed() {
-    await loadDirectory();
+  async function load() {
+    const { data, error } = await supabase.from('client_sites').select('*').order('name');
+    if (error) {
+      document.getElementById('cd-count')!.textContent = 'Could not load: ' + error.message;
+      return;
+    }
+    sites = (data ?? []) as ClientSite[];
+    render();
   }
 
-  initAdminAuth(onAuthed, { allowedRoles: ['agency'] });
+  initAdminAuth(load, { allowedRoles: ['agency'] });
 </script>

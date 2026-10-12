@@ -332,7 +332,7 @@ async function sendEmails(db: SupabaseClient, a: Record<string, any>, data: Reco
     reply_to: a.email,
     subject: `Audit sent: ${a.practice_name} (${a.name ?? a.email})`,
     html: `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.5;color:#18181b">
-<p><a href="${link}">Open ${practice}'s audit</a></p>
+<p><a href="${link}&preview=1">Open ${practice}'s audit</a> (opening it from here doesn't count as their view)</p>
 ${rows.filter(([, v]) => v).map(([k, v]) => `<p style="margin:0 0 6px"><strong>${esc(k)}:</strong> ${esc(String(v))}</p>`).join('\n')}
 <p style="font-size:12px;color:#71717a;margin-top:16px">Reply to this email to write to ${esc(a.name ?? a.email)} directly.</p>
 </div>`,

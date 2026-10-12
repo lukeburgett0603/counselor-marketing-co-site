@@ -1,0 +1,204 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+---
+
+<!--
+  Tier 2 — Cloudflare Web Analytics, sourced from the get-traffic-stats
+  Edge Function. Generalized into the template for the first time as
+  part of the "Analytics Dashboards" nav reorg (see CLAUDE.md) — this
+  used to be Freedom Counseling Services-only code (their own Cloudflare
+  account/credentials), left out of the template deliberately at the
+  time rather than half-generalized. Now that it has its own dedicated
+  page alongside Leads/Blog/GBP/SEO under one consistent nav group,
+  keeping it Freedom-only would have made "Analytics Dashboards" an
+  inconsistent folder from one client site to the next — see the real-
+  bugs list's own lesson from Tier 2's original mistake ("bring the Edge
+  Function AND this admin UI wiring together, not just the function").
+  A client with no `business.cloudflare_beacon_token`/Edge Function
+  secrets configured just sees the empty state below.
+
+  Redesigned in phase 3 of the admin redesign (2026-10-07): visits lead
+  (people, not page loads), an interactive 30-day chart, inquiries per
+  100 visits, the busiest weekday, and top pages with readable names.
+  The old CLAUDE.md "Pageviews-per-day chart" notes (flex column bars)
+  no longer apply: the chart is an SVG now.
+-->
+<AdminLayout title="Website traffic | Admin" current="analytics-traffic">
+  <p class="i-intro">How many people visit your website, and where they go.</p>
+
+  <div class="t-grid m-loading" id="w-loading" aria-hidden="true">
+    <div class="t-skel t-s12" style="height:110px"></div>
+    <div class="t-skel t-s12" style="height:280px"></div>
+  </div>
+
+  <section id="traffic-empty" class="t-card" hidden>
+    <div class="t-empty">
+      <b>Website traffic isn't connected yet</b>
+      Visitor counts come from Cloudflare Web Analytics. Ask your agency to connect it; nothing on your website changes.
+    </div>
+  </section>
+
+  <div id="traffic-section" hidden>
+    <div class="m-kpis">
+      <div class="t-kpi"><span class="t-lbl">Visits this month</span><span id="traffic-this-month-visits" class="t-v a-num">—</span><span id="w-visits-sub" class="t-delta"></span></div>
+      <div class="t-kpi"><span class="t-lbl">Pages viewed this month</span><span id="traffic-this-month" class="t-v a-num">—</span><span id="w-ppv" class="t-delta"></span></div>
+      <div class="t-kpi"><span class="t-lbl">Inquiries per 100 visits</span><span id="w-conv" class="t-v a-num">—</span><span id="w-conv-sub" class="t-delta"></span></div>
+      <div class="t-kpi"><span class="t-lbl">Busiest day</span><span id="w-busiest" class="t-v">—</span><span id="w-busiest-sub" class="t-delta"></span></div>
+    </div>
+
+    <section class="t-card w-chart-card">
+      <h2>Visits per day<span class="t-aside" id="traffic-chart-peak"></span></h2>
+      <div class="w-chart" id="traffic-chart">
+        <div class="w-tip" id="w-tip" hidden></div>
+      </div>
+      <div class="v-axis" id="w-axis"></div>
+    </section>
+
+    <section class="t-card q-section">
+      <h2>Most visited pages<span class="t-aside">Last 30 days, pages viewed</span></h2>
+      <div id="traffic-top-pages"></div>
+    </section>
+
+    <!-- Last month, kept for the record (and the old ids). -->
+    <p class="i-hint w-last">
+      Last month: <b id="traffic-last-month-visits">—</b> visits, <b id="traffic-last-month">—</b> pages viewed.
+    </p>
+  </div>
+</AdminLayout>
+
+<script>
+  import { initAdminAuth, supabase } from '../../../lib/adminAuth';
+  import { localDay, renderAreaChart, shortDay } from '../../../lib/areaChart';
+
+  type Day = { date: string; pageviews: number; visits: number };
+  type TrafficStats = {
+    thisMonth: { pageviews: number; visits: number };
+    lastMonth: { pageviews: number; visits: number };
+    byDay: Day[];
+    topPages: { path: string; pageviews: number }[];
+  };
+
+  function escapeHtml(value: string): string {
+    const div = document.createElement('div');
+    div.textContent = value;
+    return div.innerHTML;
+  }
+
+  const dayOf = localDay;
+  const short = shortDay;
+
+  // "/counselors/marcus-hill" -> "Marcus hill" with the path kept as a
+  // tooltip; the homepage reads as "Home".
+  function pageName(path: string): string {
+    const clean = path.split('?')[0].replace(/\/+$/, '');
+    if (!clean) return 'Home';
+    const last = decodeURIComponent(clean.split('/').pop() ?? clean).replace(/[-_]+/g, ' ').trim();
+    return last ? last.charAt(0).toUpperCase() + last.slice(1) : path;
+  }
+
+  function renderChart(days: Day[]) {
+    renderAreaChart(
+      document.getElementById('traffic-chart')!,
+      document.getElementById('w-tip')!,
+      document.getElementById('w-axis')!,
+      days.map((d) => ({ date: d.date, value: d.visits })),
+      (i) =>
+        `<b>${dayOf(days[i].date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</b><span><i class="a-num">${days[i].visits.toLocaleString()}</i> visits</span><span><i class="a-num">${days[i].pageviews.toLocaleString()}</i> pages viewed</span>`,
+      'Today'
+    );
+  }
+
+  async function inquiriesThisMonth(): Promise<number | null> {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const { count, error } = await supabase
+      .from('leads')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', start)
+      .is('lead_magnet_id', null);
+    return error ? null : (count ?? 0);
+  }
+
+  async function loadTrafficStats() {
+    const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
+    const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+    const empty = () => {
+      document.getElementById('w-loading')!.hidden = true;
+      document.getElementById('traffic-empty')!.hidden = false;
+    };
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) return empty();
+
+      const [response, inquiries] = await Promise.all([
+        fetch(`${SUPABASE_URL}/functions/v1/get-traffic-stats`, {
+          method: 'POST',
+          headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${accessToken}` },
+        }),
+        inquiriesThisMonth(),
+      ]);
+      if (!response.ok) return empty();
+      const stats = (await response.json()) as TrafficStats;
+      const days = stats.byDay ?? [];
+      const tm = stats.thisMonth;
+      const lm = stats.lastMonth;
+
+      document.getElementById('traffic-this-month-visits')!.textContent = tm.visits.toLocaleString();
+      document.getElementById('w-visits-sub')!.textContent = `${lm.visits.toLocaleString()} in all of last month`;
+      document.getElementById('traffic-this-month')!.textContent = tm.pageviews.toLocaleString();
+      document.getElementById('w-ppv')!.textContent = tm.visits ? `${(tm.pageviews / tm.visits).toFixed(1)} pages per visit` : '';
+      document.getElementById('traffic-last-month-visits')!.textContent = lm.visits.toLocaleString();
+      document.getElementById('traffic-last-month')!.textContent = lm.pageviews.toLocaleString();
+
+      const conv = document.getElementById('w-conv')!;
+      if (inquiries === null || !tm.visits) {
+        conv.textContent = '—';
+      } else {
+        conv.textContent = ((inquiries / tm.visits) * 100).toFixed(1);
+        document.getElementById('w-conv-sub')!.textContent = `${inquiries} inquir${inquiries === 1 ? 'y' : 'ies'} from ${tm.visits.toLocaleString()} visits`;
+      }
+
+      // Average visits by weekday over the chart's 30 days.
+      if (days.length >= 7) {
+        const sums = Array(7).fill(0);
+        const counts = Array(7).fill(0);
+        for (const d of days) {
+          const wd = dayOf(d.date).getDay();
+          sums[wd] += d.visits;
+          counts[wd]++;
+        }
+        const avg = sums.map((s, i) => (counts[i] ? s / counts[i] : 0));
+        const best = avg.indexOf(Math.max(...avg));
+        const name = new Date(2026, 0, 4 + best).toLocaleDateString(undefined, { weekday: 'long' });
+        document.getElementById('w-busiest')!.textContent = `${name}s`;
+        document.getElementById('w-busiest-sub')!.textContent = `About ${Math.round(avg[best])} visits on an average ${name}`;
+      }
+
+      const peak = days.reduce<Day | null>((m, d) => (!m || d.visits > m.visits ? d : m), null);
+      document.getElementById('traffic-chart-peak')!.textContent = peak ? `Busiest: ${peak.visits.toLocaleString()} on ${short(peak.date)}` : '';
+      renderChart(days);
+
+      const topEl = document.getElementById('traffic-top-pages')!;
+      if (stats.topPages.length === 0) {
+        topEl.innerHTML = '<p class="i-hint">No page views yet.</p>';
+      } else {
+        const maxPv = stats.topPages[0].pageviews;
+        topEl.innerHTML = `<div class="t-bars w-bars">${stats.topPages
+          .map(
+            (p) =>
+              `<div class="t-bar"><span class="t-lbl" title="${escapeHtml(p.path)}"><b>${escapeHtml(pageName(p.path))}</b><small>${escapeHtml(p.path)}</small></span><div class="t-track"><div class="t-fill" style="width:${Math.round((p.pageviews / maxPv) * 100)}%"></div></div><span class="a-num">${p.pageviews.toLocaleString()}</span></div>`
+          )
+          .join('')}</div>`;
+      }
+
+      document.getElementById('w-loading')!.hidden = true;
+      document.getElementById('traffic-section')!.hidden = false;
+    } catch {
+      // Network error, malformed response, etc.: show the empty state.
+      empty();
+    }
+  }
+
+  initAdminAuth(loadTrafficStats, { allowedRoles: ['owner', 'agency'] });
+</script>

@@ -1,5 +1,5 @@
 // Pure derivation helpers for the SEO Insights admin page
-// (admin/seo-insights.astro) — kept out of that page's inline <script>
+// (admin/analytics/seo.astro) — kept out of that page's inline <script>
 // for the same "one query + pure derivation functions over an
 // already-fetched array" reason getCounselorOptions/getAuthorHeadshot
 // are split out of pages.ts rather than inlined at each call site.

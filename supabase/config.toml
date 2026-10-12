@@ -19,3 +19,11 @@ verify_jwt = false
 
 [functions.unsubscribe-audit]
 verify_jwt = false
+
+# refresh-seo-rankings is the same cron-job-caller shape as
+# send-nurture-emails above (its own SEO_CRON_SECRET, not
+# NURTURE_CRON_SECRET) — see that function's top-of-file comment for why
+# verify_jwt must be off for a function a cron job calls with a
+# project-owned secret instead of a real Supabase-signed JWT.
+[functions.refresh-seo-rankings]
+verify_jwt = false

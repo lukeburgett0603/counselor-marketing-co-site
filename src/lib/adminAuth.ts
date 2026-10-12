@@ -26,13 +26,29 @@ export interface AdminUser {
   // admin/counselor-settings.astro for that one page only, on top of the
   // normal 'staff' blog access.
   linked_counselor_page_id: string | null;
+  // Set on the Team page (0074). Today greets people by it.
+  display_name?: string | null;
 }
 
 const ROLE_NAV_ACCESS: Record<AdminUser['role'], string[]> = {
   owner: [
-    'leads',
+    'today',
+    'analytics',
+    'analytics-overview',
+    'analytics-caseload',
+    'analytics-leads',
+    'analytics-traffic',
+    'analytics-blog',
+    'analytics-gbp',
+    'analytics-seo',
     'crm',
-    'seo-insights',
+    'referral-partners',
+    'links',
+    // CMC-only screens; keep when syncing from the template.
+    'audits',
+    'testimonials',
+    'directory',
+    'review-program',
     'content-plan',
     'blog',
     'content',
@@ -40,13 +56,28 @@ const ROLE_NAV_ACCESS: Record<AdminUser['role'], string[]> = {
     'content-page-copy',
     'lead-magnets',
     'team',
+    'your-data',
     'counselor-settings',
   ],
-  staff: ['blog', 'content-plan'],
+  staff: ['today', 'blog', 'content-plan'],
   agency: [
-    'leads',
+    'today',
+    'analytics',
+    'analytics-overview',
+    'analytics-caseload',
+    'analytics-leads',
+    'analytics-traffic',
+    'analytics-blog',
+    'analytics-gbp',
+    'analytics-seo',
     'crm',
-    'seo-insights',
+    'referral-partners',
+    'links',
+    // CMC-only screens; keep when syncing from the template.
+    'audits',
+    'testimonials',
+    'directory',
+    'review-program',
     'content-plan',
     'blog',
     'content',
@@ -55,6 +86,7 @@ const ROLE_NAV_ACCESS: Record<AdminUser['role'], string[]> = {
     'lead-magnets',
     'suggestions',
     'team',
+    'your-data',
     'counselor-settings',
   ],
 };
@@ -128,9 +160,18 @@ export function initAdminAuth(
       // child key or the "Website content" header never shows at all.
       allowed.add('content');
       allowed.add('content-page-copy');
+      // "My inquiries": only leads assigned to them (0073, 0076).
+      allowed.add('crm');
+      // "My caseload": only their own card.
+      allowed.add('analytics-caseload');
     }
     document.querySelectorAll<HTMLElement>('[data-nav-key]').forEach((el) => {
       el.classList.toggle('hidden', !allowed.has(el.dataset.navKey!));
+    });
+    // A menu section (e.g. "Get referred") hides its label too when this
+    // role can see none of its items.
+    document.querySelectorAll<HTMLElement>('[data-nav-group]').forEach((group) => {
+      group.classList.toggle('hidden', !group.querySelector('[data-nav-key]:not(.hidden)'));
     });
   }
 
@@ -170,11 +211,11 @@ export function initAdminAuth(
 
   // isFreshLogin is only true right after the login form or the
   // invite/set-password form actually submits — not on every page
-  // load's existing-session check. A linked counselor's single task on
-  // this admin is their own settings, so the moment they log in they're
-  // sent straight there rather than wherever they happened to land (a
-  // bookmarked /admin/blog link, say) — but a later page refresh, or
-  // clicking a different nav item, doesn't fight them back to it.
+  // load's existing-session check. A linked counselor's home is Today
+  // (their inquiries, caseload, and availability), so the moment they log
+  // in they're sent there rather than wherever they happened to land (a
+  // bookmarked /admin/blog link, say). A later page refresh, or clicking
+  // a different nav item, doesn't fight them back to it.
   async function tryShowAuthed(isFreshLogin = false) {
     const adminUser = await resolveAdminUser();
     if (!adminUser || adminUser.status !== 'active') {
@@ -182,21 +223,25 @@ export function initAdminAuth(
       return;
     }
     if (options.allowedRoles && !options.allowedRoles.includes(adminUser.role)) {
-      window.location.href = withBase('/admin/blog');
+      window.location.href = withBase('/admin/today');
       return;
     }
     if (
       isFreshLogin &&
       adminUser.role === 'staff' &&
       adminUser.linked_counselor_page_id &&
-      !window.location.pathname.replace(/\/$/, '').endsWith('/admin/counselor-settings')
+      !window.location.pathname.replace(/\/$/, '').endsWith('/admin/today')
     ) {
-      window.location.href = withBase('/admin/counselor-settings');
+      // Today is their home: their inquiries, caseload, and availability.
+      window.location.href = withBase('/admin/today');
       return;
     }
     hideAllViews();
     adminContent.style.display = '';
     applyNavAccess(adminUser);
+    // AdminLayout.astro's shell listens for this to fill in the account
+    // menu and the Inquiries badge.
+    window.dispatchEvent(new CustomEvent('admin:authed', { detail: adminUser }));
     if (adminUser.role === 'agency') {
       updateSuggestionsBadge();
     }
@@ -278,13 +323,14 @@ export function initAdminAuth(
     if (forgotPasswordStatus) forgotPasswordStatus.textContent = '';
     const formData = new FormData(forgotPasswordForm);
     const { error } = await supabase.auth.resetPasswordForEmail(formData.get('email') as string, {
-      redirectTo: window.location.origin + withBase('/admin/leads'),
+      redirectTo: window.location.origin + withBase('/admin/analytics/leads'),
     });
     if (!forgotPasswordStatus) return;
     forgotPasswordStatus.textContent = error
       ? error.message
       : 'If an account exists for that email, a reset link is on its way.';
-    forgotPasswordStatus.className = 'text-center text-sm ' + (error ? 'text-red-600' : 'text-emerald-700');
+    forgotPasswordStatus.className = 'a-status';
+    forgotPasswordStatus.style.color = error ? 'var(--a-bad)' : 'var(--a-good)';
   });
 
   logoutButton?.addEventListener('click', async () => {

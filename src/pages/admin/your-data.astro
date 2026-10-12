@@ -1,0 +1,84 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { EXPORT_TABLES } from '../../lib/dataExport';
+---
+
+<!--
+  "Your data": the practice downloads everything it owns, any time, as one
+  ZIP (CSV + JSON per table, its uploaded files, and a README). CMC policy
+  (CMC folder CLAUDE.md, "Pricing update"): a practice's data is theirs and
+  always goes with them; the CMC platform itself (this admin, CRM,
+  dashboards, automations) does not. The public website half of an exit is
+  scripts/export-static-site.mjs. Built client-side with fflate from the
+  same RLS-protected reads the rest of the admin uses, so it can only ever
+  contain what this login is allowed to see. Restyled in phase 3 of the
+  admin redesign (2026-10-08).
+-->
+<AdminLayout title="Your data | Admin" current="your-data">
+  <div class="yd-wrap">
+    <section class="t-card yd-hero">
+      <span class="yd-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0-4.5-4.5M12 15l4.5-4.5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /></svg></span>
+      <h2 class="yd-h">Your data is yours.</h2>
+      <p class="yd-p">
+        Download everything your practice has in this system, any time, in standard formats (spreadsheet-ready CSV and
+        JSON). If you ever leave, your data and your website go with you. The dashboard software itself stays behind.
+      </p>
+      <button id="download-button" type="button" class="a-btn a-btn-primary yd-btn">Download all my data (.zip)</button>
+      <p id="download-status" class="i-hint" role="status"></p>
+      <p class="i-hint yd-note">
+        This file includes names and contact details of people who reached out to you. Store it somewhere secure, and
+        don't email it unencrypted.
+      </p>
+    </section>
+
+    <section class="t-card">
+      <h2>What's included</h2>
+      <ul class="v-checklist yd-list">
+        {EXPORT_TABLES.map((t) => <li>{t.label}</li>)}
+        <li>Your uploaded images and guide files</li>
+      </ul>
+      <p class="i-hint yd-not">Not included: admin logins and passwords (those belong to each person), and the software that runs this dashboard.</p>
+    </section>
+  </div>
+</AdminLayout>
+
+<script>
+  import { supabase, initAdminAuth } from '../../lib/adminAuth';
+  import { buildDataExport } from '../../lib/dataExport';
+
+  const button = document.getElementById('download-button') as HTMLButtonElement;
+  const status = document.getElementById('download-status')!;
+  let practiceName = 'practice';
+
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    status.className = 'i-hint';
+    try {
+      const { zip, summary } = await buildDataExport(supabase, (message) => (status.textContent = message));
+      const blob = new Blob([zip as Uint8Array<ArrayBuffer>], { type: 'application/zip' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${practiceName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-data-${new Date().toISOString().slice(0, 10)}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      status.textContent = summary;
+      status.className = 'i-hint r-ok';
+    } catch (err) {
+      status.textContent = 'Could not build the export: ' + (err instanceof Error ? err.message : String(err));
+      status.className = 'i-hint r-err';
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  initAdminAuth(
+    async () => {
+      const { data } = await supabase.from('business').select('display_name').single();
+      if (data?.display_name) practiceName = data.display_name;
+    },
+    { allowedRoles: ['owner', 'agency'] }
+  );
+</script>

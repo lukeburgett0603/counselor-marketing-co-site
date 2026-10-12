@@ -45,6 +45,7 @@
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are injected automatically.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { buildLeadAutoReply } from '../_shared/leadAutoReply.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -71,6 +72,22 @@ const SESSION_FORMAT_LABELS: Record<string, string> = {
   telehealth: 'Telehealth',
 };
 
+// Copy of src/lib/leadSource.ts's LEAD_SOURCES (Deno can't import from
+// src/). Add a new option in both places.
+const LEAD_SOURCE_LABELS: Record<string, string> = {
+  google_search: 'Google search',
+  google_maps: 'Google Maps',
+  ai_assistant: 'ChatGPT or another AI assistant',
+  directory: 'Psychology Today or another directory',
+  insurance: 'My insurance company',
+  doctor: 'My doctor or another healthcare provider',
+  professional: 'An attorney or other professional',
+  church: 'My church or pastor',
+  friend_family: 'A friend or family member',
+  social_media: 'Social media',
+  other: 'Other',
+};
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -86,6 +103,8 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: 'Invalid JSON body' }, 400);
   }
 
+  // CMC-ONLY (keep when syncing from the template): step 2 of CMC's audit
+  // form attaches details to the lead it just created.
   // Optional follow-up details for a lead this visitor just created (the
   // audit form's step 2, 2026-09-30 rebuild). Appends to that lead's
   // message instead of inserting a duplicate. Requires the id returned by
@@ -190,6 +209,28 @@ Deno.serve(async (req: Request) => {
   if ('preferred_session_format' in body) {
     insertPayload.preferred_session_format = body.preferred_session_format || null;
   }
+  // "How did you hear about us?" — sanitized to a known value here rather
+  // than by a DB CHECK constraint, so an unexpected value is dropped
+  // instead of failing the whole lead insert. Keep in sync with
+  // src/lib/leadSource.ts.
+  if ('lead_source' in body) {
+    insertPayload.lead_source =
+      typeof body.lead_source === 'string' && LEAD_SOURCE_LABELS[body.lead_source] ? body.lead_source : null;
+    insertPayload.lead_source_detail =
+      typeof body.lead_source_detail === 'string' && body.lead_source_detail.trim()
+        ? body.lead_source_detail.trim().slice(0, 120)
+        : null;
+  }
+  // Google Ads attribution (0072_ad_attribution.sql): click IDs and UTM
+  // tags the visitor's own browser remembered from their landing URL.
+  // Treated as untrusted input: only known keys, strings, length-capped.
+  if (body.attribution && typeof body.attribution === 'object') {
+    const a = body.attribution as Record<string, unknown>;
+    for (const key of ['gclid', 'gbraid', 'wbraid', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'landing_page']) {
+      const value = a[key];
+      if (typeof value === 'string' && value.trim()) insertPayload[key] = value.trim().slice(0, 300);
+    }
+  }
   // A guide-download submission (LeadMagnet.astro) — a distinct, lower-
   // intent signal from a real appointment request, see CLAUDE.md's
   // "Contacts vs. leads" section. Only present when this call came from
@@ -260,6 +301,19 @@ Deno.serve(async (req: Request) => {
               (insertPayload.preferred_session_format as string))
             : null,
         ],
+        [
+          'Heard about us',
+          insertPayload.lead_source
+            ? LEAD_SOURCE_LABELS[insertPayload.lead_source as string] +
+              (insertPayload.lead_source_detail ? ` (${insertPayload.lead_source_detail as string})` : '')
+            : null,
+        ],
+        [
+          'Came from',
+          insertPayload.gclid || insertPayload.gbraid || insertPayload.wbraid
+            ? `Google Ads${insertPayload.utm_campaign ? ` (${insertPayload.utm_campaign as string})` : ''}`
+            : null,
+        ],
         ['Current website', insertPayload.existing_website_url as string | null],
         ['From page', (insertPayload.source_page as string | null) ?? '(homepage)'],
       ];
@@ -280,7 +334,8 @@ Deno.serve(async (req: Request) => {
           from: fromHeader,
           to: notificationRecipients,
           reply_to: email,
-          subject: `${insertPayload.source_page === "caseload-calculator" ? "Caseload Calculator results" : "New audit request"} from ${name}`,
+          // CMC-ONLY subject (keep when syncing from the template).
+          subject: `${insertPayload.source_page === 'caseload-calculator' ? 'Caseload Calculator results' : 'New audit request'} from ${name}`,
           html: `${rowsHtml}\n${messageHtml}\n<hr style="border:none;border-top:1px solid #ddd;margin:20px 0;">\n<p style="font-size:12px;color:#888;">Reply directly to this email to respond to ${escapeHtml(name)}.</p>`,
         }),
       });
@@ -304,6 +359,52 @@ Deno.serve(async (req: Request) => {
     // the visitor and never allowed to make a captured lead look failed.
     // Still logged, for the same reason as the non-2xx case above.
     console.error('submit-lead: notification email threw', err);
+  }
+
+  // Automatic reply to the lead (0070_lead_auto_reply.sql). Its own
+  // try/catch, independent of the practice notification above, so either
+  // one failing never stops the other. Appointment requests only: a guide
+  // download already returned above and gets its nurture sequence instead.
+  try {
+    const resendApiKey = Deno.env.get('NURTURE_RESEND_API_KEY');
+    const senderEmail = Deno.env.get('NURTURE_SENDER_EMAIL');
+    const { data: biz } = await supabase
+      .from('business')
+      .select(
+        'display_name, telephone, lead_notification_email, lead_response_time_note, lead_auto_reply_enabled, lead_auto_reply_message, show_crisis_resources'
+      )
+      .maybeSingle();
+
+    if (resendApiKey && senderEmail && biz?.lead_auto_reply_enabled && email) {
+      const { subject, html } = buildLeadAutoReply({
+        leadName: name,
+        practiceName: biz.display_name,
+        customMessage: biz.lead_auto_reply_message,
+        responseTimeNote: biz.lead_response_time_note,
+        telephone: biz.telephone,
+        showCrisisResources: biz.show_crisis_resources !== false,
+      });
+      // Replies go to the practice's own inbox (the first lead-notification
+      // address), never to the no-reply sending address.
+      const replyTo = (biz.lead_notification_email ?? '').split(',').map((s: string) => s.trim()).filter(Boolean)[0];
+      const fromHeader = `${biz.display_name} <${senderEmail}>`;
+
+      const replyResponse = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${resendApiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: fromHeader, to: [email], ...(replyTo ? { reply_to: replyTo } : {}), subject, html }),
+      });
+      if (replyResponse.ok) {
+        await supabase.from('leads').update({ auto_reply_sent_at: new Date().toISOString() }).eq('id', lead.id);
+      } else {
+        console.error('submit-lead: Resend rejected the lead auto-reply', {
+          status: replyResponse.status,
+          body: await replyResponse.text(),
+        });
+      }
+    }
+  } catch (err) {
+    console.error('submit-lead: lead auto-reply threw', err);
   }
 
   return jsonResponse({ ok: true, id: lead.id });

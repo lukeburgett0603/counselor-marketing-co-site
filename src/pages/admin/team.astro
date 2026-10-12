@@ -3,59 +3,51 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 ---
 
 <AdminLayout title="Team | Admin" current="team">
-  <div class="max-w-2xl space-y-10">
-    <section>
-      <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold text-brand-ink">Team members</h2>
-      <p class="mb-4 text-sm text-slate-600">
-        Owners have full access. Staff can only create and manage their own blog posts. Agency support access can't
-        be revoked from here.
-      </p>
-      <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-        <table class="w-full text-left text-sm">
-          <thead class="border-b border-slate-200 bg-slate-50">
-            <tr>
-              <th class="px-4 py-3 font-semibold">Email</th>
-              <th class="px-4 py-3 font-semibold">Role</th>
-              <th class="px-4 py-3 font-semibold">Status</th>
-              <th class="px-4 py-3 font-semibold"></th>
-            </tr>
-          </thead>
-          <tbody id="team-table-body"></tbody>
-        </table>
-      </div>
+  <!--
+    Admin redesign phase 3 (2026-10-08): members as rows with an avatar,
+    inline name, role and status; the invite in a side card. The invite
+    offers Counselor / Writer / Owner in plain words; Counselor and Writer
+    are both the 'staff' role (Counselor = staff linked to their page).
+  -->
+  <p class="i-intro">Who can sign in to this dashboard, and what each person can do.</p>
+  <div class="tm-layout">
+    <section class="t-card">
+      <h2>Team members<span class="t-aside" id="tm-count"></span></h2>
+      <ul id="team-table-body" class="tm-list"></ul>
+      <p class="i-hint tm-note">Your agency's support login can't be removed from here.</p>
     </section>
 
-    <section>
-      <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold text-brand-ink">Invite someone</h2>
-      <form id="invite-form" class="space-y-4">
-        <div>
-          <label class="mb-1 block text-sm font-semibold text-slate-700">Email</label>
-          <input id="invite-email" type="email" required class="w-full rounded-md border border-slate-300 px-4 py-2" />
+    <section class="t-card i-fields tm-invite">
+      <h2>Invite someone</h2>
+      <form id="invite-form" class="i-fields">
+        <div class="i-field">
+          <label for="invite-name">Name</label>
+          <input id="invite-name" type="text" maxlength="80" autocomplete="off" placeholder="Jordan Reyes" />
+          <span class="i-hint">Used to greet them on their Today page.</span>
         </div>
-        <div>
-          <label class="mb-1 block text-sm font-semibold text-slate-700">Role</label>
-          <select id="invite-role" class="w-full rounded-md border border-slate-300 px-4 py-2">
-            <option value="staff">Staff — blog posts only</option>
-            <option value="owner">Owner — full access</option>
-          </select>
+        <div class="i-field">
+          <label for="invite-email">Email</label>
+          <input id="invite-email" type="email" required />
         </div>
-        <div id="invite-counselor-link-wrap" class="hidden">
-          <label class="mb-1 block text-sm font-semibold text-slate-700">Link to counselor page (optional)</label>
-          <select id="invite-counselor-link" class="w-full rounded-md border border-slate-300 px-4 py-2">
+        <fieldset class="tm-roles">
+          <legend>What they'll do</legend>
+          <label class="tm-role"><input type="radio" name="tm-role" value="counselor" checked /><span><b>Counselor</b><small>Their own inquiries, caseload and profile page</small></span></label>
+          <label class="tm-role"><input type="radio" name="tm-role" value="writer" /><span><b>Writer</b><small>Blog posts and content assigned to them</small></span></label>
+          <label class="tm-role"><input type="radio" name="tm-role" value="owner" /><span><b>Owner</b><small>Everything, including Team and settings</small></span></label>
+        </fieldset>
+        <select id="invite-role" hidden aria-hidden="true" tabindex="-1">
+          <option value="staff">Staff</option>
+          <option value="owner">Owner</option>
+        </select>
+        <div id="invite-counselor-link-wrap" class="i-field hidden">
+          <label for="invite-counselor-link">Their counselor page</label>
+          <select id="invite-counselor-link">
             <option value="">None</option>
           </select>
-          <p class="mt-1 text-xs text-slate-500">
-            Lets this login update their own availability, telehealth, and modalities on that page — see Counselor settings.
-          </p>
+          <span class="i-hint">Links this login to their page, so they see their own inquiries and can update their availability.</span>
         </div>
-        <button
-          id="invite-submit-button"
-          type="button"
-          class="rounded-md bg-brand-primary px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90"
-        >
-          Send invite
-        </button>
-        <p id="invite-status" class="text-sm" role="status"></p>
+        <button id="invite-submit-button" type="button" class="a-btn a-btn-primary">Send invite</button>
+        <p id="invite-status" class="i-hint" role="status"></p>
       </form>
     </section>
   </div>
@@ -71,7 +63,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   // email template), not guessed by the Edge Function — see the comment
   // in supabase/functions/publish-site/index.ts for why relying on the
   // Supabase dashboard's "Site URL" setting instead was a real bug.
-  const inviteRedirectTo = window.location.origin + withBase('/admin/leads');
+  const inviteRedirectTo = window.location.origin + withBase('/admin/today');
 
   type TeamMember = {
     id: string;
@@ -79,11 +71,13 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     role: 'owner' | 'staff' | 'agency';
     status: 'pending' | 'active';
     linked_counselor_page_id: string | null;
+    display_name: string | null;
   };
 
   type CounselorPage = { id: string; title: string };
 
   const tableBody = document.getElementById('team-table-body')!;
+  const inviteName = document.getElementById('invite-name') as HTMLInputElement;
   const inviteEmail = document.getElementById('invite-email') as HTMLInputElement;
   const inviteRole = document.getElementById('invite-role') as HTMLSelectElement;
   const inviteCounselorLinkWrap = document.getElementById('invite-counselor-link-wrap')!;
@@ -107,10 +101,16 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       available.map((p) => `<option value="${p.id}">${escapeHtml(p.title)}</option>`).join('');
   }
 
-  function updateInviteRoleUI() {
-    inviteCounselorLinkWrap.classList.toggle('hidden', inviteRole.value !== 'staff');
+  // The radio choice drives the hidden role select the invite reads.
+  function selectedChoice(): string {
+    return (document.querySelector<HTMLInputElement>('input[name="tm-role"]:checked')?.value) ?? 'counselor';
   }
-  inviteRole.addEventListener('change', updateInviteRoleUI);
+  function updateInviteRoleUI() {
+    const choice = selectedChoice();
+    inviteRole.value = choice === 'owner' || choice === 'agency' ? choice : 'staff';
+    inviteCounselorLinkWrap.classList.toggle('hidden', choice !== 'counselor');
+  }
+  document.querySelector('.tm-roles')!.addEventListener('change', updateInviteRoleUI);
 
   function escapeHtml(value: string): string {
     const div = document.createElement('div');
@@ -121,49 +121,89 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   async function loadTeam() {
     const { data, error } = await supabase.from('admin_users').select('*').order('created_at');
     if (error) {
-      tableBody.innerHTML = `<tr><td colspan="4" class="px-4 py-3 text-sm text-red-600">Could not load team: ${escapeHtml(error.message)}</td></tr>`;
+      tableBody.innerHTML = `<li class="i-hint r-err">Could not load team: ${escapeHtml(error.message)}</li>`;
       return;
     }
     const members = (data ?? []) as TeamMember[];
     existingMembers = members;
+    document.getElementById('tm-count')!.textContent = `${members.length} ${members.length === 1 ? 'person' : 'people'}`;
     tableBody.innerHTML = members
       .map((member) => {
         const isSelf = member.id === currentAdminUser?.id;
-        const statusLabel =
-          member.status === 'active'
-            ? '<span class="text-emerald-700">Active</span>'
-            : '<span class="text-amber-700">Pending</span>';
         const linkedPage = counselorPages.find((p) => p.id === member.linked_counselor_page_id);
-        const roleCell = linkedPage
-          ? `Staff <span class="text-xs text-slate-400">(${escapeHtml(linkedPage.title)})</span>`
-          : escapeHtml(member.role);
+        const role =
+          member.role === 'agency'
+            ? 'Agency support'
+            : member.role === 'owner'
+              ? 'Owner'
+              : linkedPage
+                ? `Counselor · ${escapeHtml(linkedPage.title.split(',')[0])}`
+                : 'Writer';
         const actions: string[] = [];
         if (member.status === 'pending') {
-          actions.push(`<button data-resend-id="${member.id}" class="resend-button text-brand-primary hover:underline">Resend invite</button>`);
+          actions.push(`<button type="button" data-resend-id="${member.id}" class="resend-button a-btn i-btn">Resend invite</button>`);
         }
+        // Names: anyone's for owner/agency, except only agency renames
+        // agency (matches set_admin_user_name in 0074).
+        const canRename = isSelf || currentAdminUser?.role === 'agency' || member.role !== 'agency';
+        const label = member.display_name || member.email;
+        const nameCell = canRename
+          ? `<input data-name-id="${member.id}" type="text" maxlength="80" value="${escapeHtml(member.display_name ?? '')}" placeholder="Add a name" aria-label="Name for ${escapeHtml(member.email)}" class="tm-name" />`
+          : `<b class="tm-name-ro">${escapeHtml(member.display_name ?? member.email)}</b>`;
         // An agency row can only ever be revoked by another agency login
-        // — matches the RLS policy (see 0013), which is the real
-        // boundary; this just avoids offering a button that would fail.
+        // (RLS in 0013 is the real boundary; this avoids a failing button).
         const canRevoke = !isSelf && (member.role !== 'agency' || currentAdminUser?.role === 'agency');
         if (canRevoke) {
-          actions.push(`<button data-revoke-id="${member.id}" class="revoke-button text-red-600 hover:underline">Revoke</button>`);
+          actions.push(`<button type="button" data-revoke-id="${member.id}" class="revoke-button a-link i-danger">Remove</button>`);
         }
-        return `
-      <tr class="border-b border-slate-100 last:border-0">
-        <td class="px-4 py-3">${escapeHtml(member.email)}${isSelf ? ' <span class="text-xs text-slate-400">(you)</span>' : ''}</td>
-        <td class="px-4 py-3">${member.role === 'staff' ? roleCell : `<span class="capitalize">${escapeHtml(member.role)}</span>`}</td>
-        <td class="px-4 py-3">${statusLabel}</td>
-        <td class="px-4 py-3 text-right space-x-3">${actions.join('')}</td>
-      </tr>`;
+        const initials = (label.trim().split(/[\s.@_-]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('') || '?').toUpperCase();
+        return `<li class="tm-row">
+          <span class="i-avatar">${escapeHtml(initials)}</span>
+          <div class="tm-who">${nameCell}<small>${escapeHtml(member.email)}${isSelf ? ' · you' : ''}</small></div>
+          <span class="tm-role-pill tm-r-${member.role}">${role}</span>
+          <span class="bp-pill ${member.status === 'active' ? 'bp-pill-p' : 'tm-pending'}">${member.status === 'active' ? 'Active' : 'Invited'}</span>
+          <span class="tm-actions">${actions.join('')}</span>
+        </li>`;
       })
       .join('');
     populateCounselorLinkOptions();
   }
 
+  // Save a name when the field loses focus or Enter is pressed.
+  async function saveName(input: HTMLInputElement) {
+    const id = input.dataset.nameId!;
+    const before = existingMembers.find((m) => m.id === id)?.display_name ?? '';
+    const value = input.value.trim();
+    if (value === before) return;
+    input.disabled = true;
+    const { error } = await supabase.rpc('set_admin_user_name', { target_id: id, new_name: value });
+    input.disabled = false;
+    if (error) {
+      window.alert('Could not save the name: ' + error.message);
+      input.value = before;
+      return;
+    }
+    const member = existingMembers.find((m) => m.id === id);
+    if (member) member.display_name = value || null;
+    input.style.borderColor = 'var(--a-good, #10b981)';
+    setTimeout(() => (input.style.borderColor = ''), 1200);
+  }
+  tableBody.addEventListener('focusout', (event) => {
+    const input = (event.target as HTMLElement).closest<HTMLInputElement>('input[data-name-id]');
+    if (input) saveName(input);
+  });
+  tableBody.addEventListener('keydown', (event) => {
+    const input = (event.target as HTMLElement).closest<HTMLInputElement>('input[data-name-id]');
+    if (input && event.key === 'Enter') {
+      event.preventDefault();
+      input.blur();
+    }
+  });
+
   tableBody.addEventListener('click', async (event) => {
     const target = event.target as HTMLElement;
 
-    const resendId = target.dataset.resendId;
+    const resendId = target.closest<HTMLElement>('[data-resend-id]')?.dataset.resendId;
     if (resendId) {
       target.textContent = 'Resending...';
       const result = await callPublishFunction({ action: 'resend', userId: resendId, redirectTo: inviteRedirectTo });
@@ -174,9 +214,9 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       return;
     }
 
-    const revokeId = target.dataset.revokeId;
+    const revokeId = target.closest<HTMLElement>('[data-revoke-id]')?.dataset.revokeId;
     if (revokeId) {
-      if (!window.confirm('Revoke this person\'s admin access? They will no longer be able to log in to the admin dashboard.')) return;
+      if (!window.confirm('Remove this person\'s access? They will no longer be able to sign in to the dashboard.')) return;
       const { error } = await supabase.from('admin_users').delete().eq('id', revokeId);
       if (error) {
         window.alert('Could not revoke access: ' + error.message);
@@ -190,11 +230,16 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     const email = inviteEmail.value.trim();
     if (!email) {
       inviteStatus.textContent = 'Enter an email address.';
-      inviteStatus.className = 'text-sm text-red-600';
+      inviteStatus.className = 'i-hint r-err';
+      return;
+    }
+    if (selectedChoice() === 'counselor' && !inviteCounselorLink.value) {
+      inviteStatus.textContent = 'Choose their counselor page, or invite them as a Writer.';
+      inviteStatus.className = 'i-hint r-err';
       return;
     }
     inviteStatus.textContent = 'Sending invite...';
-    inviteStatus.className = 'text-sm text-slate-600';
+    inviteStatus.className = 'i-hint';
     inviteSubmitButton.disabled = true;
 
     const result = await callPublishFunction({
@@ -202,17 +247,24 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       email,
       role: inviteRole.value,
       redirectTo: inviteRedirectTo,
-      linkedCounselorPageId: inviteRole.value === 'staff' && inviteCounselorLink.value ? inviteCounselorLink.value : null,
+      linkedCounselorPageId: selectedChoice() === 'counselor' && inviteCounselorLink.value ? inviteCounselorLink.value : null,
     });
 
     inviteSubmitButton.disabled = false;
     if (!result.ok) {
       inviteStatus.textContent = 'Could not send invite: ' + result.error;
-      inviteStatus.className = 'text-sm text-red-600';
+      inviteStatus.className = 'i-hint r-err';
       return;
     }
+    // The Edge Function creates the admin_users row; add the name to it.
+    const name = inviteName.value.trim();
+    if (name) {
+      const { data: target } = await supabase.from('admin_users').select('id').ilike('email', email).maybeSingle();
+      if (target) await supabase.rpc('set_admin_user_name', { target_id: (target as { id: string }).id, new_name: name });
+    }
     inviteStatus.textContent = 'Invite sent.';
-    inviteStatus.className = 'text-sm text-emerald-700';
+    inviteStatus.className = 'i-hint r-ok';
+    inviteName.value = '';
     inviteEmail.value = '';
     inviteCounselorLink.value = '';
     await loadTeam();
@@ -223,11 +275,15 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     // Only an existing agency admin can grant agency-level access —
     // matches the Edge Function's own check — so a plain owner never
     // even sees the option.
-    if (adminUser.role === 'agency') {
+    if (adminUser.role === 'agency' && !inviteRole.querySelector('option[value="agency"]')) {
       const agencyOption = document.createElement('option');
       agencyOption.value = 'agency';
-      agencyOption.textContent = 'Agency — full CMC support access';
+      agencyOption.textContent = 'Agency';
       inviteRole.appendChild(agencyOption);
+      document.querySelector('.tm-roles')!.insertAdjacentHTML(
+        'beforeend',
+        '<label class="tm-role"><input type="radio" name="tm-role" value="agency" /><span><b>Agency</b><small>Full CMC support access</small></span></label>'
+      );
     }
     const { data } = await supabase
       .from('pages')

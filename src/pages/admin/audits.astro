@@ -1,0 +1,201 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<!--
+  CMC-only: every instant Caseload Audit (the `audits` table, see
+  0100_cmc_instant_audits.sql and request-audit). Who asked, whether they
+  opened it, how far the follow-up emails got, and whether the inquiry
+  became a client. "Open" uses the audit page's ?preview=1, so looking at
+  an audit from here never counts as the prospect's view. Same list
+  patterns (status chips as the filter, i-table) as Inquiries.
+-->
+<AdminLayout title="Audits | Admin" current="audits">
+  <p class="i-intro">Every instant audit: who asked, whether they opened it, and where the follow-up emails are.</p>
+
+  <div class="r-kpis">
+    <div class="t-kpi">
+      <span class="t-lbl">Audits this month</span>
+      <span id="au-month" class="t-v a-num">—</span>
+      <span id="au-month-note" class="t-delta"></span>
+    </div>
+    <div class="t-kpi">
+      <span class="t-lbl">Opened</span>
+      <span id="au-opened" class="t-v a-num">—</span>
+      <span id="au-opened-note" class="t-delta"></span>
+    </div>
+    <div class="t-kpi">
+      <span class="t-lbl">Became clients</span>
+      <span id="au-clients" class="t-v a-num">—</span>
+      <span class="t-delta">Inquiry marked Scheduled</span>
+    </div>
+  </div>
+
+  <div class="i-pipeline" id="au-pipeline" role="group" aria-label="Filter audits"></div>
+
+  <div class="i-filters">
+    <label class="i-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+      <input id="au-search" type="text" placeholder="Search by practice, name, email, or city" aria-label="Search audits" />
+    </label>
+    <p id="au-count" class="i-count"></p>
+  </div>
+
+  <div class="i-list t-card">
+    <table class="i-table">
+      <thead>
+        <tr>
+          <th>Practice</th>
+          <th class="i-hide-sm">Requested</th>
+          <th>Opened</th>
+          <th class="i-hide-md">Follow-ups</th>
+          <th class="i-hide-sm">Inquiry</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="au-body"></tbody>
+    </table>
+    <div id="au-empty" class="t-empty" hidden></div>
+  </div>
+</AdminLayout>
+
+<script>
+  import { supabase, initAdminAuth } from '../../lib/adminAuth';
+  import { withBase } from '../../lib/url';
+  import { STATUS_LABELS } from '../../lib/leadStatus';
+
+  type Audit = {
+    id: string;
+    token: string;
+    name: string | null;
+    email: string;
+    practice_input: string;
+    practice_name: string | null;
+    url: string | null;
+    city: string | null;
+    state: string | null;
+    status: 'pending' | 'needs_city' | 'running' | 'done' | 'failed';
+    created_at: string;
+    first_viewed_at: string | null;
+    view_count: number;
+    followup_step: number;
+    unsubscribed_at: string | null;
+    lead_id: string | null;
+    lead: { status: string | null } | null;
+  };
+
+  const FOLLOWUPS = 5;
+  let audits: Audit[] = [];
+  let filter = '';
+
+  const esc = (v: string) => {
+    const d = document.createElement('div');
+    d.textContent = v;
+    return d.innerHTML;
+  };
+  const shortDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+  // One filter per state that needs a different action from Luke.
+  const FILTERS: { key: string; label: string; test: (a: Audit) => boolean }[] = [
+    { key: '', label: 'All', test: () => true },
+    { key: 'unopened', label: 'Not opened', test: (a) => a.status === 'done' && !a.first_viewed_at },
+    { key: 'opened', label: 'Opened', test: (a) => !!a.first_viewed_at },
+    { key: 'clients', label: 'Became clients', test: (a) => a.lead?.status === 'scheduled' },
+    { key: 'attention', label: 'Needs you', test: (a) => a.status === 'failed' || a.status === 'needs_city' },
+  ];
+
+  function renderStats() {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const thisMonth = audits.filter((a) => a.created_at >= monthStart);
+    document.getElementById('au-month')!.textContent = String(thisMonth.length);
+    document.getElementById('au-month-note')!.textContent = `${audits.length} all time`;
+    const done = audits.filter((a) => a.status === 'done');
+    const opened = done.filter((a) => a.first_viewed_at);
+    document.getElementById('au-opened')!.textContent = done.length ? `${Math.round((opened.length / done.length) * 100)}%` : '—';
+    document.getElementById('au-opened-note')!.textContent = `${opened.length} of ${done.length} sent`;
+    document.getElementById('au-clients')!.textContent = String(audits.filter((a) => a.lead?.status === 'scheduled').length);
+  }
+
+  function renderPipeline() {
+    document.getElementById('au-pipeline')!.innerHTML = FILTERS.map(
+      (f) =>
+        `<button type="button" class="i-chip" data-filter="${f.key}" aria-pressed="${filter === f.key}"><span>${f.label}</span><b class="a-num">${audits.filter(f.test).length}</b></button>`,
+    ).join('');
+  }
+  document.getElementById('au-pipeline')!.addEventListener('click', (e) => {
+    const chip = (e.target as HTMLElement).closest<HTMLElement>('[data-filter]');
+    if (!chip) return;
+    filter = chip.dataset.filter!;
+    renderList();
+  });
+
+  function openedCell(a: Audit): string {
+    if (a.status === 'failed') return '<span class="r-stage r-stage-inactive" style="color:var(--a-bad)">Failed</span>';
+    if (a.status === 'needs_city') return '<span class="r-stage r-stage-contacted">Waiting on city</span>';
+    if (a.status !== 'done') return '<span class="i-faint">Building</span>';
+    if (!a.first_viewed_at) return '<span class="i-muted">Not yet</span>';
+    return `<span class="r-stage r-stage-active">${shortDate(a.first_viewed_at)}</span>${a.view_count > 1 ? ` <span class="i-faint">${a.view_count} views</span>` : ''}`;
+  }
+
+  function followupCell(a: Audit): string {
+    if (a.status !== 'done') return '';
+    if (a.unsubscribed_at) return '<span class="i-faint">Unsubscribed</span>';
+    if (a.lead && ['scheduled', 'referred', 'withdrawn'].includes(a.lead.status ?? '')) return '<span class="i-faint">Stopped</span>';
+    if (a.followup_step >= FOLLOWUPS) return '<span class="i-muted">All 5 sent</span>';
+    return `<span class="i-muted">${a.followup_step} of ${FOLLOWUPS} sent</span>`;
+  }
+
+  function renderList() {
+    renderPipeline();
+    const q = (document.getElementById('au-search') as HTMLInputElement).value.trim().toLowerCase();
+    const test = FILTERS.find((f) => f.key === filter)!.test;
+    const rows = audits.filter(
+      (a) => test(a) && (!q || [a.practice_name ?? a.practice_input, a.name ?? '', a.email, a.city ?? ''].some((v) => v.toLowerCase().includes(q))),
+    );
+    document.getElementById('au-count')!.textContent = `${rows.length} audit${rows.length === 1 ? '' : 's'}`;
+    const empty = document.getElementById('au-empty')!;
+    empty.hidden = rows.length > 0;
+    if (!rows.length) {
+      empty.innerHTML = audits.length
+        ? '<b>No audits match.</b>Try a different filter or search.'
+        : '<b>No audits yet.</b>When a practice requests a Free Caseload Audit on your site, it shows up here.';
+    }
+    document.getElementById('au-body')!.innerHTML = rows
+      .map((a) => {
+        const place = [a.city, a.state].filter(Boolean).join(', ');
+        const leadStatus = a.lead?.status;
+        const inquiry = a.lead_id
+          ? `<a class="a-link" href="${withBase('/admin/crm')}?lead=${a.lead_id}">${esc(leadStatus ? STATUS_LABELS[leadStatus] ?? leadStatus : 'Open')}</a>`
+          : '<span class="i-faint">Deleted</span>';
+        const open = a.status === 'done' ? `<a class="a-btn i-btn" href="${withBase('/audit')}?t=${a.token}&preview=1" target="_blank" rel="noopener">Open</a>` : '';
+        return `<tr>
+          <td><div class="i-who"><div><b>${esc(a.practice_name ?? a.practice_input)}</b><small>${esc([a.name, place].filter(Boolean).join(' · ') || a.email)}</small></div></div></td>
+          <td class="i-hide-sm i-muted">${shortDate(a.created_at)}</td>
+          <td>${openedCell(a)}</td>
+          <td class="i-hide-md">${followupCell(a)}</td>
+          <td class="i-hide-sm">${inquiry}</td>
+          <td class="r-num">${open}</td>
+        </tr>`;
+      })
+      .join('');
+  }
+
+  document.getElementById('au-search')!.addEventListener('input', renderList);
+
+  async function load() {
+    const { data, error } = await supabase
+      .from('audits')
+      .select('id, token, name, email, practice_input, practice_name, url, city, state, status, created_at, first_viewed_at, view_count, followup_step, unsubscribed_at, lead_id, lead:leads(status)')
+      .order('created_at', { ascending: false });
+    if (error) {
+      document.getElementById('au-count')!.textContent = 'Could not load audits: ' + error.message;
+      return;
+    }
+    audits = (data ?? []) as unknown as Audit[];
+    renderStats();
+    renderList();
+  }
+
+  initAdminAuth(load, { allowedRoles: ['owner', 'agency'] });
+</script>

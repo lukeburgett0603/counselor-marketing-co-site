@@ -1,0 +1,543 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { LINK_CATEGORIES, LINK_RULES, LINK_STATUSES, OWNER_PARTIES } from '../../lib/linkBuilding';
+---
+
+<!--
+  Link building tracker: the backlink half of the "Get Found" step. The
+  websites the practice wants a link from, where each one stands, who's
+  doing it (the practice, or its marketing team on done-for-you plans),
+  and the next step. Starts from a reviewed suggestion list
+  (src/lib/linkBuilding.ts); practices add their own too. Same list/detail
+  toggle, stage-chip filter and "due this week" patterns as
+  admin/referral-partners.astro. See 0077_link_building.sql. Owners and
+  agency only.
+-->
+<AdminLayout title="Links | Admin" current="links">
+  <div id="links-list-view">
+    <p class="i-intro">Trusted local websites that link to yours help Google see your practice as real and respected. Work through this list one at a time.</p>
+
+    <div class="r-kpis">
+      <div class="t-kpi">
+        <span class="t-lbl">Live links</span>
+        <span id="stat-live" class="t-v a-num">—</span>
+        <span id="stat-live-note" class="t-delta"></span>
+      </div>
+      <div class="t-kpi">
+        <span class="t-lbl">In progress</span>
+        <span id="stat-progress" class="t-v a-num">—</span>
+        <span class="t-delta">Working on it or submitted</span>
+      </div>
+      <div class="t-kpi">
+        <span class="t-lbl">To do</span>
+        <span id="stat-todo" class="t-v a-num">—</span>
+        <span class="t-delta">Not started yet</span>
+      </div>
+    </div>
+
+    <div class="i-pipeline" id="lk-pipeline" role="group" aria-label="Filter by status"></div>
+
+    <div id="lk-due-section" class="t-card i-due hidden">
+      <h2>Next steps due<span class="t-aside" id="lk-due-count"></span></h2>
+      <div id="lk-due-list" class="i-due-list"></div>
+    </div>
+
+    <div class="i-filters">
+      <label class="i-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+        <input id="lk-search" type="text" placeholder="Search links" aria-label="Search links" />
+      </label>
+      <select id="lk-status-filter" hidden aria-hidden="true" tabindex="-1">
+        <option value="">All</option>
+        {LINK_STATUSES.map((s) => <option value={s.value}>{s.label}</option>)}
+      </select>
+      <select id="lk-owner-filter" aria-label="Who's doing it">
+        <option value="">Anyone</option>
+        {OWNER_PARTIES.map((o) => <option value={o.value}>{o.label}</option>)}
+      </select>
+      <p id="lk-count" class="i-count"></p>
+      <button id="lk-suggest-button" type="button" class="a-btn i-btn" hidden>Add suggested links</button>
+      <button id="lk-add-button" type="button" class="a-btn a-btn-primary i-btn">+ Add link</button>
+    </div>
+
+    <div class="i-list t-card">
+      <table class="i-table">
+        <thead>
+          <tr>
+            <th>Link</th>
+            <th>Status</th>
+            <th class="i-hide-md">Cost</th>
+            <th class="i-hide-sm">Who</th>
+            <th class="i-hide-sm">Next step</th>
+          </tr>
+        </thead>
+        <tbody id="lk-table-body"></tbody>
+      </table>
+      <div id="lk-empty" class="t-empty" hidden></div>
+    </div>
+
+    <section class="t-card r-kit-card">
+      <h2>Ground rules</h2>
+      <ul class="lk-rules">
+        {LINK_RULES.map((r) => <li>{r}</li>)}
+      </ul>
+    </section>
+  </div>
+
+  <div id="lk-detail-view" class="hidden">
+    <div class="i-detail-top">
+      <button id="lk-back" type="button" class="a-link">&larr; All links</button>
+      <div class="i-detail-tools">
+        <button id="lk-delete" type="button" class="a-btn i-btn i-danger">Delete</button>
+      </div>
+    </div>
+
+    <div class="i-detail">
+      <div class="i-detail-main">
+        <section class="t-card i-person">
+          <div class="i-person-head">
+            <div>
+              <h2 id="lk-detail-name"></h2>
+              <p id="lk-detail-meta"></p>
+            </div>
+            <span id="lk-detail-status" class="r-head-stage"></span>
+          </div>
+          <div class="r-links" id="lk-detail-links"></div>
+        </section>
+
+        <section class="t-card">
+          <h2>How to get it</h2>
+          <p id="lk-cost" class="lk-cost"></p>
+          <ol id="lk-steps" class="lk-steps"></ol>
+          <p id="lk-no-steps" class="i-hint" hidden>Your own addition. Keep your plan and progress in the notes.</p>
+          <div class="i-inline lk-quick">
+            <button id="lk-start" type="button" class="a-btn i-btn">I'm working on it</button>
+            <button id="lk-submitted" type="button" class="a-btn i-btn">I applied / submitted</button>
+            <button id="lk-live" type="button" class="a-btn a-btn-primary i-btn">It's live</button>
+            <span id="lk-quick-status" class="i-hint" role="status"></span>
+          </div>
+        </section>
+      </div>
+
+      <aside class="i-detail-side">
+        <form id="lk-form" class="t-card i-fields">
+          <div class="i-field">
+            <label for="lf-status">Status</label>
+            <select id="lf-status" name="status">
+              {LINK_STATUSES.map((s) => <option value={s.value}>{s.label}</option>)}
+            </select>
+          </div>
+          <div class="i-field">
+            <label for="lf-owner">Who's doing it</label>
+            <select id="lf-owner" name="owner_party">
+              {OWNER_PARTIES.map((o) => <option value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+          <div class="i-field">
+            <label for="lf-next">Next step date</label>
+            <input id="lf-next" name="next_step_date" type="date" />
+          </div>
+          <div class="i-field">
+            <label for="lf-name">Name</label>
+            <input id="lf-name" name="name" type="text" required />
+          </div>
+          <div class="i-field">
+            <label for="lf-category">Type</label>
+            <select id="lf-category" name="category">
+              {LINK_CATEGORIES.map((c) => <option value={c.value}>{c.label}</option>)}
+            </select>
+          </div>
+          <div class="i-field">
+            <label for="lf-website">Their website</label>
+            <input id="lf-website" name="website" type="url" placeholder="https://" />
+          </div>
+          <div class="i-field">
+            <label for="lf-cost">Cost</label>
+            <input id="lf-cost" name="cost_note" type="text" placeholder="e.g. Free, $30/month" />
+          </div>
+          <div class="i-field">
+            <label for="lf-live-url">Page where your link appears</label>
+            <input id="lf-live-url" name="live_url" type="url" placeholder="https://" />
+          </div>
+          <div class="i-field">
+            <label for="lf-notes">Notes</label>
+            <textarea id="lf-notes" name="notes" rows="4" placeholder="Who you talked to, login details to remember, what's next..."></textarea>
+          </div>
+          <div class="i-inline">
+            <button type="submit" class="a-btn a-btn-primary i-btn">Save</button>
+            <span id="lk-form-status" class="i-hint" role="status"></span>
+          </div>
+        </form>
+      </aside>
+    </div>
+  </div>
+
+  <div id="lk-add-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+    <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+      <div class="mb-4 flex items-center justify-between">
+        <p class="font-semibold text-brand-ink">Add a link to go after</p>
+        <button id="lk-add-close" type="button" class="text-sm text-slate-500 hover:text-slate-800">Close</button>
+      </div>
+      <form id="lk-add-form" class="space-y-3">
+        <div>
+          <label for="la-name" class="block text-xs font-semibold text-slate-500">Name</label>
+          <input id="la-name" name="name" type="text" required placeholder="e.g. Grace Church events page, Rotary Club directory" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label for="la-category" class="block text-xs font-semibold text-slate-500">Type</label>
+          <select id="la-category" name="category" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+            {LINK_CATEGORIES.map((c) => <option value={c.value}>{c.label}</option>)}
+          </select>
+        </div>
+        <div>
+          <label for="la-website" class="block text-xs font-semibold text-slate-500">Their website (optional)</label>
+          <input id="la-website" name="website" type="url" placeholder="https://" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+        </div>
+        <p id="lk-add-status" class="text-sm text-red-600"></p>
+        <button type="submit" class="a-btn a-btn-primary w-full">Add link</button>
+      </form>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  import { supabase, initAdminAuth } from '../../lib/adminAuth';
+  import {
+    LINK_STATUSES,
+    LINK_SUGGESTIONS,
+    fillPlace,
+    linkCategoryLabel,
+    linkStatusLabel,
+    ownerLabel,
+    type LinkOpportunity,
+  } from '../../lib/linkBuilding';
+
+  let links: LinkOpportunity[] = [];
+  let currentId: string | null = null;
+  let city: string | null = null;
+  let state: string | null = null;
+
+  const listView = document.getElementById('links-list-view')!;
+  const detailView = document.getElementById('lk-detail-view')!;
+  const tableBody = document.getElementById('lk-table-body')!;
+  const searchInput = document.getElementById('lk-search') as HTMLInputElement;
+  const statusFilter = document.getElementById('lk-status-filter') as HTMLSelectElement;
+  const ownerFilter = document.getElementById('lk-owner-filter') as HTMLSelectElement;
+  const suggestButton = document.getElementById('lk-suggest-button') as HTMLButtonElement;
+  const form = document.getElementById('lk-form') as HTMLFormElement;
+  const formStatus = document.getElementById('lk-form-status')!;
+  const quickStatus = document.getElementById('lk-quick-status')!;
+  const addModal = document.getElementById('lk-add-modal')!;
+  const addForm = document.getElementById('lk-add-form') as HTMLFormElement;
+  const addStatus = document.getElementById('lk-add-status')!;
+
+  function escapeHtml(value: string): string {
+    const div = document.createElement('div');
+    div.textContent = value;
+    return div.innerHTML;
+  }
+  const escapeAttr = (value: string) => escapeHtml(value).replace(/"/g, '&quot;');
+
+  function todayIso(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  // Plain `date` columns have no time zone: parse as local.
+  function formatShort(ymd: string): string {
+    const [y, m, d] = ymd.split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  const statusBadge = (status: string) =>
+    `<span class="r-stage lk-stage-${escapeAttr(status)}">${escapeHtml(linkStatusLabel(status))}</span>`;
+
+  const suggestionFor = (l: LinkOpportunity) => LINK_SUGGESTIONS.find((s) => s.key === l.suggestion_key) ?? null;
+
+  function renderStats() {
+    const live = links.filter((l) => l.status === 'live');
+    document.getElementById('stat-live')!.textContent = String(live.length);
+    const newest = live.map((l) => l.live_on).filter(Boolean).sort().at(-1);
+    document.getElementById('stat-live-note')!.textContent = newest ? `Newest: ${formatShort(newest)}` : 'None yet';
+    document.getElementById('stat-progress')!.textContent = String(links.filter((l) => ['in_progress', 'submitted'].includes(l.status)).length);
+    document.getElementById('stat-todo')!.textContent = String(links.filter((l) => l.status === 'todo').length);
+    const missing = LINK_SUGGESTIONS.filter((s) => !links.some((l) => l.suggestion_key === s.key));
+    suggestButton.hidden = missing.length === 0 || links.length === 0;
+    suggestButton.textContent = `Add suggested links (${missing.length})`;
+  }
+
+  // Same rule as referral follow-ups: no lower bound, so an overdue step
+  // keeps showing instead of disappearing once its date passes.
+  function renderDue() {
+    const weekOut = new Date();
+    weekOut.setDate(weekOut.getDate() + 7);
+    const limit = `${weekOut.getFullYear()}-${String(weekOut.getMonth() + 1).padStart(2, '0')}-${String(weekOut.getDate()).padStart(2, '0')}`;
+    const today = todayIso();
+    const due = links
+      .filter((l) => !['live', 'skipped'].includes(l.status) && l.next_step_date && l.next_step_date <= limit)
+      .sort((a, b) => a.next_step_date!.localeCompare(b.next_step_date!));
+    document.getElementById('lk-due-section')!.classList.toggle('hidden', due.length === 0);
+    document.getElementById('lk-due-count')!.textContent = `${due.length} in the next 7 days`;
+    document.getElementById('lk-due-list')!.innerHTML = due
+      .map((l) => {
+        const overdue = l.next_step_date! < today;
+        const when = overdue ? `Overdue · was due ${formatShort(l.next_step_date!)}` : l.next_step_date === today ? 'Due today' : `Due ${formatShort(l.next_step_date!)}`;
+        return `<button type="button" data-link-id="${l.id}" class="open-link due-item"><span class="i-due-name">${escapeHtml(l.name)}</span><span class="i-due-when${overdue ? ' late' : ''}">${when}</span></button>`;
+      })
+      .join('');
+  }
+
+  function renderPipeline() {
+    const current = statusFilter.value;
+    const chip = (value: string, label: string, n: number) =>
+      `<button type="button" class="i-chip lk-chip-${value || 'all'}" data-status="${value}" aria-pressed="${current === value}"><span>${label}</span><b class="a-num">${n}</b></button>`;
+    document.getElementById('lk-pipeline')!.innerHTML =
+      chip('', 'All', links.length) + LINK_STATUSES.map((s) => chip(s.value, s.label, links.filter((l) => l.status === s.value).length)).join('');
+  }
+  document.getElementById('lk-pipeline')!.addEventListener('click', (event) => {
+    const chip = (event.target as HTMLElement).closest<HTMLElement>('[data-status]');
+    if (!chip) return;
+    statusFilter.value = chip.dataset.status!;
+    renderList();
+  });
+
+  const STATUS_ORDER = ['in_progress', 'submitted', 'todo', 'live', 'skipped'];
+
+  function renderList() {
+    renderPipeline();
+    const q = searchInput.value.trim().toLowerCase();
+    const rows = links
+      .filter((l) => {
+        if (statusFilter.value && l.status !== statusFilter.value) return false;
+        if (ownerFilter.value && l.owner_party !== ownerFilter.value) return false;
+        if (q && ![l.name, l.notes ?? '', l.website ?? ''].some((v) => v.toLowerCase().includes(q))) return false;
+        return true;
+      })
+      .sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status) || a.name.localeCompare(b.name));
+    document.getElementById('lk-count')!.textContent = `${rows.length} link${rows.length === 1 ? '' : 's'}`;
+    const empty = document.getElementById('lk-empty')!;
+    empty.hidden = rows.length > 0;
+    if (!rows.length) {
+      empty.innerHTML = links.length
+        ? '<b>No links match these filters.</b>Try a different status or search.'
+        : `<b>No links yet.</b>Start with ${LINK_SUGGESTIONS.length} places most counseling practices can get listed, each with steps.<button type="button" id="lk-empty-suggest" class="a-btn a-btn-primary i-btn lk-empty-btn">Add suggested links</button>`;
+      document.getElementById('lk-empty-suggest')?.addEventListener('click', addSuggestions);
+    }
+    const today = todayIso();
+    tableBody.innerHTML = rows
+      .map((l) => {
+        const late = l.next_step_date && l.next_step_date < today && !['live', 'skipped'].includes(l.status);
+        const cost = l.cost_note ?? suggestionFor(l)?.cost ?? '';
+        return `
+      <tr data-link-id="${l.id}" class="open-link ${l.status === 'skipped' ? 'i-archived' : ''}">
+        <td><div class="i-who"><div><b>${escapeHtml(l.name)}</b><small>${escapeHtml(linkCategoryLabel(l.category))}</small></div></div></td>
+        <td>${statusBadge(l.status)}</td>
+        <td class="i-hide-md i-muted">${escapeHtml(cost.split(';')[0])}</td>
+        <td class="i-hide-sm i-muted">${escapeHtml(ownerLabel(l.owner_party))}</td>
+        <td class="i-hide-sm ${late ? 'i-late' : 'i-muted'}">${l.next_step_date ? formatShort(l.next_step_date) : ''}</td>
+      </tr>`;
+      })
+      .join('');
+  }
+
+  function renderAll() {
+    renderStats();
+    renderDue();
+    renderList();
+  }
+
+  [searchInput, statusFilter, ownerFilter].forEach((el) => el.addEventListener('input', renderList));
+
+  document.addEventListener('click', (event) => {
+    const target = (event.target as HTMLElement).closest<HTMLElement>('.open-link');
+    if (target?.dataset.linkId) openDetail(target.dataset.linkId);
+  });
+
+  function renderHeader() {
+    const l = links.find((x) => x.id === currentId);
+    if (!l) return;
+    document.getElementById('lk-detail-name')!.textContent = l.name;
+    document.getElementById('lk-detail-meta')!.textContent = [linkCategoryLabel(l.category), ownerLabel(l.owner_party)].join(' · ');
+    document.getElementById('lk-detail-status')!.innerHTML = statusBadge(l.status);
+    const out: string[] = [];
+    if (l.website && /^https?:\/\//i.test(l.website.trim())) out.push(`<a class="a-btn i-btn" href="${escapeAttr(l.website.trim())}" target="_blank" rel="noopener">Their website</a>`);
+    if (l.live_url && /^https?:\/\//i.test(l.live_url.trim())) out.push(`<a class="a-btn i-btn" href="${escapeAttr(l.live_url.trim())}" target="_blank" rel="noopener">See your link</a>`);
+    const linksEl = document.getElementById('lk-detail-links')!;
+    linksEl.innerHTML = out.join('');
+    linksEl.hidden = out.length === 0;
+  }
+
+  function renderSteps() {
+    const l = links.find((x) => x.id === currentId);
+    if (!l) return;
+    const s = suggestionFor(l);
+    const cost = l.cost_note ?? s?.cost ?? '';
+    const costEl = document.getElementById('lk-cost')!;
+    costEl.textContent = cost ? `What it takes: ${cost}` : '';
+    costEl.hidden = !cost;
+    document.getElementById('lk-steps')!.innerHTML = (s?.steps ?? []).map((step) => `<li>${escapeHtml(fillPlace(step, city, state))}</li>`).join('');
+    document.getElementById('lk-no-steps')!.hidden = !!s;
+  }
+
+  function openDetail(id: string) {
+    const l = links.find((x) => x.id === id);
+    if (!l) return;
+    currentId = id;
+    const f = form.elements as unknown as Record<string, HTMLInputElement>;
+    for (const key of ['status', 'owner_party', 'next_step_date', 'name', 'category', 'website', 'cost_note', 'live_url', 'notes']) {
+      f[key].value = ((l as unknown as Record<string, string | null>)[key] ?? '') as string;
+    }
+    formStatus.textContent = '';
+    quickStatus.textContent = '';
+    renderHeader();
+    renderSteps();
+    listView.classList.add('hidden');
+    detailView.classList.remove('hidden');
+    window.scrollTo(0, 0);
+  }
+
+  document.getElementById('lk-back')!.addEventListener('click', () => {
+    detailView.classList.add('hidden');
+    listView.classList.remove('hidden');
+    renderAll();
+  });
+
+  async function save(update: Partial<LinkOpportunity>, statusEl: HTMLElement): Promise<boolean> {
+    if (!currentId) return false;
+    statusEl.textContent = 'Saving...';
+    statusEl.className = 'i-hint';
+    const { error } = await supabase.from('link_opportunities').update(update).eq('id', currentId);
+    if (error) {
+      statusEl.textContent = 'Could not save: ' + error.message;
+      statusEl.className = 'i-hint r-err';
+      return false;
+    }
+    Object.assign(links.find((l) => l.id === currentId)!, update);
+    statusEl.textContent = 'Saved.';
+    statusEl.className = 'i-hint r-ok';
+    renderHeader();
+    renderSteps();
+    return true;
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const data = new FormData(form);
+    const text = (k: string) => ((data.get(k) as string) ?? '').trim() || null;
+    const current = links.find((l) => l.id === currentId)!;
+    const status = data.get('status') as string;
+    const update: Partial<LinkOpportunity> = {
+      status,
+      owner_party: data.get('owner_party') as string,
+      next_step_date: text('next_step_date'),
+      name: text('name') ?? '',
+      category: data.get('category') as string,
+      website: text('website'),
+      cost_note: text('cost_note'),
+      live_url: text('live_url'),
+      notes: text('notes'),
+      // Stamp the day it went live the first time; clear it if it's moved back.
+      live_on: status === 'live' ? current.live_on ?? todayIso() : null,
+    };
+    if (!update.name) return;
+    await save(update, formStatus);
+  });
+
+  // One-tap status changes from the "How to get it" card.
+  const quick = (status: string) => async () => {
+    const current = links.find((l) => l.id === currentId);
+    if (!current) return;
+    const update: Partial<LinkOpportunity> = { status, live_on: status === 'live' ? current.live_on ?? todayIso() : null };
+    if (status === 'live') update.next_step_date = null;
+    if (await save(update, quickStatus)) {
+      (form.elements.namedItem('status') as HTMLSelectElement).value = status;
+      if (status === 'live') {
+        (form.elements.namedItem('next_step_date') as HTMLInputElement).value = '';
+        quickStatus.textContent = 'Nice work. Add the page where your link appears, if you have it.';
+        (form.elements.namedItem('live_url') as HTMLInputElement).focus();
+      }
+    }
+  };
+  document.getElementById('lk-start')!.addEventListener('click', quick('in_progress'));
+  document.getElementById('lk-submitted')!.addEventListener('click', quick('submitted'));
+  document.getElementById('lk-live')!.addEventListener('click', quick('live'));
+
+  document.getElementById('lk-delete')!.addEventListener('click', async () => {
+    const l = links.find((x) => x.id === currentId);
+    if (!l) return;
+    if (!window.confirm(`Delete "${l.name}"? Mark it Skipped instead if you might come back to it.`)) return;
+    const { error } = await supabase.from('link_opportunities').delete().eq('id', l.id);
+    if (error) {
+      window.alert('Could not delete: ' + error.message);
+      return;
+    }
+    links = links.filter((x) => x.id !== l.id);
+    detailView.classList.add('hidden');
+    listView.classList.remove('hidden');
+    renderAll();
+  });
+
+  // The reviewed list, filled in with the practice's city and state.
+  // suggestion_key is unique, so a suggestion can never be added twice.
+  async function addSuggestions() {
+    const missing = LINK_SUGGESTIONS.filter((s) => !links.some((l) => l.suggestion_key === s.key));
+    if (!missing.length) return;
+    const rows = missing.map((s) => ({ name: fillPlace(s.name, city, state), category: s.category, suggestion_key: s.key, cost_note: s.cost }));
+    const { data, error } = await supabase.from('link_opportunities').insert(rows).select();
+    if (error) {
+      window.alert('Could not add suggestions: ' + error.message);
+      return;
+    }
+    links.push(...((data ?? []) as LinkOpportunity[]));
+    renderAll();
+  }
+  suggestButton.addEventListener('click', addSuggestions);
+
+  document.getElementById('lk-add-button')!.addEventListener('click', () => {
+    addForm.reset();
+    addStatus.textContent = '';
+    addModal.classList.remove('hidden');
+    addModal.classList.add('flex');
+  });
+  document.getElementById('lk-add-close')!.addEventListener('click', () => {
+    addModal.classList.add('hidden');
+    addModal.classList.remove('flex');
+  });
+
+  addForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const data = new FormData(addForm);
+    const name = ((data.get('name') as string) ?? '').trim();
+    if (!name) return;
+    const { data: inserted, error } = await supabase
+      .from('link_opportunities')
+      .insert({ name, category: data.get('category') as string, website: ((data.get('website') as string) ?? '').trim() || null })
+      .select()
+      .single();
+    if (error) {
+      addStatus.textContent = 'Could not add link: ' + error.message;
+      return;
+    }
+    links.push(inserted as LinkOpportunity);
+    addModal.classList.add('hidden');
+    addModal.classList.remove('flex');
+    openDetail((inserted as LinkOpportunity).id);
+  });
+
+  async function load() {
+    const [l, b] = await Promise.all([
+      supabase.from('link_opportunities').select('*').order('name'),
+      supabase.from('business').select('address_locality, address_region').single(),
+    ]);
+    if (l.error) {
+      document.getElementById('lk-count')!.textContent = 'Could not load links: ' + l.error.message;
+      return;
+    }
+    links = (l.data ?? []) as LinkOpportunity[];
+    city = (b.data as { address_locality: string | null } | null)?.address_locality ?? null;
+    state = (b.data as { address_region: string | null } | null)?.address_region ?? null;
+    renderAll();
+  }
+
+  initAdminAuth(load, { allowedRoles: ['owner', 'agency'] });
+</script>

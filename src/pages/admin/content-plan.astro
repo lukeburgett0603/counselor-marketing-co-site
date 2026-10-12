@@ -10,67 +10,36 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   admin/counselor-settings.astro's owner/agency-vs-linked-counselor
   split, rather than two separate pages.
 -->
-<AdminLayout title="Content Plan | Admin" current="content-plan">
-  <!-- Owner/agency: the full board -->
+<AdminLayout title="Content plan | Admin" current="content-plan">
+  <!-- Owner/agency: the board. Columns are the statuses; cards drag
+       between columns or move with their status picker. -->
   <div id="plan-board-view" class="hidden">
-    <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <label class="block text-xs font-semibold text-slate-500">Status</label>
-        <select id="plan-filter-status" class="rounded-md border border-slate-300 px-3 py-2 text-sm">
-          <option value="active" selected>Active (not yet published)</option>
-          <option value="all">All</option>
-          <option value="idea">Idea</option>
-          <option value="assigned">Assigned</option>
-          <option value="drafted">Drafted</option>
-          <option value="published">Published</option>
-        </select>
+    <p class="i-intro">Every article and page idea, from first idea to published.</p>
+    <div class="i-toolbar">
+      <p id="plan-count" class="i-count cp-count"></p>
+      <div class="i-actions">
+        <label class="i-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+          <input id="cp-search" type="text" placeholder="Search ideas" aria-label="Search ideas" />
+        </label>
+        <button id="add-idea-button" type="button" class="a-btn a-btn-primary i-btn">+ Add idea</button>
       </div>
-      <button
-        id="add-idea-button"
-        type="button"
-        class="rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
-      >
-        + Add idea
-      </button>
     </div>
-
-    <p id="plan-count" class="mb-3 text-sm text-slate-600"></p>
-
-    <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-      <table class="w-full text-left text-sm">
-        <thead class="border-b border-slate-200 bg-slate-50">
-          <tr>
-            <th class="px-4 py-3 font-semibold">Title</th>
-            <th class="px-4 py-3 font-semibold">Keyword</th>
-            <th class="px-4 py-3 font-semibold">Search volume</th>
-            <th class="px-4 py-3 font-semibold">Content type</th>
-            <th class="px-4 py-3 font-semibold">Assigned to</th>
-            <th class="px-4 py-3 font-semibold">Due date</th>
-            <th class="px-4 py-3 font-semibold">Status</th>
-            <th class="px-4 py-3 font-semibold"></th>
-          </tr>
-        </thead>
-        <tbody id="plan-table-body"></tbody>
-      </table>
-    </div>
-    <p id="plan-empty" class="hidden px-1 py-4 text-sm text-slate-500">No content plan items yet.</p>
+    <div id="plan-table-body" class="cp-board"></div>
+    <p id="plan-empty" class="t-card t-empty" hidden><b>No ideas yet.</b>Add one here, or use "Plan it" on Search rankings to turn a search into an article idea.</p>
   </div>
 
   <!-- Staff: only their own assignments -->
   <div id="plan-my-assignments-view" class="hidden">
-    <h2 class="mb-4 font-[family-name:var(--font-heading)] text-xl font-extrabold text-brand-ink">My content assignments</h2>
-    <div id="my-assignments-list" class="space-y-4"></div>
-    <p id="my-assignments-empty" class="hidden text-sm text-slate-500">Nothing assigned to you yet.</p>
+    <p class="i-intro">Articles and pages assigned to you, soonest due first.</p>
+    <div id="my-assignments-list" class="cp-mine"></div>
+    <p id="my-assignments-empty" class="t-card t-empty" hidden><b>Nothing assigned to you yet.</b>When something is assigned to you, it shows up here.</p>
   </div>
 
   <!-- Shared row-actions menu (owner/agency board only) -->
-  <div id="actions-menu" class="fixed z-50 hidden w-32 rounded-md border border-slate-200 bg-white py-1 text-left shadow-lg">
-    <button type="button" id="actions-menu-edit" class="block w-full px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50">
-      Edit
-    </button>
-    <button type="button" id="actions-menu-delete" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-red-50">
-      Delete
-    </button>
+  <div id="actions-menu" class="i-menu hidden">
+    <button type="button" id="actions-menu-edit">Edit</button>
+    <button type="button" id="actions-menu-delete" class="i-danger">Delete</button>
   </div>
 
   <!-- Add/Edit idea modal (owner/agency only) -->
@@ -83,7 +52,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       <button
         id="modal-draft-blog-button"
         type="button"
-        class="hidden mb-4 w-full rounded-md border border-brand-primary px-4 py-2 text-sm font-semibold text-brand-primary hover:bg-brand-neutral"
+        class="hidden a-btn mb-4 w-full"
       >
         Draft blog post &rarr;
       </button>
@@ -140,9 +109,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           <textarea name="notes" rows="3" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"></textarea>
         </div>
         <p id="idea-form-status" class="text-sm text-red-600"></p>
-        <button type="submit" class="w-full rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
-          Save
-        </button>
+        <button type="submit" class="a-btn a-btn-primary w-full">Save</button>
       </form>
     </div>
   </div>
@@ -176,7 +143,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     notes: string | null;
   }
 
-  type AdminUserRow = { id: string; email: string; role: string; status: string };
+  type AdminUserRow = { id: string; email: string; role: string; status: string; display_name?: string | null };
   type PageRow = { id: string; title: string };
 
   const CONTENT_TYPE_LABELS: Record<string, string> = {
@@ -203,7 +170,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 
   const boardView = document.getElementById('plan-board-view')!;
   const myAssignmentsView = document.getElementById('plan-my-assignments-view')!;
-  const statusFilter = document.getElementById('plan-filter-status') as HTMLSelectElement;
+  const searchField = document.getElementById('cp-search') as HTMLInputElement;
   const addIdeaButton = document.getElementById('add-idea-button')!;
   const planCount = document.getElementById('plan-count')!;
   const planTableBody = document.getElementById('plan-table-body')!;
@@ -245,68 +212,142 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   }
 
   function userLabel(u: AdminUserRow): string {
-    return `${u.email} (${u.role})`;
+    return u.display_name ? `${u.display_name} (${u.email})` : `${u.email} (${u.role})`;
   }
 
   function assigneeLabel(userId: string | null): string {
     if (!userId) return 'Unassigned';
     const u = assignableUsers.find((a) => a.id === userId);
-    return u ? u.email : 'Unknown';
+    return u ? (u.display_name || u.email.split('@')[0]) : 'Unknown';
+  }
+
+  function initials(name: string): string {
+    return (name.trim().split(/[\s.@_-]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('') || '?').toUpperCase();
+  }
+
+  const todayIso = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  const shortDate = (ymd: string) => new Date(ymd + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+  // One card, shared by the board and the staff list.
+  function cardHtml(item: ContentPlanItem, opts: { board: boolean }): string {
+    const late = item.due_date && item.due_date < todayIso() && item.status !== 'published';
+    const assignee = assigneeLabel(item.assigned_to);
+    const meta = [
+      item.keyword ? `<span class="cp-kw">${escapeHtml(item.keyword)}${item.search_volume != null ? ` · ${item.search_volume.toLocaleString()}/mo` : ''}</span>` : '',
+      item.target_question ? `<span class="cp-q">"${escapeHtml(item.target_question)}"</span>` : '',
+    ].join('');
+    const statusSelect = `<select class="${opts.board ? 'row-status-select' : 'my-status-select'} cp-status" data-item-id="${item.id}" aria-label="Status">${Object.entries(STATUS_LABELS)
+      .map(([value, label]) => `<option value="${value}" ${item.status === value ? 'selected' : ''}>${label}</option>`)
+      .join('')}</select>`;
+    return `<article class="cp-card${item.priority === 'high' ? ' cp-high' : ''}" data-item-id="${item.id}" ${opts.board ? 'draggable="true"' : ''}>
+      <div class="cp-top">
+        <span class="cp-type">${CONTENT_TYPE_LABELS[item.content_type]}</span>
+        ${opts.board ? `<button type="button" class="actions-toggle i-more" data-item-id="${item.id}" aria-label="Actions for ${escapeHtml(item.title)}">···</button>` : statusSelect}
+      </div>
+      <b class="cp-title">${escapeHtml(item.title)}</b>
+      ${meta ? `<div class="cp-meta">${meta}</div>` : ''}
+      <div class="cp-foot">
+        ${opts.board ? `<span class="cp-who" title="${escapeHtml(assignee)}"><span class="i-avatar sm">${item.assigned_to ? escapeHtml(initials(assignee)) : '–'}</span>${escapeHtml(assignee)}</span>` : ''}
+        ${item.due_date ? `<span class="cp-due${late ? ' late' : ''}">${late ? 'Overdue · ' : 'Due '}${shortDate(item.due_date)}</span>` : ''}
+      </div>
+      ${
+        item.content_type === 'blog_post' && item.status !== 'published'
+          ? `<button type="button" class="draft-blog-link a-btn i-btn cp-draft" data-item-id="${item.id}">${item.linked_page_id ? 'Open draft' : 'Draft blog post'} &rarr;</button>`
+          : ''
+      }
+      ${opts.board ? `<div class="cp-move">${statusSelect}</div>` : ''}
+      ${
+        opts.board
+          ? ''
+          : `<label class="cp-notes-l">Notes<textarea class="my-notes-field" rows="2" data-item-id="${item.id}">${escapeHtml(item.notes ?? '')}</textarea></label>
+             <div class="i-inline"><button type="button" class="my-notes-save a-btn i-btn" data-item-id="${item.id}">Save notes</button><span class="my-save-status i-hint"></span></div>`
+      }
+    </article>`;
   }
 
   // --- Owner/agency board ---
 
-  function applyStatusFilter(list: ContentPlanItem[]): ContentPlanItem[] {
-    const status = statusFilter.value;
-    if (status === 'all') return list;
-    // Default view: everything not yet published — a published item stays
-    // fully visible via the explicit "Published"/"All" filter options, it
-    // just stops cluttering the "still needs to be created" default view.
-    if (status === 'active') return list.filter((i) => i.status !== 'published');
-    return list.filter((i) => i.status === status);
-  }
+  const COLUMN_HINTS: Record<string, string> = {
+    idea: 'Not started',
+    assigned: 'Someone is on it',
+    drafted: 'Written, not live',
+    published: 'Live on the site',
+  };
+  // Published is history: the latest few show, the rest stay a click away.
+  const PUBLISHED_SHOWN = 6;
+  let showAllPublished = false;
+  const PRIORITY_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 };
 
   function renderBoard() {
-    const filtered = applyStatusFilter(items);
-    planCount.textContent = `${filtered.length} item${filtered.length === 1 ? '' : 's'}`;
-    planEmpty.classList.toggle('hidden', filtered.length > 0);
-    planTableBody.innerHTML = filtered
-      .map(
-        (item) => `
-      <tr class="border-b border-slate-100 last:border-0" data-item-id="${item.id}">
-        <td class="px-4 py-3">
-          <div class="flex items-center gap-2">
-            <span>${escapeHtml(item.title)}</span>
-            ${
-              item.content_type === 'blog_post'
-                ? `<button type="button" class="draft-blog-link whitespace-nowrap rounded-md border border-brand-primary px-2 py-1 text-xs font-semibold text-brand-primary hover:bg-brand-neutral" data-item-id="${item.id}">Draft blog post &rarr;</button>`
-                : ''
-            }
-          </div>
-        </td>
-        <td class="px-4 py-3">${item.keyword ? escapeHtml(item.keyword) : '—'}</td>
-        <td class="px-4 py-3">${item.search_volume != null ? `${item.search_volume.toLocaleString()}/mo` : '—'}</td>
-        <td class="px-4 py-3">${CONTENT_TYPE_LABELS[item.content_type]}</td>
-        <td class="px-4 py-3">${escapeHtml(assigneeLabel(item.assigned_to))}</td>
-        <td class="px-4 py-3 whitespace-nowrap">${item.due_date ? new Date(item.due_date + 'T00:00:00').toLocaleDateString() : '—'}</td>
-        <td class="px-4 py-3">
-          <select class="row-status-select rounded-md border border-slate-300 px-2 py-1 text-sm" data-item-id="${item.id}">
-            ${Object.entries(STATUS_LABELS)
-              .map(([value, label]) => `<option value="${value}" ${item.status === value ? 'selected' : ''}>${label}</option>`)
-              .join('')}
-          </select>
-        </td>
-        <td class="px-4 py-3 text-right">
-          <button type="button" class="actions-toggle rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50" data-item-id="${item.id}">
-            Actions &#9662;
-          </button>
-        </td>
-      </tr>`
-      )
+    const q = searchField.value.trim().toLowerCase();
+    const visible = items.filter((i) => !q || [i.title, i.keyword ?? '', i.target_question ?? ''].some((v) => v.toLowerCase().includes(q)));
+    const open = items.filter((i) => i.status !== 'published').length;
+    planCount.textContent = `${open} in progress · ${items.length - open} published`;
+    planEmpty.hidden = items.length > 0;
+    planTableBody.hidden = items.length === 0;
+    planTableBody.innerHTML = Object.keys(STATUS_LABELS)
+      .map((status) => {
+        let col = visible.filter((i) => i.status === status);
+        // Within a column: overdue/soonest due first, then priority.
+        col.sort((a, b) => (a.due_date ?? '9999').localeCompare(b.due_date ?? '9999') || (PRIORITY_RANK[a.priority ?? ''] ?? 3) - (PRIORITY_RANK[b.priority ?? ''] ?? 3));
+        const total = col.length;
+        if (status === 'published' && !showAllPublished) col = col.slice(0, PUBLISHED_SHOWN);
+        return `<section class="cp-col cp-col-${status}" data-status="${status}">
+          <h2><span class="cp-dot"></span>${STATUS_LABELS[status]}<span class="cp-n a-num">${total}</span><small>${COLUMN_HINTS[status]}</small></h2>
+          <div class="cp-cards">${col.map((i) => cardHtml(i, { board: true })).join('') || '<p class="cp-none">Nothing here</p>'}</div>
+          ${status === 'published' && total > PUBLISHED_SHOWN ? `<button type="button" class="a-link cp-more" data-toggle-published>${showAllPublished ? 'Show fewer' : `Show all ${total}`}</button>` : ''}
+        </section>`;
+      })
       .join('');
   }
 
-  statusFilter.addEventListener('change', renderBoard);
+  searchField.addEventListener('input', renderBoard);
+
+  async function setStatus(itemId: string, status: string) {
+    const item = items.find((i) => i.id === itemId);
+    if (!item || item.status === status) return;
+    const previous = item.status;
+    item.status = status as ContentPlanItem['status'];
+    renderBoard();
+    const { error } = await supabase.from('content_plan_items').update({ status }).eq('id', itemId);
+    if (error) {
+      item.status = previous;
+      renderBoard();
+      window.alert('Could not update status: ' + error.message);
+    }
+  }
+
+  // Drag a card to another column to change its status.
+  let draggingId: string | null = null;
+  planTableBody.addEventListener('dragstart', (event) => {
+    const card = (event.target as HTMLElement).closest<HTMLElement>('.cp-card');
+    if (!card) return;
+    draggingId = card.dataset.itemId!;
+    card.classList.add('dragging');
+    event.dataTransfer?.setData('text/plain', draggingId);
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+  });
+  planTableBody.addEventListener('dragend', () => {
+    draggingId = null;
+    planTableBody.querySelectorAll('.dragging, .drop').forEach((el) => el.classList.remove('dragging', 'drop'));
+  });
+  planTableBody.addEventListener('dragover', (event) => {
+    const col = (event.target as HTMLElement).closest<HTMLElement>('.cp-col');
+    if (!col || !draggingId) return;
+    event.preventDefault();
+    planTableBody.querySelectorAll('.cp-col.drop').forEach((el) => el !== col && el.classList.remove('drop'));
+    col.classList.add('drop');
+  });
+  planTableBody.addEventListener('drop', (event) => {
+    const col = (event.target as HTMLElement).closest<HTMLElement>('.cp-col');
+    if (!col || !draggingId) return;
+    event.preventDefault();
+    setStatus(draggingId, col.dataset.status!);
+  });
+
 
   function populateLinkedPagePicker() {
     linkedPageSelect.innerHTML =
@@ -498,8 +539,19 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       return;
     }
 
+    if (target.closest('[data-toggle-published]')) {
+      showAllPublished = !showAllPublished;
+      renderBoard();
+      return;
+    }
+
     const toggleButton = target.closest<HTMLElement>('.actions-toggle');
-    if (!toggleButton) return;
+    if (!toggleButton) {
+      // Clicking the card itself (not a control) opens it for editing.
+      const card = target.closest<HTMLElement>('.cp-card');
+      if (card && !target.closest('select, button, a')) openEditModal(card.dataset.itemId!);
+      return;
+    }
     const itemId = toggleButton.dataset.itemId!;
     if (actionsMenuItemId === itemId && !actionsMenu.classList.contains('hidden')) {
       closeActionsMenu();
@@ -511,21 +563,10 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   // Row-level status select — same pattern as the staff assignment card's
   // own .my-status-select, moved here since status is no longer part of
   // the Edit modal (see CLAUDE.md's "Content Plan" sections).
-  planTableBody.addEventListener('change', async (event) => {
+  // Status picker on each card (the keyboard-friendly way to move it).
+  planTableBody.addEventListener('change', (event) => {
     const select = (event.target as HTMLElement).closest<HTMLSelectElement>('.row-status-select');
-    if (!select) return;
-    const itemId = select.dataset.itemId!;
-    const { error } = await supabase.from('content_plan_items').update({ status: select.value }).eq('id', itemId);
-    if (error) {
-      window.alert('Could not update status: ' + error.message);
-      return;
-    }
-    const item = items.find((i) => i.id === itemId);
-    if (item) item.status = select.value as ContentPlanItem['status'];
-    // Re-render rather than leave the row alone — the default "Active"
-    // filter should drop a row the moment it's marked Published, not wait
-    // for the next full reload.
-    renderBoard();
+    if (select) setStatus(select.dataset.itemId!, select.value);
   });
 
   actionsMenuEditButton.addEventListener('click', () => {
@@ -555,7 +596,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       .select('*')
       .order('created_at', { ascending: false });
     if (error) {
-      planTableBody.innerHTML = `<tr><td colspan="7" class="px-4 py-3 text-red-600">Could not load: ${escapeHtml(error.message)}</td></tr>`;
+      planTableBody.innerHTML = `<p class="i-hint r-err">Could not load: ${escapeHtml(error.message)}</p>`;
       return;
     }
     items = (data as ContentPlanItem[]) ?? [];
@@ -565,38 +606,8 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   // --- Staff: my assignments ---
 
   function renderMyAssignments() {
-    myAssignmentsEmpty.classList.toggle('hidden', items.length > 0);
-    myAssignmentsList.innerHTML = items
-      .map(
-        (item) => `
-      <div class="assignment-card rounded-lg border border-black/5 bg-white p-5 shadow-sm" data-item-id="${item.id}">
-        <div class="mb-2 flex items-start justify-between gap-3">
-          <h3 class="font-[family-name:var(--font-heading)] text-lg font-bold text-brand-ink">${escapeHtml(item.title)}</h3>
-          <select class="my-status-select rounded-md border border-slate-300 px-2 py-1 text-sm" data-item-id="${item.id}">
-            ${Object.entries(STATUS_LABELS)
-              .map(([value, label]) => `<option value="${value}" ${item.status === value ? 'selected' : ''}>${label}</option>`)
-              .join('')}
-          </select>
-        </div>
-        <p class="mb-2 text-xs text-slate-500">
-          ${CONTENT_TYPE_LABELS[item.content_type]}${item.due_date ? ` &middot; Due ${new Date(item.due_date + 'T00:00:00').toLocaleDateString()}` : ''}${item.search_volume != null ? ` &middot; ${item.search_volume.toLocaleString()}/mo search volume` : ''}
-        </p>
-        ${item.keyword ? `<p class="mb-2 text-sm font-semibold text-brand-ink">Target keyword: <span class="font-normal">${escapeHtml(item.keyword)}</span></p>` : ''}
-        ${item.target_question ? `<p class="mb-2 text-sm italic text-slate-600">Target question: "${escapeHtml(item.target_question)}"</p>` : ''}
-        ${
-          item.content_type === 'blog_post'
-            ? `<button type="button" class="draft-blog-link mb-3 rounded-md border border-brand-primary px-3 py-1.5 text-xs font-semibold text-brand-primary hover:bg-brand-neutral" data-item-id="${item.id}">Draft blog post &rarr;</button>`
-            : ''
-        }
-        <label class="mb-1 block text-xs font-semibold text-slate-500">Notes</label>
-        <textarea class="my-notes-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm" rows="2" data-item-id="${item.id}">${escapeHtml(item.notes ?? '')}</textarea>
-        <button type="button" class="my-notes-save mt-2 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50" data-item-id="${item.id}">
-          Save notes
-        </button>
-        <span class="my-save-status ml-2 text-xs"></span>
-      </div>`
-      )
-      .join('');
+    myAssignmentsEmpty.hidden = items.length > 0;
+    myAssignmentsList.innerHTML = items.map((item) => cardHtml(item, { board: false }).replace('class="cp-card', 'class="assignment-card cp-card')).join('');
   }
 
   myAssignmentsList.addEventListener('change', async (event) => {
@@ -626,10 +637,10 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     const textarea = card.querySelector<HTMLTextAreaElement>('.my-notes-field')!;
     const statusEl = card.querySelector<HTMLElement>('.my-save-status')!;
     statusEl.textContent = 'Saving...';
-    statusEl.className = 'my-save-status ml-2 text-xs text-slate-500';
+    statusEl.className = 'my-save-status i-hint';
     const { error } = await supabase.from('content_plan_items').update({ notes: textarea.value }).eq('id', itemId);
     statusEl.textContent = error ? 'Could not save: ' + error.message : 'Saved.';
-    statusEl.className = 'my-save-status ml-2 text-xs ' + (error ? 'text-red-600' : 'text-emerald-700');
+    statusEl.className = 'my-save-status i-hint ' + (error ? 'r-err' : 'r-ok');
   });
 
   async function loadMyAssignments(userId: string) {
@@ -639,7 +650,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       .eq('assigned_to', userId)
       .order('due_date', { ascending: true, nullsFirst: false });
     if (error) {
-      myAssignmentsList.innerHTML = `<p class="text-sm text-red-600">Could not load: ${escapeHtml(error.message)}</p>`;
+      myAssignmentsList.innerHTML = `<p class="i-hint r-err">Could not load: ${escapeHtml(error.message)}</p>`;
       return;
     }
     items = (data as ContentPlanItem[]) ?? [];
@@ -649,7 +660,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   // --- Shared loaders ---
 
   async function loadAssignableUsers() {
-    const { data } = await supabase.from('admin_users').select('id, email, role, status').eq('status', 'active');
+    const { data } = await supabase.from('admin_users').select('id, email, role, status, display_name').eq('status', 'active');
     assignableUsers = (data as AdminUserRow[]) ?? [];
     populateAssigneePicker();
   }

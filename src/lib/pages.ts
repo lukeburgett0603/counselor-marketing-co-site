@@ -296,6 +296,9 @@ export interface Business {
   opening_hours: unknown;
   same_as: string[];
   photos: string[];
+  // The practice's Google Business Profile (Maps listing). Feeds schema
+  // hasMap and the neutral "Find us on Google" link in Footer and Contact,
+  // which must never say "review" (Trusted Without Asking, pillar 2).
   google_maps_url: string | null;
   collect_website_in_leads: boolean;
   lead_response_time_note: string | null;
@@ -310,6 +313,11 @@ export interface Business {
   // fully-in-person client has nothing to ask. See
   // 0039_session_format_preference.sql.
   collect_session_format_preference: boolean;
+  collect_lead_source: boolean;
+  // Practice's own Google Business Profile "ask for reviews" link. Admin
+  // only: it feeds the event QR kit on admin/review-program.astro and is
+  // never rendered on the public site. See 0069_review_program.sql.
+  google_review_url: string | null;
   // Where the submit-lead Edge Function sends a real-time "someone just
   // submitted the contact form" notification — null means no
   // notification is sent. See 0041_lead_notification_email.sql.

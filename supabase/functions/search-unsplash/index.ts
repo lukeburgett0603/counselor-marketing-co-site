@@ -93,9 +93,19 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: 'query is required' }, 400);
   }
 
+  // Unsplash's own Search API is already paginated (page + per_page) —
+  // this just exposes that instead of only ever requesting page 1. Capped
+  // at 3 pages (60 photos total at 20/page) rather than passing through
+  // whatever page an admin could theoretically request: a real, bounded
+  // "browse a few more pages" upgrade, not open-ended pagination a picker
+  // built for a handful of clicks was never designed to support.
+  const MAX_PAGE = 3;
+  const requestedPage = typeof body.page === 'number' ? body.page : 1;
+  const page = Math.min(Math.max(1, Math.trunc(requestedPage)), MAX_PAGE);
+
   try {
     const response = await fetch(
-      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=20`,
+      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=20&page=${page}`,
       { headers: { Authorization: `Client-ID ${accessKey}` } }
     );
     if (!response.ok) {
@@ -112,7 +122,11 @@ Deno.serve(async (req: Request) => {
       creditUrl: photo.user?.links?.html ?? '',
       downloadLocation: photo.links?.download_location ?? '',
     }));
-    return jsonResponse({ results });
+    // Unsplash's own total_pages tells us if there's real material for a
+    // Next click — no point offering "Next" into a page Unsplash itself
+    // has nothing for, even under our own 3-page cap.
+    const hasMore = page < MAX_PAGE && page < (data.total_pages ?? 0);
+    return jsonResponse({ results, page, hasMore });
   } catch (err) {
     return jsonResponse({ error: 'Unexpected error searching Unsplash', detail: String(err) }, 500);
   }

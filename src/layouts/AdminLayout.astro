@@ -1,18 +1,38 @@
 ---
-// Shared shell for every /admin/* page — login/invited-password-setup
-// views, then (once authenticated) a sidebar nav + the page's own content
-// in the slot. Not part of the CMS `pages` system (no `pages` row for any
-// /admin/* route), never linked from public nav/footer except the
-// Admin Login link, excluded from the sitemap (astro.config.mjs's
-// `sitemap({ filter: ... })`) and `Disallow`'d in robots.txt.ts.
+// Shared shell for every /admin/* page: login / invited-password-setup /
+// no-access views, then (once authenticated) the app shell with the
+// page's own content in the slot. Not part of the CMS `pages` system,
+// never linked from public nav/footer except the Admin Login link,
+// excluded from the sitemap and Disallow'd in robots.txt.ts.
+//
+// 2026-10-05 redesign (phase 1): the CMC platform look, the same for
+// every client (styles/admin.css), dark by default with a light mode.
+// Each practice's identity shows only as small accents: its name and
+// initials tile in the sidebar, tinted with its first brand color.
+// Design decisions: admin-redesign/decisions.md in the CMC folder.
 import '../styles/global.css';
+import '../styles/admin.css';
 import { withBase } from '../lib/url';
+import { getBusiness } from '../lib/pages';
 
 interface Props {
   title: string;
+  // Today renders its own greeting instead of the page heading.
+  hideTitle?: boolean;
   current:
-    | 'leads'
+    | 'today'
+    | 'analytics-overview'
+    | 'analytics-caseload'
+    | 'analytics-leads'
+    | 'analytics-traffic'
+    | 'analytics-blog'
+    | 'analytics-gbp'
+    | 'analytics-seo'
     | 'crm'
+    | 'referral-partners'
+    | 'links'
+    | 'review-program'
+    | 'your-data'
     | 'blog'
     | 'content-business-info'
     | 'content-page-copy'
@@ -20,282 +40,454 @@ interface Props {
     | 'team'
     | 'suggestions'
     | 'counselor-settings'
-    | 'seo-insights'
     | 'content-plan'
-    // Client-repo-only — admin/directory.astro isn't part of the shared
-    // template (see CLAUDE.md's "client directory" note), so this repo's
-    // copy of AdminLayout.astro carries one extra union member the
-    // template doesn't have. Re-add this after syncing any future
-    // template change to AdminLayout.astro into this repo.
+    // CMC-only screens (see the CMC-ONLY MENU note below).
+    | 'audits'
+    | 'testimonials'
     | 'directory';
 }
 
-const { title, current } = Astro.props;
+const { title, current, hideTitle = false } = Astro.props;
 
-// Every item renders for every role — adminAuth.ts's applyNavAccess()
-// hides the ones a given role can't use (data-nav-key below) once the
-// caller's role is known, rather than baking role awareness into this
-// static markup. "Suggestions" is agency-only — the client's own review
-// of what they submitted lives on Website content instead. "Lead CRM" is
-// deliberately a separate nav item from "Leads and analytics", not a tab
-// on that page — the client wants Leads and analytics to stay a clean,
-// numbers-only "proof of value" view for their own clients to see their
-// marketing working, with day-to-day lead management (notes, follow-ups,
-// detail view) kept off of it entirely.
-//
-// "Website content" is a collapsible group rather than a single link —
-// business info/testimonials and page copy used to be three stacked
-// sections on one route, but grew enough to warrant their own pages.
-// Each child now carries its OWN distinct `navKey` (previously both
-// shared the parent's 'content' key, hiding/showing as one unit) —
-// split the day a linked-counselor staff login needed Page Copy access
-// to their own page without also getting Business Info, exactly the
-// "future page needs the two children gated separately" case this
-// comment used to warn about. The parent `<li>` (the toggle button
-// itself) still gates on its own 'content' key — a role needs that key
-// too, or the group header never shows regardless of which children it
-// can reach.
-const navItems = [
-  { key: 'leads', label: 'Leads and analytics', href: withBase('/admin/leads') },
-  { key: 'crm', label: 'Lead CRM', href: withBase('/admin/crm') },
-  { key: 'seo-insights', label: 'SEO Insights', href: withBase('/admin/seo-insights') },
-  { key: 'content-plan', label: 'Content Plan', href: withBase('/admin/content-plan') },
-  { key: 'blog', label: 'Blog posts', href: withBase('/admin/blog') },
+let practiceName = 'Your practice';
+let practiceColor = '#7fb19a';
+try {
+  const business = await getBusiness();
+  practiceName = business.display_name || practiceName;
+  if (business.brand_colors?.[0]) practiceColor = business.brand_colors[0];
+} catch {
+  // Build without database access: the shell still renders, generically.
+}
+const practiceInitials =
+  practiceName
+    .replace(/[^A-Za-z ]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w && !['and', 'of', 'the', 'for', 'llc', 'pllc', 'inc'].includes(w.toLowerCase()))
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join('') || 'P';
+
+// Icons are inline SVG paths (24px grid, stroke-based), one per item.
+const ICONS: Record<string, string> = {
+  today: '<path d="M3 12 12 4l9 8M5 10v10h14V10"/>',
+  report: '<path d="M5 3h14v18H5zM9 16v-4m3 4V9m3 7v-2"/>',
+  rank: '<path d="M4 19V9m6 10V5m6 14v-7m4 7H2"/>',
+  gbp: '<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+  traffic: '<path d="M3 17l5-5 4 4 8-8M15 8h5v5"/>',
+  plan: '<path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h5"/>',
+  blog: '<path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"/>',
+  blogstats: '<path d="M4 4v16h16M8 15l3-4 3 2 4-6"/>',
+  magnet: '<path d="M6 3v8a6 6 0 0 0 12 0V3h-4v8a2 2 0 0 1-4 0V3zM6 7h4m4 0h4"/>',
+  pages: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+  reviews: '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+  audit: '<path d="M9 4h6l1 2h3v15H5V6h3zM9 4v3h6V4M8.5 13l2.5 2.5 4.5-5"/>',
+  quote: '<path d="M5 7h5v5c0 3-1.5 5-4 6m8-11h5v5c0 3-1.5 5-4 6"/>',
+  directory: '<path d="M4 4h16v16H4zM4 9h16M9 9v11"/>',
+  link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  partners: '<path d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm8 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM2 20c0-3 2.7-5 6-5s6 2 6 5m0-4.6c.6-.3 1.3-.4 2-.4 3.3 0 6 2 6 5"/>',
+  inbox: '<path d="M3 13h5l1.5 3h5L16 13h5M5 5h14l2 8v6H3v-6z"/>',
+  trends: '<path d="M4 19h16M7 15v-3m5 3V8m5 7v-5"/>',
+  caseload: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5V12l6 6"/>',
+  team: '<path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c.5-3.3 3.2-5 6.5-5s6 1.7 6.5 5M17 4.5a3.5 3.5 0 0 1 0 6.5M18.5 15c2 .6 3 2.3 3.2 5"/>',
+  business: '<path d="M3 21h18M5 21V8l7-5 7 5v13M10 21v-5h4v5"/>',
+  data: '<path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v3h16v-3"/>',
+  counselor: '<circle cx="12" cy="8" r="4"/><path d="M4 21c.8-4 4-6 8-6s7.2 2 8 6"/>',
+  suggest: '<path d="M4 5h16v11H8l-4 4z"/>',
+};
+
+// The menu follows the Full Caseload System: plain task names under
+// quiet step labels. Every item keeps the `navKey` adminAuth.ts uses to
+// show or hide it per role; a group label hides itself when a role can
+// see none of its items (adminAuth.ts applyNavAccess).
+type NavItem = { key: string; label: string; href: string; icon: string; badge?: string };
+// CMC-ONLY MENU (2026-10-12): Counselor Marketing Co.'s own admin runs the
+// agency, not a counseling practice, so its menu is shaped around CMC's
+// work: getting found, prospects (inquiries and instant audits), and
+// clients. Counselor-only screens (Caseload, Counselor settings, Referral
+// partners, Reviews, Lead magnets, Monthly report, Suggestions) are left
+// out. Keep this block, and the 'audits' | 'testimonials' | 'directory'
+// keys above, when syncing a future template change to this file.
+const groups: { label?: string; items: NavItem[] }[] = [
+  { items: [{ key: 'today', label: 'Today', href: '/admin/today', icon: 'today' }] },
   {
-    key: 'content',
-    label: 'Website content',
-    children: [
-      {
-        key: 'content-business-info',
-        navKey: 'content-business-info',
-        label: 'Business info & testimonials',
-        href: withBase('/admin/content/business-info'),
-      },
-      {
-        key: 'content-page-copy',
-        navKey: 'content-page-copy',
-        label: 'Page copy',
-        href: withBase('/admin/content/page-copy'),
-      },
+    label: 'Get found',
+    items: [
+      { key: 'analytics-seo', label: 'Search rankings', href: '/admin/analytics/seo', icon: 'rank' },
+      { key: 'links', label: 'Links', href: '/admin/links', icon: 'link' },
+      { key: 'analytics-traffic', label: 'Website traffic', href: '/admin/analytics/traffic', icon: 'traffic' },
+      { key: 'content-plan', label: 'Content plan', href: '/admin/content-plan', icon: 'plan' },
+      { key: 'blog', label: 'Blog posts', href: '/admin/blog', icon: 'blog' },
+      { key: 'analytics-blog', label: 'Blog analytics', href: '/admin/analytics/blog', icon: 'blogstats' },
     ],
   },
-  { key: 'lead-magnets', label: 'Lead magnets', href: withBase('/admin/lead-magnets') },
-  { key: 'suggestions', label: 'Suggestions', href: withBase('/admin/suggestions') },
-  { key: 'team', label: 'Team', href: withBase('/admin/team') },
-  { key: 'counselor-settings', label: 'Counselor settings', href: withBase('/admin/counselor-settings') },
-] as const;
+  {
+    label: 'Prospects',
+    items: [
+      { key: 'crm', label: 'Inquiries', href: '/admin/crm', icon: 'inbox', badge: 'inquiries' },
+      { key: 'audits', label: 'Audits', href: '/admin/audits', icon: 'audit' },
+      { key: 'analytics-leads', label: 'Inquiry trends', href: '/admin/analytics/leads', icon: 'trends' },
+    ],
+  },
+  {
+    label: 'Clients',
+    items: [
+      { key: 'directory', label: 'Client directory', href: '/admin/directory', icon: 'directory' },
+      { key: 'testimonials', label: 'Testimonials', href: '/admin/testimonials', icon: 'quote' },
+    ],
+  },
+];
+const settingsItems: NavItem[] = [
+  { key: 'team', label: 'Team', href: '/admin/team', icon: 'team' },
+  { key: 'content-business-info', label: 'Business info', href: '/admin/content/business-info', icon: 'business' },
+  { key: 'your-data', label: 'Your data', href: '/admin/your-data', icon: 'data' },
+];
 
-// One source of truth for "which page is this" — the sidebar highlight
-// and the page's own heading both read the same nav label, so they can
-// never drift apart the way a hand-typed <h1> on each page could.
-const pageHeading =
-  navItems
-    .flatMap((item): { key: string; label: string }[] =>
-      'children' in item ? item.children.map((child) => ({ key: child.key, label: child.label })) : [{ key: item.key, label: item.label }]
-    )
-    .find((entry) => entry.key === current)?.label ?? title;
+// One source of truth for "which page is this": the sidebar highlight,
+// the breadcrumb, and the page heading all read the same label.
+const all = [...groups.flatMap((g) => g.items.map((item) => ({ ...item, group: g.label }))), ...settingsItems.map((item) => ({ ...item, group: 'Settings' }))];
+const here = all.find((item) => item.key === current);
+const pageHeading = here?.label ?? title;
+const crumbGroup = here?.group;
+const svg = (name: string) =>
+  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" class="cmc-admin">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>{title}</title>
     <meta name="robots" content="noindex, nofollow" />
+    <meta name="view-transition" content="same-origin" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" />
+    <script is:inline>
+      // Before first paint: dark unless this browser chose light.
+      try {
+        if (localStorage.getItem('cmc-admin-theme') === 'light') document.documentElement.dataset.theme = 'light';
+      } catch (e) {}
+    </script>
   </head>
-  <body class="min-h-screen bg-brand-neutral">
-    <div id="login-view" class="mx-auto max-w-sm px-6 py-16">
-      <h1 class="mb-6 text-center font-[family-name:var(--font-heading)] text-2xl font-bold text-brand-ink">Admin</h1>
-      <p class="mb-6 text-center text-sm text-slate-600">Log in to manage your site.</p>
-      <form id="login-form" class="space-y-4">
-        <input
-          name="email"
-          type="email"
-          placeholder="Email"
-          required
-          class="w-full rounded-md border border-slate-300 px-4 py-2"
-        />
-        <input
-          name="password"
-          type="password"
-          placeholder="Password"
-          required
-          class="w-full rounded-md border border-slate-300 px-4 py-2"
-        />
-        <button
-          type="submit"
-          class="w-full rounded-md bg-brand-primary px-6 py-3 font-semibold text-white hover:opacity-90"
-        >
-          Log in
-        </button>
-        <p id="login-status" class="text-center text-sm text-red-600" role="status"></p>
-      </form>
-      <button id="forgot-password-link" type="button" class="mt-4 block w-full text-center text-sm text-brand-primary hover:underline">
-        Forgot password?
-      </button>
-      <form id="forgot-password-form" class="mt-4 hidden space-y-4">
-        <input
-          name="email"
-          type="email"
-          placeholder="Email"
-          required
-          class="w-full rounded-md border border-slate-300 px-4 py-2"
-        />
-        <button
-          type="submit"
-          class="w-full rounded-md border border-slate-300 px-6 py-3 font-semibold text-slate-700 hover:bg-slate-50"
-        >
-          Send reset link
-        </button>
-        <p id="forgot-password-status" class="text-center text-sm" role="status"></p>
-      </form>
+  <body style={`--a-practice: ${practiceColor}`}>
+    <div class="a-aura" aria-hidden="true"></div>
+
+    <div id="login-view" class="a-auth">
+      <div class="a-auth-card">
+        <div class="a-mark">{practiceInitials}</div>
+        <h1>Welcome back</h1>
+        <p>Sign in to the {practiceName} dashboard.</p>
+        <form id="login-form">
+          <input class="a-input" name="email" type="email" placeholder="Email" autocomplete="email" required aria-label="Email" />
+          <input class="a-input" name="password" type="password" placeholder="Password" autocomplete="current-password" required aria-label="Password" />
+          <button type="submit" class="a-btn a-btn-primary">Sign in</button>
+          <p id="login-status" class="a-status" role="status"></p>
+        </form>
+        <button id="forgot-password-link" type="button" class="a-link" style="display:block;margin:4px auto 0">Forgot password?</button>
+        <form id="forgot-password-form" class="hidden" style="margin-top:14px">
+          <input class="a-input" name="email" type="email" placeholder="Email" autocomplete="email" required aria-label="Email for reset link" />
+          <button type="submit" class="a-btn">Send reset link</button>
+          <p id="forgot-password-status" class="a-status" style="color:var(--a-muted)" role="status"></p>
+        </form>
+      </div>
+      <p class="a-auth-foot">Powered by Counselor Marketing Co.</p>
     </div>
 
-    <div id="set-password-view" class="mx-auto max-w-sm px-6 py-16" style="display: none;">
-      <p class="mb-4 text-sm text-slate-600">Set a password to finish setting up your admin login.</p>
-      <form id="set-password-form" class="space-y-4">
-        <input
-          name="password"
-          type="password"
-          placeholder="New password"
-          required
-          minlength="8"
-          class="w-full rounded-md border border-slate-300 px-4 py-2"
-        />
-        <button
-          type="submit"
-          class="w-full rounded-md bg-brand-primary px-6 py-3 font-semibold text-white hover:opacity-90"
-        >
-          Set password
-        </button>
-        <p id="set-password-status" class="text-center text-sm text-red-600" role="status"></p>
-      </form>
+    <div id="set-password-view" class="a-auth" style="display: none;">
+      <div class="a-auth-card">
+        <div class="a-mark">{practiceInitials}</div>
+        <h1>Set your password</h1>
+        <p>Choose a password to finish setting up your login for {practiceName}.</p>
+        <form id="set-password-form">
+          <input class="a-input" name="password" type="password" placeholder="New password (8+ characters)" autocomplete="new-password" required minlength="8" aria-label="New password" />
+          <button type="submit" class="a-btn a-btn-primary">Set password</button>
+          <p id="set-password-status" class="a-status" role="status"></p>
+        </form>
+      </div>
     </div>
 
-    <div id="no-access-view" class="mx-auto max-w-sm px-6 py-16 text-center" style="display: none;">
-      <h1 class="mb-4 font-[family-name:var(--font-heading)] text-2xl font-bold text-brand-ink">No access</h1>
-      <p class="mb-6 text-sm text-slate-600">
-        Your login doesn't have admin access on this site. Contact the site owner if you think this is a mistake.
-      </p>
-      <button id="no-access-logout-button" class="text-sm text-brand-primary hover:underline">Log out</button>
+    <div id="no-access-view" class="a-auth" style="display: none;">
+      <div class="a-auth-card" style="text-align:center">
+        <h1>No access</h1>
+        <p>Your login doesn't have access to this dashboard. Contact the practice owner if you think this is a mistake.</p>
+        <button id="no-access-logout-button" class="a-btn">Sign out</button>
+      </div>
     </div>
 
-    <!--
-      Deliberately not `class="hidden md:flex"` — Tailwind's responsive
-      utilities are generated after the base `hidden` utility in the
-      stylesheet, so at md+ viewports `md:flex` silently wins regardless
-      of whether JS has removed `hidden` yet, showing this before login.
-      An inline style always wins over any class, sidestepping that
-      specificity-order footgun entirely — adminAuth.ts toggles
-      `style.display`, not classList, for exactly this reason.
-    -->
-    <div id="admin-content" class="md:flex" style="display: none;">
-      <nav class="flex shrink-0 flex-col gap-1 border-b border-slate-200 bg-white p-3 md:w-52 md:border-b-0 md:border-r md:p-4">
-        <p class="mb-2 px-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Admin</p>
-        <ul class="flex flex-1 flex-col gap-1">
-          {navItems.map((item) =>
-            'children' in item ? (
+    <!-- Shown by adminAuth.ts via style.display (never a class toggle; see adminAuth.ts). -->
+    <div id="admin-content" style="display: none;">
+      <aside class="a-side" id="a-side" aria-label="Main menu">
+        <div class="a-practice">
+          <div class="a-mark">{practiceInitials}</div>
+          <div><b>{practiceName}</b><small id="a-role-label">Dashboard</small></div>
+        </div>
+        {groups.map((g) => (
+          <div data-nav-group>
+            {g.label && <div class="a-navlabel">{g.label}</div>}
+            <ul>
+              {g.items.map((item) => (
+                <li data-nav-key={item.key}>
+                  <a class="a-navitem" href={withBase(item.href)} data-label={item.label} data-group={g.label ?? ''} aria-current={current === item.key ? 'page' : undefined}>
+                    <Fragment set:html={svg(item.icon)} />
+                    <span>{item.label}</span>
+                    {item.badge === 'inquiries' && <span class="a-badge" data-inquiries-badge></span>}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+        <div class="a-side-spacer"></div>
+        <div data-nav-group>
+          <div class="a-navlabel">Settings</div>
+          <ul>
+            {settingsItems.map((item) => (
               <li data-nav-key={item.key}>
-                <button
-                  type="button"
-                  data-nav-toggle
-                  aria-expanded={item.children.some((child) => current === child.key) ? 'true' : 'false'}
-                  class:list={[
-                    'flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm hover:bg-brand-neutral',
-                    item.children.some((child) => current === child.key) ? 'font-semibold text-brand-ink' : 'text-slate-600',
-                  ]}
-                >
-                  {item.label}
-                  <svg
-                    data-nav-toggle-icon
-                    class:list={[
-                      'h-4 w-4 shrink-0 transition-transform',
-                      item.children.some((child) => current === child.key) ? 'rotate-90' : '',
-                    ]}
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fill-rule="evenodd"
-                      d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.02-1.1l4.5 4.25a.75.75 0 010 1.1l-4.5 4.25a.75.75 0 01-1.06-.02z"
-                      clip-rule="evenodd"
-                    />
-                  </svg>
-                </button>
-                <ul
-                  data-nav-submenu
-                  class:list={[
-                    'ml-3 mt-1 flex flex-col gap-1 border-l border-slate-200 pl-3',
-                    item.children.some((child) => current === child.key) ? '' : 'hidden',
-                  ]}
-                >
-                  {item.children.map((child) => (
-                    <li data-nav-key={child.navKey}>
-                      <a
-                        href={child.href}
-                        class:list={[
-                          'flex items-center justify-between rounded-md px-3 py-2 text-sm',
-                          current === child.key
-                            ? 'bg-brand-neutral font-semibold text-brand-ink'
-                            : 'text-slate-600 hover:bg-brand-neutral',
-                        ]}
-                      >
-                        {child.label}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ) : (
-              <li data-nav-key={item.key}>
-                <a
-                  href={item.href}
-                  class:list={[
-                    'flex items-center justify-between rounded-md px-3 py-2 text-sm',
-                    current === item.key
-                      ? 'bg-brand-neutral font-semibold text-brand-ink'
-                      : 'text-slate-600 hover:bg-brand-neutral',
-                  ]}
-                >
-                  {item.label}
-                  {item.key === 'suggestions' && (
-                    <span
-                      data-suggestions-badge
-                      class="hidden rounded-full bg-brand-accent px-1.5 py-0.5 text-xs font-semibold text-white"
-                    ></span>
-                  )}
+                <a class="a-navitem" href={withBase(item.href)} data-label={item.label} data-group="Settings" aria-current={current === item.key ? 'page' : undefined}>
+                  <Fragment set:html={svg(item.icon)} />
+                  <span>{item.label}</span>
+                  {item.badge === 'suggestions' && <span class="a-badge hidden" data-suggestions-badge></span>}
                 </a>
               </li>
-            )
-          )}
-        </ul>
-        <button id="logout-button" class="mt-4 px-3 text-left text-sm text-brand-primary hover:underline">
-          Log out
-        </button>
-      </nav>
-      <main class="min-w-0 flex-1 p-6">
-        <h1 class="mb-6 font-[family-name:var(--font-heading)] text-2xl font-extrabold text-brand-ink">{pageHeading}</h1>
-        <slot />
-      </main>
+            ))}
+          </ul>
+        </div>
+        <div class="a-powered">Powered by Counselor Marketing Co.</div>
+      </aside>
+
+      <div class="a-main" id="a-main">
+        <header class="a-top">
+          <button class="a-iconbtn a-menu-toggle" id="a-menu-btn" aria-label="Open menu" aria-controls="a-side">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+          </button>
+          <div class="a-crumb">{crumbGroup && <>{crumbGroup}<span>/</span></>}<b>{pageHeading}</b></div>
+          <div class="a-grow"></div>
+          <button class="a-kbtn" id="a-k-open" type="button">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+            <span class="a-kbtn-label">Search or jump to</span><span class="a-kbd" id="a-k-hint">⌘K</span>
+          </button>
+          <button class="a-iconbtn" id="a-theme-btn" type="button" aria-label="Switch to light mode"></button>
+          <div class="a-usermenu">
+            <button class="a-avatar" id="a-avatar" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Account">·</button>
+            <div class="a-usermenu-pop" id="a-usermenu" role="menu" hidden>
+              <div class="who"><b id="a-user-email">Signed in</b><small id="a-user-role"></small></div>
+              <button type="button" role="menuitem" id="a-theme-item">Switch to light mode</button>
+              <button type="button" role="menuitem" id="logout-button">Sign out</button>
+            </div>
+          </div>
+        </header>
+        <main class="a-view" id="a-view">
+          {!hideTitle && <h1 class="a-title">{pageHeading}</h1>}
+          <slot />
+        </main>
+      </div>
+    </div>
+
+    <div class="a-scrim" id="a-scrim" aria-hidden="true">
+      <div class="a-palette" role="dialog" aria-label="Search or jump to">
+        <input id="a-k-input" type="text" placeholder="Search pages and actions" autocomplete="off" aria-label="Search pages and actions" />
+        <div class="a-results" id="a-k-results"></div>
+      </div>
     </div>
   </body>
 </html>
 
 <script>
-  // Collapsible nav groups (currently just "Website content") — pure UI
-  // state, no persistence across page loads (this app navigates between
-  // admin routes with full page loads, and the group defaults collapsed
-  // on each one unless the current page is one of its children, per
-  // AdminLayout.astro's aria-expanded/hidden initial state above).
-  document.querySelectorAll<HTMLButtonElement>('[data-nav-toggle]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const submenu = button.nextElementSibling as HTMLElement | null;
-      if (!submenu) return;
-      const wasExpanded = button.getAttribute('aria-expanded') === 'true';
-      button.setAttribute('aria-expanded', String(!wasExpanded));
-      submenu.classList.toggle('hidden', wasExpanded);
-      button.querySelector('[data-nav-toggle-icon]')?.classList.toggle('rotate-90', !wasExpanded);
+  import { supabase } from '../lib/supabase';
+  import type { AdminUser } from '../lib/adminAuth';
+
+  const root = document.documentElement;
+  const SUN =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+  const MOON =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg>';
+
+  // ---------------------------------------------------------------- theme
+  const themeBtn = document.getElementById('a-theme-btn')!;
+  const themeItem = document.getElementById('a-theme-item')!;
+  function paintThemeControls() {
+    const light = root.dataset.theme === 'light';
+    themeBtn.innerHTML = light ? MOON : SUN;
+    const label = light ? 'Switch to dark mode' : 'Switch to light mode';
+    themeBtn.setAttribute('aria-label', label);
+    themeItem.textContent = label;
+  }
+  function toggleTheme() {
+    const light = root.dataset.theme !== 'light';
+    if (light) root.dataset.theme = 'light';
+    else delete root.dataset.theme;
+    try {
+      localStorage.setItem('cmc-admin-theme', light ? 'light' : 'dark');
+    } catch (e) {}
+    paintThemeControls();
+  }
+  themeBtn.addEventListener('click', toggleTheme);
+  themeItem.addEventListener('click', () => {
+    toggleTheme();
+    closeUserMenu();
+  });
+  paintThemeControls();
+
+  // --------------------------------------------------------- mobile menu
+  const side = document.getElementById('a-side')!;
+  document.getElementById('a-menu-btn')!.addEventListener('click', () => side.classList.toggle('open'));
+  document.addEventListener('click', (e) => {
+    const t = e.target as HTMLElement;
+    if (side.classList.contains('open') && !t.closest('#a-side') && !t.closest('#a-menu-btn')) side.classList.remove('open');
+  });
+
+  // ----------------------------------------------------------- user menu
+  const avatar = document.getElementById('a-avatar')!;
+  const userMenu = document.getElementById('a-usermenu')!;
+  function closeUserMenu() {
+    userMenu.hidden = true;
+    avatar.setAttribute('aria-expanded', 'false');
+  }
+  avatar.addEventListener('click', (e) => {
+    e.stopPropagation();
+    userMenu.hidden = !userMenu.hidden;
+    avatar.setAttribute('aria-expanded', String(!userMenu.hidden));
+  });
+  document.addEventListener('click', (e) => {
+    if (!(e.target as HTMLElement).closest('.a-usermenu')) closeUserMenu();
+  });
+
+  // Filled in once adminAuth.ts knows who's signed in.
+  const ROLE_LABEL: Record<AdminUser['role'], string> = { owner: 'Owner', staff: 'Team member', agency: 'Counselor Marketing Co.' };
+  window.addEventListener('admin:authed', (event) => {
+    const user = (event as CustomEvent<AdminUser>).detail;
+    const name = user.display_name?.trim() || (user.email || '').split('@')[0].replace(/[._-]+/g, ' ').trim();
+    avatar.textContent = (name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2) || '·').toUpperCase();
+    document.getElementById('a-user-email')!.textContent = user.display_name?.trim() || user.email;
+    const label = user.role === 'staff' && user.linked_counselor_page_id ? 'Counselor' : ROLE_LABEL[user.role];
+    document.getElementById('a-user-role')!.textContent = label;
+    document.getElementById('a-role-label')!.textContent = label;
+    if (user.role === 'owner' || user.role === 'agency') updateInquiriesBadge();
+    // A counselor's Inquiries is their own list.
+    if (user.role === 'staff' && user.linked_counselor_page_id) {
+      for (const [from, to] of [['Inquiries', 'My inquiries'], ['Caseload', 'My caseload']]) {
+        const item = document.querySelector<HTMLAnchorElement>(`#a-side a[data-label="${from}"]`);
+        if (item) {
+          item.dataset.label = to;
+          item.querySelector('span')!.textContent = to;
+        }
+        const crumb = document.querySelector('.a-crumb b');
+        if (crumb?.textContent === from) crumb.textContent = to;
+      }
+      updateInquiriesBadge(user.linked_counselor_page_id);
+    }
+  });
+
+  // Inquiries still waiting on a first reply (status "new", not archived,
+  // real appointment requests only; guide downloads aren't inquiries).
+  async function updateInquiriesBadge(counselorPageId?: string) {
+    const badge = document.querySelector<HTMLElement>('[data-inquiries-badge]');
+    if (!badge) return;
+    let query = supabase
+      .from('leads')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'new')
+      .is('archived_at', null)
+      .is('lead_magnet_id', null);
+    if (counselorPageId) query = query.eq('assigned_counselor_page_id', counselorPageId);
+    const { count, error } = await query;
+    badge.textContent = !error && count ? String(count) : '';
+  }
+
+  // ------------------------------------------------------------ ⌘K bar
+  const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
+  if (!isMac) document.getElementById('a-k-hint')!.textContent = 'Ctrl K';
+  const scrim = document.getElementById('a-scrim')!;
+  const kInput = document.getElementById('a-k-input') as HTMLInputElement;
+  const kResults = document.getElementById('a-k-results')!;
+  type KItem = { group: string; label: string; hint: string; icon: string; run: () => void };
+  let kItems: KItem[] = [];
+  let kSel = 0;
+
+  function available(): KItem[] {
+    const pages = [...document.querySelectorAll<HTMLAnchorElement>('#a-side a.a-navitem')]
+      .filter((a) => !a.closest('li')!.classList.contains('hidden'))
+      .map((a) => ({
+        group: 'Go to',
+        label: a.dataset.label!,
+        hint: a.dataset.group || '',
+        icon: a.querySelector('svg')!.outerHTML,
+        run: () => (window.location.href = a.href),
+      }));
+    const actions: KItem[] = [
+      { group: 'Actions', label: root.dataset.theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode', hint: '', icon: themeBtn.innerHTML, run: toggleTheme },
+      { group: 'Actions', label: 'Sign out', hint: '', icon: '', run: () => document.getElementById('logout-button')!.click() },
+    ];
+    return [...pages, ...actions];
+  }
+  function kRender() {
+    const q = kInput.value.trim().toLowerCase();
+    kItems = available().filter((x) => !q || x.label.toLowerCase().includes(q) || x.hint.toLowerCase().includes(q));
+    kSel = Math.min(kSel, Math.max(0, kItems.length - 1));
+    let html = '';
+    let last = '';
+    kItems.forEach((x, i) => {
+      if (x.group !== last) {
+        html += `<div class="a-rgroup">${x.group}</div>`;
+        last = x.group;
+      }
+      html += `<button type="button" class="a-res${i === kSel ? ' on' : ''}" data-k="${i}">${x.icon}<span>${x.label}</span><small>${x.hint}</small></button>`;
     });
+    kResults.innerHTML = html || '<div class="a-rgroup">No matches. Try a page name.</div>';
+    kResults.querySelector('.a-res.on')?.scrollIntoView({ block: 'nearest' });
+  }
+  function kOpen() {
+    if (document.getElementById('admin-content')!.style.display === 'none') return;
+    scrim.classList.add('open');
+    scrim.setAttribute('aria-hidden', 'false');
+    kInput.value = '';
+    kSel = 0;
+    kRender();
+    kInput.focus();
+  }
+  function kClose() {
+    scrim.classList.remove('open');
+    scrim.setAttribute('aria-hidden', 'true');
+  }
+  document.getElementById('a-k-open')!.addEventListener('click', kOpen);
+  kInput.addEventListener('input', () => {
+    kSel = 0;
+    kRender();
+  });
+  scrim.addEventListener('click', (e) => {
+    const t = e.target as HTMLElement;
+    if (t === scrim) return kClose();
+    const b = t.closest<HTMLElement>('.a-res');
+    if (b) {
+      kClose();
+      kItems[Number(b.dataset.k)].run();
+    }
+  });
+  document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      scrim.classList.contains('open') ? kClose() : kOpen();
+      return;
+    }
+    if (e.key === 'Escape') {
+      closeUserMenu();
+      side.classList.remove('open');
+    }
+    if (!scrim.classList.contains('open')) return;
+    if (e.key === 'Escape') kClose();
+    else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      kSel = Math.min(kSel + 1, kItems.length - 1);
+      kRender();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      kSel = Math.max(kSel - 1, 0);
+      kRender();
+    } else if (e.key === 'Enter' && kItems[kSel]) {
+      e.preventDefault();
+      kClose();
+      kItems[kSel].run();
+    }
   });
 </script>

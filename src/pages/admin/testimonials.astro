@@ -1,0 +1,253 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<!--
+  CMC-only: quotes from practices CMC has worked with (the `testimonials`
+  table, 0065_testimonials.sql), shown on CMC's site by TestimonialSlot in
+  the spots each quote is assigned to. Only approved quotes ever render;
+  an empty table renders nothing anywhere. The site reads this table at
+  build time, so saving triggers a rebuild. Unlike a counseling practice,
+  CMC may ask its own clients (practices) for a testimonial.
+-->
+<AdminLayout title="Testimonials | Admin" current="testimonials">
+  <div id="tm-list-view">
+    <p class="i-intro">Quotes from practices you've worked with. Only approved quotes appear on your site, in the spots you choose.</p>
+
+    <div class="i-filters">
+      <p id="ts-count" class="i-count"></p>
+      <button id="ts-add" type="button" class="a-btn a-btn-primary i-btn">+ Add testimonial</button>
+    </div>
+
+    <div class="i-list t-card">
+      <table class="i-table">
+        <thead>
+          <tr>
+            <th>Quote</th>
+            <th class="i-hide-sm">Shows on</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="ts-body"></tbody>
+      </table>
+      <div id="ts-empty" class="t-empty" hidden><b>No testimonials yet.</b>When a practice you've helped is happy with their results, ask if you can quote them. Add it here, choose where it shows, and approve it.</div>
+    </div>
+  </div>
+
+  <div id="ts-detail-view" class="hidden">
+    <div class="i-detail-top">
+      <button id="ts-back" type="button" class="a-link">&larr; All testimonials</button>
+      <div class="i-detail-tools">
+        <button id="ts-delete" type="button" class="a-btn i-btn i-danger">Delete</button>
+      </div>
+    </div>
+    <form id="ts-form" class="t-card i-fields ts-form">
+      <div class="i-field">
+        <label for="tf-quote">Quote</label>
+        <textarea id="tf-quote" name="quote" rows="5" required placeholder="Their words, exactly as they approved them."></textarea>
+      </div>
+      <div class="ts-grid">
+        <div class="i-field">
+          <label for="tf-author">Name</label>
+          <input id="tf-author" name="author_name" type="text" required placeholder="Dr. Jane Smith" />
+        </div>
+        <div class="i-field">
+          <label for="tf-role">Role (optional)</label>
+          <input id="tf-role" name="author_role" type="text" placeholder="Owner, LPC" />
+        </div>
+        <div class="i-field">
+          <label for="tf-practice">Practice (optional)</label>
+          <input id="tf-practice" name="practice_name" type="text" placeholder="Riverbend Counseling" />
+        </div>
+      </div>
+      <fieldset class="i-field">
+        <legend>Shows on</legend>
+        <div class="ts-slots" id="ts-slots"></div>
+      </fieldset>
+      <label class="i-check">
+        <input id="tf-approved" name="approved" type="checkbox" />
+        <span>Approved: they've agreed to this exact wording appearing on your site</span>
+      </label>
+      <div class="i-inline">
+        <button type="submit" class="a-btn a-btn-primary i-btn">Save</button>
+        <span id="ts-status" class="i-hint" role="status"></span>
+      </div>
+    </form>
+  </div>
+</AdminLayout>
+
+<style is:global>
+  .ts-form {
+    display: grid;
+    gap: 14px;
+    max-width: 760px;
+  }
+  .ts-grid {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  @media (max-width: 760px) {
+    .ts-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  .ts-slots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    margin-top: 6px;
+  }
+  .ts-quote {
+    display: block;
+    max-width: 60ch;
+    color: var(--a-fg);
+    white-space: normal;
+  }
+</style>
+
+<script>
+  import { supabase, initAdminAuth } from '../../lib/adminAuth';
+  import { triggerRebuild } from '../../lib/publishFunction';
+
+  type Testimonial = {
+    id: string;
+    quote: string;
+    author_name: string;
+    author_role: string | null;
+    practice_name: string | null;
+    slots: string[];
+    approved: boolean;
+    sort_order: number;
+    created_at: string;
+  };
+
+  // Where TestimonialSlot can render a quote (components/site/TestimonialSlot.astro).
+  const SLOTS = [
+    { value: 'home', label: 'Homepage' },
+    { value: 'audit', label: 'Free Caseload Audit page' },
+    { value: 'results', label: 'Results' },
+    { value: 'pricing', label: 'Pricing' },
+    { value: 'services', label: 'Services' },
+  ];
+  const slotLabel = (v: string) => SLOTS.find((s) => s.value === v)?.label ?? v;
+
+  let items: Testimonial[] = [];
+  let currentId: string | null = null;
+
+  const listView = document.getElementById('tm-list-view')!;
+  const detailView = document.getElementById('ts-detail-view')!;
+  const form = document.getElementById('ts-form') as HTMLFormElement;
+  const status = document.getElementById('ts-status')!;
+  document.getElementById('ts-slots')!.innerHTML = SLOTS.map(
+    (s) => `<label class="i-check"><input type="checkbox" name="slots" value="${s.value}" /><span>${s.label}</span></label>`,
+  ).join('');
+
+  const esc = (v: string) => {
+    const d = document.createElement('div');
+    d.textContent = v;
+    return d.innerHTML;
+  };
+
+  function renderList() {
+    document.getElementById('ts-count')!.textContent = `${items.length} testimonial${items.length === 1 ? '' : 's'}`;
+    document.getElementById('ts-empty')!.hidden = items.length > 0;
+    document.getElementById('ts-body')!.innerHTML = items
+      .map(
+        (t) => `<tr data-id="${t.id}" class="ts-open">
+          <td><span class="ts-quote">"${esc(t.quote.length > 140 ? t.quote.slice(0, 140) + '...' : t.quote)}"</span><small class="i-muted">${esc([t.author_name, t.practice_name].filter(Boolean).join(', '))}</small></td>
+          <td class="i-hide-sm i-muted">${t.slots.length ? esc(t.slots.map(slotLabel).join(', ')) : '<span class="i-faint">Nowhere yet</span>'}</td>
+          <td>${t.approved ? '<span class="r-stage r-stage-active">Approved</span>' : '<span class="r-stage r-stage-prospect">Draft</span>'}</td>
+        </tr>`,
+      )
+      .join('');
+  }
+
+  function openDetail(id: string | null) {
+    currentId = id;
+    const t = items.find((x) => x.id === id);
+    form.reset();
+    (form.elements.namedItem('quote') as HTMLTextAreaElement).value = t?.quote ?? '';
+    (form.elements.namedItem('author_name') as HTMLInputElement).value = t?.author_name ?? '';
+    (form.elements.namedItem('author_role') as HTMLInputElement).value = t?.author_role ?? '';
+    (form.elements.namedItem('practice_name') as HTMLInputElement).value = t?.practice_name ?? '';
+    (form.elements.namedItem('approved') as HTMLInputElement).checked = t?.approved ?? false;
+    form.querySelectorAll<HTMLInputElement>('input[name="slots"]').forEach((c) => (c.checked = t?.slots.includes(c.value) ?? false));
+    document.getElementById('ts-delete')!.hidden = !t;
+    status.textContent = '';
+    listView.classList.add('hidden');
+    detailView.classList.remove('hidden');
+    window.scrollTo(0, 0);
+  }
+
+  document.addEventListener('click', (e) => {
+    const row = (e.target as HTMLElement).closest<HTMLElement>('.ts-open');
+    if (row?.dataset.id) openDetail(row.dataset.id);
+  });
+  document.getElementById('ts-add')!.addEventListener('click', () => openDetail(null));
+  document.getElementById('ts-back')!.addEventListener('click', () => {
+    detailView.classList.add('hidden');
+    listView.classList.remove('hidden');
+    renderList();
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = new FormData(form);
+    const text = (k: string) => ((data.get(k) as string) ?? '').trim() || null;
+    const row = {
+      quote: text('quote') ?? '',
+      author_name: text('author_name') ?? '',
+      author_role: text('author_role'),
+      practice_name: text('practice_name'),
+      slots: data.getAll('slots') as string[],
+      approved: (form.elements.namedItem('approved') as HTMLInputElement).checked,
+    };
+    if (!row.quote || !row.author_name) return;
+    status.textContent = 'Saving...';
+    status.className = 'i-hint';
+    const query = currentId ? supabase.from('testimonials').update(row).eq('id', currentId).select().single() : supabase.from('testimonials').insert(row).select().single();
+    const { data: saved, error } = await query;
+    if (error) {
+      status.textContent = 'Could not save: ' + error.message;
+      status.className = 'i-hint r-err';
+      return;
+    }
+    const s = saved as Testimonial;
+    if (currentId) Object.assign(items.find((x) => x.id === currentId)!, s);
+    else items.unshift(s);
+    currentId = s.id;
+    document.getElementById('ts-delete')!.hidden = false;
+    status.textContent = 'Saved. Updating your site...';
+    const result = await triggerRebuild();
+    status.textContent = result.ok ? 'Saved. Your site will update in a few minutes.' : 'Saved, but the site update didn’t start. It will go live on the next update.';
+    status.className = result.ok ? 'i-hint r-ok' : 'i-hint r-warn';
+  });
+
+  document.getElementById('ts-delete')!.addEventListener('click', async () => {
+    const t = items.find((x) => x.id === currentId);
+    if (!t || !window.confirm(`Delete the testimonial from ${t.author_name}? Untick Approved instead to just hide it.`)) return;
+    const { error } = await supabase.from('testimonials').delete().eq('id', t.id);
+    if (error) {
+      window.alert('Could not delete: ' + error.message);
+      return;
+    }
+    items = items.filter((x) => x.id !== t.id);
+    await triggerRebuild();
+    detailView.classList.add('hidden');
+    listView.classList.remove('hidden');
+    renderList();
+  });
+
+  async function load() {
+    const { data, error } = await supabase.from('testimonials').select('*').order('sort_order').order('created_at', { ascending: false });
+    if (error) {
+      document.getElementById('ts-count')!.textContent = 'Could not load testimonials: ' + error.message;
+      return;
+    }
+    items = (data ?? []) as Testimonial[];
+    renderList();
+  }
+
+  initAdminAuth(load, { allowedRoles: ['owner', 'agency'] });
+</script>

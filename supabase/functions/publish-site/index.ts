@@ -51,6 +51,7 @@
 // something to set as a secret.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { buildLeadAutoReply } from '../_shared/leadAutoReply.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -143,7 +144,7 @@ Deno.serve(async (req: Request) => {
     return publish();
   }
 
-  if (action !== 'invite' && action !== 'resend') {
+  if (!['invite', 'resend', 'preview-auto-reply', 'test-auto-reply'].includes(action)) {
     return jsonResponse({ error: `Unknown action "${action}"` }, 400);
   }
 
@@ -160,7 +161,55 @@ Deno.serve(async (req: Request) => {
     .eq('id', user.id)
     .maybeSingle();
   if (!callerRow || (callerRow.role !== 'owner' && callerRow.role !== 'agency') || callerRow.status !== 'active') {
-    return jsonResponse({ error: 'Only an active owner or agency admin can manage team access' }, 403);
+    return jsonResponse({ error: 'Only an active owner or agency admin can do this' }, 403);
+  }
+
+  // Lead auto-reply preview / test send (0070_lead_auto_reply.sql). Both
+  // build from the SAME shared builder submit-lead uses, with the admin's
+  // unsaved draft values passed in, so the preview is exactly what a lead
+  // would receive. The test goes only to the signed-in admin's own address.
+  if (action === 'preview-auto-reply' || action === 'test-auto-reply') {
+    const { data: biz } = await adminClient
+      .from('business')
+      .select('display_name, telephone, lead_notification_email, lead_response_time_note, show_crisis_resources')
+      .maybeSingle();
+    if (!biz) {
+      return jsonResponse({ error: 'Business record not found' }, 500);
+    }
+    const draftMessage = typeof body.customMessage === 'string' ? body.customMessage.slice(0, 800) : null;
+    const email = buildLeadAutoReply({
+      leadName: action === 'test-auto-reply' ? 'Test' : 'Jordan',
+      practiceName: biz.display_name,
+      customMessage: draftMessage,
+      responseTimeNote: biz.lead_response_time_note,
+      telephone: biz.telephone,
+      showCrisisResources: biz.show_crisis_resources !== false,
+    });
+    if (action === 'preview-auto-reply') {
+      return jsonResponse({ ok: true, subject: email.subject, html: email.html });
+    }
+
+    const resendApiKey = Deno.env.get('NURTURE_RESEND_API_KEY');
+    const senderEmail = Deno.env.get('NURTURE_SENDER_EMAIL');
+    if (!resendApiKey || !senderEmail || !user.email) {
+      return jsonResponse({ error: 'Email sending is not configured for this site' }, 500);
+    }
+    const replyTo = (biz.lead_notification_email ?? '').split(',').map((s: string) => s.trim()).filter(Boolean)[0];
+    const sendResponse = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${resendApiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: `${biz.display_name} <${senderEmail}>`,
+        to: [user.email],
+        ...(replyTo ? { reply_to: replyTo } : {}),
+        subject: `[Test] ${email.subject}`,
+        html: email.html,
+      }),
+    });
+    if (!sendResponse.ok) {
+      return jsonResponse({ error: `The email provider rejected the test: ${await sendResponse.text()}` }, 502);
+    }
+    return jsonResponse({ ok: true, sentTo: user.email });
   }
 
   if (action === 'invite') {

@@ -1,0 +1,9 @@
+---
+// Moved to admin/analytics/blog.astro as part of the "Analytics
+// Dashboards" nav reorg (see AdminLayout.astro and CLAUDE.md). This
+// redirect keeps any old bookmark or hardcoded link to /admin/blog-
+// analytics working.
+import { withBase } from '../../lib/url';
+
+return Astro.redirect(withBase('/admin/analytics/blog'), 302);
+---

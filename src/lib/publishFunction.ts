@@ -7,7 +7,7 @@ import { supabase } from './supabase';
 // the action routing and the auth checks each action does server-side.
 export async function callPublishFunction(
   body: Record<string, unknown>
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; data?: Record<string, unknown> }> {
   const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
   const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
   const { data: sessionData } = await supabase.auth.getSession();
@@ -25,7 +25,7 @@ export async function callPublishFunction(
     if (!response.ok) {
       return { ok: false, error: result.error ?? 'Something went wrong.' };
     }
-    return { ok: true };
+    return { ok: true, data: result };
   } catch (err) {
     return { ok: false, error: String(err) };
   }
