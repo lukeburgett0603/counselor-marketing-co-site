@@ -51,9 +51,18 @@
 // per-keyword array is `keywords[]`, each item's own tracked-keyword id
 // is `_id`, and its current position is `rank.last` — no plain
 // ranking-URL field exists at this level (see
-// parseTrackingStatsItem()'s own comment), so `ranking_url` stays null
-// for now. Trust the live shape over the docs if they ever disagree
-// again, for either endpoint.
+// parseTrackingStatsItem()'s own comment). Trust the live shape over
+// the docs if they ever disagree again, for either endpoint.
+//
+// Fixed 2026-10-14: this function had never saved a single rank
+// snapshot. target_keywords.mangools_tracked_keyword_id holds Mangools'
+// 32-hex keyword hash (`kwId`), but stats items are keyed by the 24-hex
+// tracked-keyword `_id`, so every lookup missed and was skipped without
+// an error. The tracking detail endpoint
+// (GET /serpwatcher/trackings/{id}/detail) lists both ids per keyword
+// plus the ranking URL, so it's fetched alongside the stats to bridge
+// the two. Unmatched items are now reported in ranksErrors instead of
+// vanishing.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -77,12 +86,25 @@ interface TargetKeywordRow {
 // — `map_pack.url` exists but is specifically for local-pack presence,
 // not the organic ranking URL, so `url` stays null here rather than
 // guessing at a field that isn't actually present.
-function parseTrackingStatsItem(item: any): { trackedKeywordId: string | null; position: number | null; url: string | null } {
+//
+// `rank.last` is 101 when the domain isn't in the top 100 (and -1 or
+// null when there's no check yet); all of those are stored as a null
+// position, never as a number.
+function parseTrackingStatsItem(item: any): { trackedKeywordId: string | null; position: number | null } {
+  const last = item?.rank?.last;
   return {
     trackedKeywordId: item?._id ?? null,
-    position: item?.rank?.last ?? null,
-    url: null,
+    position: typeof last === 'number' && last >= 1 && last <= 100 ? last : null,
   };
+}
+
+// One tracking-detail keyword: `_id` is the tracked-keyword id the
+// stats use, `kwId` is the keyword hash stored in target_keywords, and
+// `url` is the page currently ranking (null when nothing ranks).
+interface TrackingDetailKeyword {
+  _id: string;
+  kwId?: string;
+  url?: string | null;
 }
 
 Deno.serve(async (req: Request) => {
@@ -133,38 +155,68 @@ Deno.serve(async (req: Request) => {
       if (keywordsError) {
         ranksErrors.push('Could not load target keywords: ' + keywordsError.message);
       } else {
-        const byTrackedKeywordId = new Map<string, TargetKeywordRow>(
-          ((targetKeywords as TargetKeywordRow[]) ?? []).map((tk) => [tk.mangools_tracked_keyword_id!, tk])
-        );
+        // Several target rows can point at the same Mangools keyword
+        // (e.g. two spellings of one phrase), so each id maps to a list.
+        const byMangoolsId = new Map<string, TargetKeywordRow[]>();
+        for (const tk of (targetKeywords as TargetKeywordRow[]) ?? []) {
+          const list = byMangoolsId.get(tk.mangools_tracked_keyword_id!) ?? [];
+          list.push(tk);
+          byMangoolsId.set(tk.mangools_tracked_keyword_id!, list);
+        }
 
-        const statsRes = await fetch(
-          `${MANGOOLS_API_BASE}/serpwatcher/trackings/${business.mangools_tracking_id}/stats`,
-          { method: 'POST', headers: { 'x-access-token': mangoolsApiKey, 'Content-Type': 'application/json' } }
-        );
+        const trackingPath = `${MANGOOLS_API_BASE}/serpwatcher/trackings/${business.mangools_tracking_id}`;
+        const [detailRes, statsRes] = await Promise.all([
+          fetch(`${trackingPath}/detail`, { headers: { 'x-access-token': mangoolsApiKey } }),
+          fetch(`${trackingPath}/stats`, {
+            method: 'POST',
+            headers: { 'x-access-token': mangoolsApiKey, 'Content-Type': 'application/json' },
+          }),
+        ]);
 
-        if (!statsRes.ok) {
+        if (!detailRes.ok) {
+          ranksErrors.push(`tracking detail: Mangools returned ${detailRes.status}`);
+        } else if (!statsRes.ok) {
           ranksErrors.push(`tracking stats: Mangools returned ${statsRes.status}`);
         } else {
+          const detail = await detailRes.json();
+          const detailById = new Map<string, TrackingDetailKeyword>(
+            ((detail?.keywords ?? []) as TrackingDetailKeyword[]).map((kw) => [kw._id, kw])
+          );
+
           const stats = await statsRes.json();
           // Confirmed against a real live response — see
           // parseTrackingStatsItem()'s own comment above.
           const items: any[] = stats?.keywords ?? [];
+          const rows: { target_keyword_id: string; position: number | null; ranking_url: string | null }[] = [];
+          const matched = new Set<string>();
 
           for (const item of items) {
             const parsed = parseTrackingStatsItem(item);
-            const tk = parsed.trackedKeywordId ? byTrackedKeywordId.get(String(parsed.trackedKeywordId)) : undefined;
-            if (!tk) continue;
-
-            const { error: insertError } = await supabase.from('keyword_rank_snapshots').insert({
-              target_keyword_id: tk.id,
-              position: parsed.position,
-              ranking_url: parsed.url,
-            });
-            if (insertError) {
-              ranksErrors.push(`${tk.keyword}: ${insertError.message}`);
-              continue;
+            if (!parsed.trackedKeywordId) continue;
+            const detailKw = detailById.get(parsed.trackedKeywordId);
+            // Match on either id, so rows saved with the tracked-keyword
+            // `_id` keep working too.
+            const tks = byMangoolsId.get(parsed.trackedKeywordId) ?? (detailKw?.kwId ? byMangoolsId.get(detailKw.kwId) : undefined);
+            if (!tks) continue;
+            for (const tk of tks) {
+              matched.add(tk.id);
+              rows.push({
+                target_keyword_id: tk.id,
+                position: parsed.position,
+                // A URL only means something when the page is in the top 100.
+                ranking_url: parsed.position !== null ? (detailKw?.url ?? null) : null,
+              });
             }
-            ranksChecked++;
+          }
+
+          if (rows.length > 0) {
+            const { error: insertError } = await supabase.from('keyword_rank_snapshots').insert(rows);
+            if (insertError) ranksErrors.push(`rank snapshots: ${insertError.message}`);
+            else ranksChecked = rows.length;
+          }
+
+          for (const tk of (targetKeywords as TargetKeywordRow[]) ?? []) {
+            if (!matched.has(tk.id)) ranksErrors.push(`${tk.keyword}: not found in the Mangools tracking`);
           }
         }
       }
