@@ -15,7 +15,7 @@ import { buildReport } from '../../../src/lib/audit/findings.ts';
 
 const DAYS = [1, 4, 7, 10, 14];
 const CLOSED = ['scheduled', 'referred', 'withdrawn'];
-const PAGE_URL = Deno.env.get('AUDIT_PAGE_URL') ?? 'https://lukeburgett0603.github.io/counselor-marketing-co-site/audit';
+const PAGE_URL = Deno.env.get('AUDIT_PAGE_URL') ?? 'https://lukeburgett0603.github.io/counselor-marketing-co-site/audit/';
 const FN_URL = `${Deno.env.get('SUPABASE_URL')}/functions/v1`;
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);

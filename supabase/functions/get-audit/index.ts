@@ -6,7 +6,7 @@
 // stripped before anything reaches the browser.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const PAGE_URL = Deno.env.get('AUDIT_PAGE_URL') ?? 'https://lukeburgett0603.github.io/counselor-marketing-co-site/audit';
+const PAGE_URL = Deno.env.get('AUDIT_PAGE_URL') ?? 'https://lukeburgett0603.github.io/counselor-marketing-co-site/audit/';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -15,7 +15,7 @@ const cors = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
-const ADMIN_URL = (Deno.env.get('AUDIT_PAGE_URL') ?? 'https://lukeburgett0603.github.io/counselor-marketing-co-site/audit').replace(/\/audit$/, '/admin');
+const ADMIN_URL = (Deno.env.get('AUDIT_PAGE_URL') ?? 'https://lukeburgett0603.github.io/counselor-marketing-co-site/audit/').replace(/\/audit\/?$/, '/admin');
 const esc = (v: string) => v.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
 // "Just opened their audit": the best-timed follow-up Luke gets. Emailed to

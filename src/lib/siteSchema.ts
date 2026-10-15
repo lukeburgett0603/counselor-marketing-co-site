@@ -12,7 +12,7 @@ export function ids(siteUrl: string) {
   return {
     org: `${siteUrl}/#organization`,
     site: `${siteUrl}/#website`,
-    person: `${siteUrl}/about#luke-burgett`,
+    person: `${siteUrl}/about/#luke-burgett`,
   };
 }
 
@@ -65,7 +65,7 @@ export function breadcrumbs(siteUrl: string, crumbs: { name: string; path: strin
       '@type': 'ListItem',
       position: i + 1,
       name: c.name,
-      item: c.path === '/' ? `${siteUrl}/` : `${siteUrl}${c.path}`,
+      item: c.path === '/' ? `${siteUrl}/` : `${siteUrl}${withTrailingSlash(c.path)}`,
     })),
   };
 }
@@ -87,7 +87,7 @@ export function service(siteUrl: string, opts: { name: string; description: stri
     name: opts.name,
     serviceType: opts.serviceType ?? opts.name,
     description: opts.description,
-    url: `${siteUrl}${opts.path}`,
+    url: `${siteUrl}${withTrailingSlash(opts.path)}`,
     provider: { '@id': ids(siteUrl).org },
     areaServed: { '@type': 'Country', name: 'United States' },
   };
@@ -147,7 +147,7 @@ export function article(
     publisher: { '@id': id.org },
     datePublished: opts.datePublished,
     dateModified: opts.dateModified ?? opts.datePublished,
-    mainEntityOfPage: `${siteUrl}${opts.path}`,
+    mainEntityOfPage: `${siteUrl}${withTrailingSlash(opts.path)}`,
   };
   if (opts.image) node.image = opts.image;
   return node;
@@ -158,7 +158,7 @@ export function webApplication(siteUrl: string, opts: { name: string; descriptio
     '@type': 'WebApplication',
     name: opts.name,
     description: opts.description,
-    url: `${siteUrl}${opts.path}`,
+    url: `${siteUrl}${withTrailingSlash(opts.path)}`,
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Any (runs in the browser)',
     offers: { '@type': 'Offer', price: 0, priceCurrency: 'USD' },
@@ -169,7 +169,7 @@ export function webApplication(siteUrl: string, opts: { name: string; descriptio
 export function itemList(siteUrl: string, items: { name: string; path: string }[]): Node {
   return {
     '@type': 'ItemList',
-    itemListElement: items.map((it, i) => ({ '@type': 'ListItem', position: i + 1, name: it.name, url: `${siteUrl}${it.path}` })),
+    itemListElement: items.map((it, i) => ({ '@type': 'ListItem', position: i + 1, name: it.name, url: `${siteUrl}${withTrailingSlash(it.path)}` })),
   };
 }
 
@@ -178,12 +178,12 @@ export function webPage(siteUrl: string, opts: { name: string; description: stri
     '@type': 'WebPage',
     name: opts.name,
     description: opts.description,
-    url: `${siteUrl}${opts.path}`,
+    url: `${siteUrl}${withTrailingSlash(opts.path)}`,
     isPartOf: { '@id': ids(siteUrl).site },
   };
 }
 
-import { withBase } from './url';
+import { withBase, withTrailingSlash } from './url';
 // The site's real root including any GitHub Pages base path, no trailing slash.
 export function rootUrl(site: URL | undefined, url: URL): string {
   return new URL(withBase('/'), site ?? url).toString().replace(/\/$/, '');

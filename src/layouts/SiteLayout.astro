@@ -7,7 +7,7 @@ import '../styles/site.css';
 import SiteHeader from '../components/site/SiteHeader.astro';
 import SiteFooter from '../components/site/SiteFooter.astro';
 import Wordmark from '../components/site/Wordmark.astro';
-import { withBase } from '../lib/url';
+import { withBase, withTrailingSlash } from '../lib/url';
 import { organization, website, person, breadcrumbs, faqPage, type Node } from '../lib/siteSchema';
 
 interface Props {
@@ -28,7 +28,7 @@ interface Props {
 const { title, description, path, crumbs = [], schema = [], faqs = [], ogType = 'website', ogImage, noindex = false, minimal = false } = Astro.props;
 
 const siteUrl = new URL(withBase('/'), Astro.site ?? Astro.url).toString().replace(/\/$/, '');
-const canonical = path === '/' ? `${siteUrl}/` : `${siteUrl}${path}`;
+const canonical = path === '/' ? `${siteUrl}/` : `${siteUrl}${withTrailingSlash(path)}`;
 const trail = path === '/' ? [] : [{ name: 'Home', path: '/' }, ...crumbs];
 
 const graph: Node[] = [organization(siteUrl), website(siteUrl), person(siteUrl), ...schema];

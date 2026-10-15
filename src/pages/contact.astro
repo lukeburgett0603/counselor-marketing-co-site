@@ -6,13 +6,13 @@ import PageHero from '../components/site/PageHero.astro';
 import ContactForm from '../components/site/ContactForm.astro';
 import Ph from '../components/site/Ph.astro';
 import { SITE } from '../lib/site';
-import { withBase } from '../lib/url';
+import { withBase, withTrailingSlash } from '../lib/url';
 import { rootUrl } from '../lib/siteSchema';
 
 const path = '/contact';
 const description = 'Talk with a licensed counselor about filling your practice\'s caseload. Call, or request your free Caseload Audit.';
 const siteUrl = rootUrl(Astro.site, Astro.url);
-const contactPage = { '@type': 'ContactPage', name: 'Contact Counselor Marketing Co.', url: `${siteUrl}${path}`, description };
+const contactPage = { '@type': 'ContactPage', name: 'Contact Counselor Marketing Co.', url: `${siteUrl}${withTrailingSlash(path)}`, description };
 ---
 
 <SiteLayout title="Contact Counselor Marketing Co." description={description} path={path} crumbs={[{ name: 'Contact', path }]} schema={[contactPage]}>

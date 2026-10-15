@@ -13,8 +13,13 @@ function rehypeBaseLinks() {
   const visit = (node) => {
     if (node.type === 'element' && node.tagName === 'a') {
       const href = node.properties?.href;
-      if (typeof href === 'string' && href.startsWith('/') && !href.startsWith('//') && prefix && !href.startsWith(prefix + '/')) {
-        node.properties.href = prefix + href;
+      if (typeof href === 'string' && href.startsWith('/') && !href.startsWith('//')) {
+        // Pages are folders, so page links end in a slash (see src/lib/url.ts).
+        const [, p, suffix] = href.match(/^([^?#]*)(.*)$/);
+        const last = p.split('/').pop() ?? '';
+        const slashed = p.endsWith('/') || last.includes('.') ? p : `${p}/`;
+        const based = prefix && !slashed.startsWith(prefix + '/') ? prefix + slashed : slashed;
+        node.properties.href = based + suffix;
       }
     }
     (node.children ?? []).forEach(visit);
@@ -26,11 +31,11 @@ function rehypeBaseLinks() {
 // Static builds emit a meta-refresh page with a canonical link to the new
 // URL, the closest GitHub Pages gets to a 301.
 const redirects = {
-  '/full-service-marketing': '/how-it-works',
-  '/branding': '/website-design',
-  '/case-study-freedom-counseling': '/results/freedom-counseling-services',
-  '/faith-based-counseling-marketing': '/christian-counseling-marketing',
-  '/ethical-reviews': '/google-reviews-for-therapists',
+  '/full-service-marketing': '/how-it-works/',
+  '/branding': '/website-design/',
+  '/case-study-freedom-counseling': '/results/freedom-counseling-services/',
+  '/faith-based-counseling-marketing': '/christian-counseling-marketing/',
+  '/ethical-reviews': '/google-reviews-for-therapists/',
 };
 
 // `site` gets overwritten per client repo once a domain is known
@@ -47,7 +52,9 @@ const redirects = {
 export default defineConfig({
   site: 'https://lukeburgett0603.github.io',
   base: BASE,
-  trailingSlash: 'never',
+  // Pages are folders (slug/index.html) and GitHub Pages redirects /slug
+  // to /slug/, so every address ends in a slash. See src/lib/url.ts.
+  trailingSlash: 'always',
   redirects: Object.fromEntries(Object.entries(redirects).map(([from, to]) => [from, BASE + to])),
   markdown: { rehypePlugins: [rehypeBaseLinks] },
   integrations: [
@@ -55,7 +62,7 @@ export default defineConfig({
     sitemap({
       // /admin/* is the internal, auth-gated admin area — never
       // public/indexable pages.
-      filter: (page) => !page.includes('/admin') && !/\/audit\/?$/.test(page) && !Object.keys(redirects).some((from) => page.endsWith(from)),
+      filter: (page) => !page.includes('/admin') && !/\/audit\/?$/.test(page) && !Object.keys(redirects).some((from) => page.replace(/\/$/, '').endsWith(from)),
     }),
   ],
   image: {

@@ -3,6 +3,7 @@
 // @id everywhere else, never invent a property value, no self-serving
 // Review/AggregateRating markup, FAQPage only on pages with real visible Q&A.
 import type { Business, Page } from './pages';
+import { pageUrl } from './url';
 
 function businessId(siteUrl: string): string {
   return `${siteUrl}/#business`;
@@ -81,7 +82,7 @@ export function buildServiceSchema(page: Page, siteUrl: string) {
   // field written for public consumption, same as it is in <head>.
   if (page.meta_description) schema.description = page.meta_description;
   if (page.area_served_name) schema.areaServed = page.area_served_name;
-  schema.url = `${siteUrl}/${page.slug}`;
+  schema.url = pageUrl(siteUrl, page.slug);
   return schema;
 }
 
@@ -102,7 +103,7 @@ export function buildArticleSchema(page: Page, siteUrl: string, hasBlog: boolean
   // canonical location, not left implicit via the <link rel="canonical">
   // tag alone.
   if (page.slug) {
-    schema.mainEntityOfPage = { '@type': 'WebPage', '@id': `${siteUrl}/${page.slug}` };
+    schema.mainEntityOfPage = { '@type': 'WebPage', '@id': pageUrl(siteUrl, page.slug) };
   }
   // Real, computed from the actual body — never a hand-typed estimate that
   // can drift out of sync with the content.
@@ -197,7 +198,7 @@ export function buildPersonSchema(page: Page, siteUrl: string) {
   // See buildServiceSchema above — purpose is internal-only, never public.
   if (page.meta_description) schema.description = page.meta_description;
   if (page.images.headshot) schema.image = page.images.headshot.url;
-  schema.url = `${siteUrl}/${page.slug}`;
+  schema.url = pageUrl(siteUrl, page.slug);
   return schema;
 }
 
@@ -215,7 +216,7 @@ export function buildContactPageSchema(business: Business, siteUrl: string, page
     '@context': 'https://schema.org',
     '@type': 'ContactPage',
     about: { '@id': businessId(siteUrl) },
-    url: `${siteUrl}/${page.slug}`,
+    url: pageUrl(siteUrl, page.slug),
   };
   if (business.telephone) schema.telephone = business.telephone;
   return schema;
@@ -226,7 +227,7 @@ export function buildWebPageSchema(page: Page, siteUrl: string) {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
     name: page.title,
-    url: `${siteUrl}/${page.slug}`,
+    url: pageUrl(siteUrl, page.slug),
   };
   // Every page that reaches this generic fallback (About, Services
   // Overview, Blog Index, Other) still has a real meta_description written
@@ -265,7 +266,7 @@ export function buildBreadcrumbSchema(chain: Page[], siteUrl: string) {
       '@type': 'ListItem',
       position: index + 1,
       name: page.title,
-      item: page.page_type === 'Homepage' ? siteUrl : `${siteUrl}/${page.slug}`,
+      item: page.page_type === 'Homepage' ? `${siteUrl}/` : pageUrl(siteUrl, page.slug),
     })),
   };
 }

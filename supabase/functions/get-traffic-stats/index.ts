@@ -181,8 +181,21 @@ Deno.serve(async (req: Request) => {
       pageviews: row.count,
       visits: row.sum?.visits ?? 0,
     })),
-    topPages: byPath
-      .filter((row) => row.dimensions?.requestPath)
-      .map((row) => ({ path: row.dimensions!.requestPath!, pageviews: row.count })),
+    // Pages moved from /slug to /slug/ on 2026-10-14 (trailing slashes,
+    // see src/lib/url.ts), so one page can appear under both paths in
+    // the same date range. Count them as one page, under the slash form.
+    topPages: Object.entries(
+      byPath
+        .filter((row) => row.dimensions?.requestPath)
+        .reduce<Record<string, number>>((acc, row) => {
+          const raw = row.dimensions!.requestPath!;
+          const last = raw.split('/').pop() ?? '';
+          const path = raw.endsWith('/') || last.includes('.') ? raw : `${raw}/`;
+          acc[path] = (acc[path] ?? 0) + row.count;
+          return acc;
+        }, {}),
+    )
+      .map(([path, pageviews]) => ({ path, pageviews }))
+      .sort((a, b) => b.pageviews - a.pageviews),
   });
 });

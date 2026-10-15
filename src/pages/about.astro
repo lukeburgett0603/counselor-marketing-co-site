@@ -14,7 +14,7 @@ const path = '/about';
 const description =
   'Counselor Marketing Co. was built by Luke Burgett, a licensed counselor, to give counseling practices a client-getting system that respects their ethics code.';
 const siteUrl = rootUrl(Astro.site, Astro.url);
-const aboutPage = { ...webPage(siteUrl, { name: 'About Counselor Marketing Co.', description, path }), '@type': 'AboutPage', mainEntity: { '@id': `${siteUrl}/about#luke-burgett` } };
+const aboutPage = { ...webPage(siteUrl, { name: 'About Counselor Marketing Co.', description, path }), '@type': 'AboutPage', mainEntity: { '@id': `${siteUrl}/about/#luke-burgett` } };
 ---
 
 <SiteLayout title="About Counselor Marketing Co. | Built by a Licensed Counselor" description={description} path={path} crumbs={[{ name: 'About', path }]} schema={[aboutPage]}>

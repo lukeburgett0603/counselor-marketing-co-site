@@ -6,7 +6,7 @@ import SchemaScript from '../components/SchemaScript.astro';
 import { buildPageSchemas, buildBreadcrumbSchema } from '../lib/schema';
 import { buildBreadcrumbChain } from '../lib/pages';
 import type { Page, Business } from '../lib/pages';
-import { withBase } from '../lib/url';
+import { pageUrl, withBase } from '../lib/url';
 import '../styles/global.css';
 
 interface Props {
@@ -22,7 +22,7 @@ const { page, allPages, business } = Astro.props;
 // URL below is built from this so they stay correct with or without a
 // custom domain (which just makes the base path '/').
 const siteUrl = new URL(withBase('/'), Astro.site ?? Astro.url).toString().replace(/\/$/, '');
-const canonicalUrl = page.page_type === 'Homepage' ? `${siteUrl}/` : `${siteUrl}/${page.slug}`;
+const canonicalUrl = page.page_type === 'Homepage' ? `${siteUrl}/` : pageUrl(siteUrl, page.slug);
 const title = page.meta_title ?? page.title;
 // No `?? page.purpose` fallback here on purpose: `purpose` is internal
 // planning metadata (has held pricing tiers) — it must never reach a
