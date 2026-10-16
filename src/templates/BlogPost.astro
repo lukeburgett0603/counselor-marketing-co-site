@@ -2,10 +2,11 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import KeyTakeaways from '../components/KeyTakeaways.astro';
+import TableOfContents from '../components/TableOfContents.astro';
 import CTA from '../components/CTA.astro';
 import LeadGenerator from '../components/LeadGenerator.astro';
 import LeadMagnet from '../components/LeadMagnet.astro';
-import { renderCopy } from '../lib/markdown';
+import { renderCopy, extractTableOfContents } from '../lib/markdown';
 import { withBase } from '../lib/url';
 import { getCounselorOptions } from '../lib/pages';
 import type { Page, Business } from '../lib/pages';
@@ -31,6 +32,10 @@ const hubPage = page.category
       (p) => (p.page_type === 'Content Pillar' || p.page_type === 'Service Hub') && p.category === page.category
     )
   : undefined;
+
+// Sticky "On this page" list beside the body (the post's ### sections,
+// whose ids come from renderCopy), as on hub pages (ContentPillar.astro).
+const tocItems = extractTableOfContents(page.copy);
 
 const publishedDate = page.date_published
   ? new Date(page.date_published).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
@@ -62,9 +67,20 @@ const publishedDate = page.date_published
   <div class="mx-auto max-w-3xl px-6 pt-6">
     <KeyTakeaways items={page.key_takeaways} />
   </div>
-  <article class="prose prose-lg mx-auto max-w-3xl px-6 pb-10 pt-4">
-    <Fragment set:html={renderCopy(page.copy)} />
-  </article>
+  {tocItems.length > 1 && (
+    <details class="mx-auto mb-2 max-w-3xl rounded-lg border border-slate-200 px-6 py-3 lg:hidden">
+      <summary class="cursor-pointer font-semibold">In this article</summary>
+      <ol class="mt-3 list-decimal space-y-1 pl-5 text-sm">
+        {tocItems.map((item) => <li><a href={`#${item.id}`} class="text-slate-700 hover:underline">{item.text}</a></li>)}
+      </ol>
+    </details>
+  )}
+  <div class:list={['mx-auto grid grid-cols-1 gap-10 px-6 pb-10 pt-4', tocItems.length > 1 ? 'max-w-5xl lg:grid-cols-[220px_1fr]' : 'max-w-3xl']}>
+    <TableOfContents items={tocItems} />
+    <article class="prose prose-lg">
+      <Fragment set:html={renderCopy(page.copy)} />
+    </article>
+  </div>
   <CTA heading={page.cta_heading ?? `Want help from ${business.display_name}?`} subheading={page.cta_subheading} buttonText={page.cta_button_text ?? undefined} />
   <LeadMagnet pageId={page.id} turnstileSiteKey={business.cloudflare_turnstile_site_key} />
   <LeadGenerator
