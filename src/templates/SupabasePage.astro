@@ -6,7 +6,9 @@ import SiteLayout from '../layouts/SiteLayout.astro';
 import Faq from '../components/site/Faq.astro';
 import CtaBand from '../components/site/CtaBand.astro';
 import Ph from '../components/site/Ph.astro';
-import { renderCopy, extractTableOfContents } from '../lib/markdown';
+import ArticleLibrary from '../components/site/ArticleLibrary.astro';
+import { Image } from 'astro:assets';
+import { renderCopy } from '../lib/markdown';
 import { withBase } from '../lib/url';
 import { article, webPage } from '../lib/siteSchema';
 import type { Page } from '../lib/pages';
@@ -26,7 +28,31 @@ const isArticle = page.page_type === 'Content Pillar' || page.page_type === 'Blo
 const isLegal = page.page_type === 'Other';
 const isIndex = page.page_type === 'Blog Index';
 const faqs = (page.faqs ?? []).map((f) => ({ q: f.question, a: f.answer }));
-const toc = isArticle ? extractTableOfContents(page.copy) : [];
+// Article body: drop a leading heading that only repeats the H1, lift
+// "###"-only copy a level so the outline doesn't jump from H1 to H3, and
+// give every H2/H3 an id for the table of contents. The contents list
+// the H2s when there are at least two, otherwise the H3s (CMC's older
+// copy opens with one "##" hook and uses "###" for every section).
+const norm = (t: string) => t.replace(/<[^>]+>|[#*_\s?!.,:'"]/g, '').toLowerCase();
+const titleKey = norm(h1).slice(0, 24);
+const body = (page.copy ?? '').replace(/^#{1,2}\s+(.*)\n+/gm, (m, text: string) => (titleKey && norm(text).startsWith(titleKey) ? '' : m));
+const leveled = /^## /m.test(body) ? body : body.replace(/^###(#?) /gm, '##$1 ');
+const slugify = (t: string) => t.toLowerCase().replace(/&[a-z]+;/g, ' ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+const heads: { text: string; id: string; level: number }[] = [];
+const bodyHtml = renderCopy(isArticle ? leveled : page.copy).replace(/<h([23])(?: id="[^"]*")?>([\s\S]*?)<\/h\1>/g, (_m, lvl: string, inner: string) => {
+  const text = inner.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&#39;|&apos;/g, "'").replace(/&quot;/g, '"').trim();
+  let id = slugify(text) || `section-${heads.length + 1}`;
+  if (heads.some((h) => h.id === id)) id = `${id}-${heads.length + 1}`;
+  heads.push({ text, id, level: Number(lvl) });
+  return `<h${lvl} id="${id}">${inner}</h${lvl}>`;
+});
+const h2s = heads.filter((h) => h.level === 2);
+const h3s = heads.filter((h) => h.level === 3);
+const toc = !isArticle ? [] : h2s.length >= 2 ? h2s : h3s.length >= 2 ? h3s : heads;
+const takeaways = (page.key_takeaways ?? []).filter((t) => t && t.trim());
+const hero = page.images?.hero?.url ? page.images.hero : undefined;
+// Unsplash attribution names the registered Unsplash app (see OptimizedImage.astro).
+const unsplashApp = import.meta.env.PUBLIC_UNSPLASH_APP_NAME || 'local-business-site-template';
 const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }) : null);
 const updated = fmt(page.date_modified ?? page.date_published);
 
@@ -34,8 +60,40 @@ const hubs = allPages.filter((p) => p.page_type === 'Content Pillar' && p.catego
 const posts = allPages
   .filter((p) => p.page_type === 'Blog Post')
   .sort((a, b) => (b.date_published ?? '').localeCompare(a.date_published ?? ''));
-const categoryPosts = page.category ? posts.filter((p) => p.category === page.category && p.slug !== page.slug) : [];
 const parentHub = page.page_type === 'Blog Post' ? hubs.find((h) => h.category === page.category) : undefined;
+const hubFor = (category: string | null) => hubs.find((h) => h.category === category);
+const card = (p: Page) => ({
+  title: p.h1 || p.title,
+  text: p.meta_description ?? undefined,
+  href: withBase(`/${p.slug}`),
+  slug: p.slug,
+  topic: hubFor(p.category)?.slug,
+  topicLabel: hubFor(p.category)?.title,
+  date: p.date_published ?? undefined,
+  image: p.images?.hero?.url ? { url: p.images.hero.url, alt: p.images.hero.alt || '' } : undefined,
+});
+// Below an article: up to three more, same topic first, then the newest.
+// On a topic hub: every article in that topic.
+const others = posts.filter((p) => p.slug !== page.slug);
+const moreArticles =
+  page.page_type === 'Content Pillar'
+    ? others.filter((p) => p.category === page.category).map(card)
+    : [...others.filter((p) => p.category && p.category === page.category), ...others.filter((p) => !p.category || p.category !== page.category)].slice(0, 3).map(card);
+// Blog index: the whole library. Topics are the hubs that have articles.
+// The search box also looks through each article's summary, search
+// phrase, section headings, and opening (kept short so the page stays
+// light as the library grows).
+function searchText(p: Page, topic?: string): string {
+  const copy = p.copy ?? '';
+  const headings = [...copy.matchAll(/^#{2,4}\s+(.+)$/gm)].map((m) => m[1]);
+  const opening = copy.replace(/^#{1,6}\s+.*$/gm, ' ').replace(/[*_`>#\[\]()]/g, ' ').split(/\s+/).slice(0, 150).join(' ');
+  return [p.meta_description, p.focus_keyword, topic, ...headings, opening].filter(Boolean).join(' ').toLowerCase();
+}
+const library = isIndex ? posts.map((p) => ({ ...card(p), search: searchText(p, hubFor(p.category)?.title) })) : [];
+const topics = hubs
+  .map((h) => ({ slug: h.slug, label: h.title, count: posts.filter((p) => p.category === h.category).length }))
+  .filter((t) => t.count > 0);
+const fmtShort = (d?: string) => (d ? new Date(`${d.slice(0, 10)}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '');
 
 const crumbs =
   page.page_type === 'Blog Post'
@@ -73,7 +131,11 @@ const schema = isArticle
       </ol>
     </nav>
     <div class="max-w-3xl">
-      {page.category && page.page_type === 'Blog Post' && <p class="mb-4 text-sm font-medium text-accent">{page.category}</p>}
+      {page.page_type === 'Blog Post' && page.category && (
+        parentHub
+          ? <a href={withBase(`/${parentHub.slug}`)} class="mb-4 inline-block text-sm font-medium text-accent hover:underline hover:underline-offset-4">{parentHub.title}</a>
+          : <p class="mb-4 text-sm font-medium text-muted">{page.category}</p>
+      )}
       <h1 class:list={['font-semibold leading-[1.06] tracking-[-0.035em] text-ink', isLegal ? 'text-[clamp(32px,3.6vw,44px)]' : 'text-[clamp(36px,4.4vw,52px)]']}>{h1}</h1>
       {page.hero_subhead && <p class="lede mt-5">{page.hero_subhead}</p>}
       {isArticle && (
@@ -85,95 +147,263 @@ const schema = isArticle
   </section>
 
   {isIndex ? (
-    <section class="wrap pb-10">
-      {page.copy && <div class="prose prose-site prose-lg max-w-3xl" set:html={renderCopy(page.copy)} />}
-      <h2 class="h2 mt-12">Guides and tools</h2>
-      <ul class="mt-6 grid gap-4 md:grid-cols-3">
-        {[
-          { t: 'How to Get More Therapy Clients', d: 'The complete guide to filling your caseload, step by step.', h: '/how-to-get-more-therapy-clients', i: 'compass' },
-          { t: 'Caseload Calculator', d: 'See your open spots and what filling them is worth.', h: '/caseload-calculator', i: 'calculator' },
-          { t: 'Compare your options', d: 'Website builders, directories, platforms, and agencies, compared honestly.', h: '/compare', i: 'scales' },
-        ].map((g) => (
-          <li>
-            <a href={withBase(g.h)} class="card block h-full p-6 transition-colors hover:border-accent">
-              <Ph name={g.i} class="size-6 text-accent" />
-              <p class="h3 mt-4">{g.t}</p>
-              <p class="mt-1.5 text-[15px] text-muted">{g.d}</p>
-            </a>
-          </li>
-        ))}
-      </ul>
-      <h2 class="h2 mt-16">Topics</h2>
-      <ul class="mt-6 divide-y divide-line border-y border-line">
-        {hubs.map((h) => (
-          <li>
-            <a href={withBase(`/${h.slug}`)} class="group flex items-center justify-between gap-6 py-5">
-              <span>
-                <span class="h3 block group-hover:text-accent">{h.title}</span>
-                {h.meta_description && <span class="mt-1 block max-w-[70ch] text-[15px] text-muted">{h.meta_description}</span>}
-              </span>
-              <Ph name="arrow-right" class="size-5 text-accent" />
-            </a>
-          </li>
-        ))}
-      </ul>
-      {posts.length > 0 && (
-        <>
-          <h2 class="h2 mt-16">Latest articles</h2>
-          <ul class="mt-6 grid gap-4 md:grid-cols-2">
-            {posts.map((p) => (
+    <>
+      {page.copy && (
+        <section class="wrap pb-10">
+          <div class="prose prose-site prose-lg max-w-3xl" set:html={renderCopy(page.copy)} />
+        </section>
+      )}
+      {library.length > 0 && <ArticleLibrary topics={topics} articles={library} featured={library[0]?.slug} />}
+      <section class="wrap pb-10">
+        <h2 class="h2">Guides and tools</h2>
+        <ul class="mt-6 grid gap-4 md:grid-cols-3">
+          {[
+            { t: 'How to Get More Therapy Clients', d: 'The complete guide to filling your caseload, step by step.', h: '/how-to-get-more-therapy-clients', i: 'compass' },
+            { t: 'Caseload Calculator', d: 'See your open spots and what filling them is worth.', h: '/caseload-calculator', i: 'calculator' },
+            { t: 'Compare your options', d: 'Website builders, directories, platforms, and agencies, compared honestly.', h: '/compare', i: 'scales' },
+          ].map((g) => (
+            <li>
+              <a href={withBase(g.h)} class="card block h-full p-6 transition-colors hover:border-muted">
+                <Ph name={g.i} class="size-6 text-accent" />
+                <p class="h3 mt-4">{g.t}</p>
+                <p class="mt-1.5 text-[15px] text-muted">{g.d}</p>
+              </a>
+            </li>
+          ))}
+        </ul>
+        {hubs.length > 0 && (
+          <>
+            <h2 class="h2 mt-16">Topics</h2>
+            <ul class="mt-6 divide-y divide-line border-y border-line">
+              {hubs.map((h) => (
+                <li>
+                  <a href={withBase(`/${h.slug}`)} class="group flex items-center justify-between gap-6 py-5">
+                    <span>
+                      <span class="h3 block group-hover:text-accent">{h.title}</span>
+                      {h.meta_description && <span class="mt-1 block max-w-[70ch] text-[15px] text-muted">{h.meta_description}</span>}
+                    </span>
+                    <Ph name="arrow-right" class="size-5 text-accent" />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </section>
+    </>
+  ) : (
+    <>
+      {isArticle && hero && (
+        <div class="wrap pb-10 sm:pb-12">
+          <div class="aspect-[2/1] max-w-[1024px] overflow-hidden rounded-card border border-line bg-accent-soft">
+            <Image src={hero.url} alt={hero.alt || ''} inferSize widths={[640, 960, 1280, 1600]} sizes="(max-width: 1072px) 100vw, 1024px" loading="eager" fetchpriority="high" class="size-full object-cover" />
+          </div>
+          {hero.creditName && hero.creditUrl && (
+            <p class="mt-2 text-[13px] text-muted">Photo by <a href={`${hero.creditUrl}?utm_source=${unsplashApp}&utm_medium=referral`} class="underline underline-offset-2 hover:text-ink" rel="noopener">{hero.creditName}</a> on <a href={`https://unsplash.com/?utm_source=${unsplashApp}&utm_medium=referral`} class="underline underline-offset-2 hover:text-ink" rel="noopener">Unsplash</a></p>
+          )}
+        </div>
+      )}
+      <div class:list={['wrap pb-6', toc.length > 1 && 'art-layout']}>
+        <div class="min-w-0">
+          {takeaways.length > 0 && (
+            <section class="art-kt" aria-labelledby="art-kt-h">
+              <h2 id="art-kt-h">Key takeaways</h2>
+              <ol>{takeaways.map((t) => <li>{t}</li>)}</ol>
+            </section>
+          )}
+          {toc.length > 1 && (
+            <details class="art-toc-m card">
+              <summary>In this article <Ph name="caret-down" class="size-4 text-muted" /></summary>
+              <ol>{toc.map((t) => <li><a href={`#${t.id}`}>{t.text}</a></li>)}</ol>
+            </details>
+          )}
+          <article class="art-body prose prose-site prose-lg max-w-[720px]" set:html={bodyHtml} />
+        </div>
+        {toc.length > 1 && (
+          <nav class="art-toc" aria-label="On this page">
+            <p>On this page</p>
+            <ol>{toc.map((t) => <li><a href={`#${t.id}`}>{t.text}</a></li>)}</ol>
+          </nav>
+        )}
+      </div>
+      {moreArticles.length > 0 && (
+        <section class="wrap py-14 lg:py-16">
+          <h2 class="h2">{page.page_type === 'Content Pillar' ? 'Articles on this topic' : 'More articles'}</h2>
+          <ul class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {moreArticles.map((a) => (
               <li>
-                <a href={withBase(`/${p.slug}`)} class="card block h-full p-6 transition-colors hover:border-accent">
-                  {p.category && <p class="text-sm text-accent">{p.category}</p>}
-                  <p class="h3 mt-2">{p.title}</p>
-                  {p.meta_description && <p class="mt-1.5 text-[15px] text-muted">{p.meta_description}</p>}
+                <a href={a.href} class="card flex h-full flex-col gap-2 overflow-hidden px-5 pb-5 transition-colors hover:border-muted">
+                  {a.image ? (
+                    <div class="-mx-5 mb-1.5 aspect-video overflow-hidden bg-accent-soft">
+                      <Image src={a.image.url} alt={a.image.alt} inferSize widths={[400, 640, 800]} sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 380px" loading="lazy" class="size-full object-cover" />
+                    </div>
+                  ) : <span class="mt-3" />}
+                  {(a.topicLabel || a.date) && <span class="text-[13px] font-medium text-muted">{[a.topicLabel, fmtShort(a.date)].filter(Boolean).join(' · ')}</span>}
+                  <strong class="text-[17px] font-semibold leading-snug tracking-[-0.01em] text-ink">{a.title}</strong>
+                  {a.text && <span class="line-clamp-3 text-[15px] leading-normal text-muted">{a.text}</span>}
+                  <span class="link-arrow mt-auto pt-1 text-[15px]">Read the article <Ph name="arrow-right" class="size-4" /></span>
                 </a>
               </li>
             ))}
           </ul>
-        </>
+        </section>
       )}
-    </section>
-  ) : (
-    <div class:list={['wrap pb-6', toc.length > 2 && 'lg:grid lg:grid-cols-[220px_1fr] lg:gap-14']}>
-      {toc.length > 2 && (
-        <nav aria-label="On this page" class="hidden lg:block">
-          <div class="sticky top-24">
-            <p class="text-sm font-medium text-ink">On this page</p>
-            <ul class="mt-3 space-y-2 border-l border-line">
-              {toc.map((t) => (
-                <li><a href={`#${t.id}`} class="-ml-px block border-l border-transparent pl-4 text-sm text-muted hover:border-accent hover:text-ink">{t.text}</a></li>
-              ))}
-            </ul>
-          </div>
-        </nav>
-      )}
-      <div class="max-w-3xl">
-        {page.key_takeaways?.length > 0 && (
-          <aside class="card mb-10 p-6">
-            <p class="font-semibold text-ink">Key takeaways</p>
-            <ul class="mt-3 space-y-2">
-              {page.key_takeaways.map((k: string) => (
-                <li class="flex gap-3 text-muted"><Ph name="check" class="mt-1 size-4 text-accent" />{k}</li>
-              ))}
-            </ul>
-          </aside>
-        )}
-        <article class="prose prose-site prose-lg max-w-none" set:html={renderCopy(page.copy)} />
-        {categoryPosts.length > 0 && (
-          <section class="mt-14">
-            <h2 class="h2">Related articles</h2>
-            <ul class="mt-6 divide-y divide-line border-y border-line">
-              {categoryPosts.map((p) => (
-                <li><a href={withBase(`/${p.slug}`)} class="link-arrow py-4">{p.title} <Ph name="arrow-right" class="size-4" /></a></li>
-              ))}
-            </ul>
-          </section>
-        )}
-      </div>
-    </div>
+    </>
   )}
 
   {faqs.length > 0 && <Faq faqs={faqs} />}
   {!isLegal && <CtaBand />}
 </SiteLayout>
+
+<style>
+  /* Section links land below the sticky header through html's
+     scroll-padding-top (site.css); no extra scroll-margin here. */
+  /* Takeaways read like an editorial "in brief": a heavy rule, a plain
+     heading, numbered points split by hairlines. No card, no fill. */
+  .art-kt {
+    max-width: 720px;
+    margin-bottom: 40px;
+    border-top: 3px solid var(--ink);
+    padding-top: 16px;
+    counter-reset: kt;
+  }
+  .art-kt h2 {
+    font-size: 19px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .art-kt ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .art-kt li {
+    counter-increment: kt;
+    display: grid;
+    grid-template-columns: 2.2rem minmax(0, 1fr);
+    gap: 4px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink);
+    font-size: 17px;
+    line-height: 1.55;
+  }
+  .art-kt li::before {
+    content: counter(kt);
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 15px;
+    line-height: 1.75;
+  }
+  .art-toc-m {
+    max-width: 720px;
+    margin-bottom: 32px;
+    padding: 14px 20px;
+  }
+  .art-toc-m summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 600;
+    color: var(--ink);
+    cursor: pointer;
+    list-style: none;
+  }
+  .art-toc-m summary::-webkit-details-marker {
+    display: none;
+  }
+  .art-toc-m[open] summary :global(svg) {
+    transform: rotate(180deg);
+  }
+  .art-toc-m ol {
+    list-style: decimal;
+    margin: 12px 0 2px;
+    padding-left: 1.4em;
+    display: grid;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 16px;
+  }
+  .art-toc-m a,
+  .art-toc a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .art-toc-m a:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .art-toc {
+    display: none;
+  }
+  @media (min-width: 1024px) {
+    .art-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 720px) 240px;
+      gap: 64px;
+      justify-content: start;
+    }
+    .art-toc-m {
+      display: none;
+    }
+    .art-toc {
+      display: block;
+      position: sticky;
+      top: 96px;
+      align-self: start;
+      max-height: calc(100vh - 128px);
+      overflow: auto;
+    }
+    .art-toc p {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 12px;
+    }
+    .art-toc ol {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      border-left: 1px solid var(--line);
+      display: grid;
+      gap: 2px;
+    }
+    .art-toc li a {
+      display: block;
+      padding: 6px 0 6px 14px;
+      margin-left: -1px;
+      border-left: 2px solid transparent;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.4;
+      transition: color 0.15s;
+    }
+    .art-toc li a:hover {
+      color: var(--ink);
+    }
+    /* The section being read: ink, never the accent fill. */
+    .art-toc li a[aria-current='true'] {
+      color: var(--ink);
+      font-weight: 500;
+      border-left-color: var(--ink);
+    }
+  }
+</style>
+
+<script>
+  // Highlight the section being read in the sticky list.
+  const links = [...document.querySelectorAll<HTMLAnchorElement>('.art-toc a')];
+  const heads = links.map((a) => document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter((h): h is HTMLElement => !!h);
+  if (heads.length) {
+    const update = () => {
+      let current = heads[0];
+      for (const h of heads) if (h.getBoundingClientRect().top < 160) current = h;
+      links.forEach((a) => a.setAttribute('aria-current', String(a.hash === `#${current.id}`)));
+    };
+    addEventListener('scroll', update, { passive: true });
+    update();
+  }
+</script>
