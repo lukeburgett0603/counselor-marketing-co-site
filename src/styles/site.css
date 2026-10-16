@@ -223,6 +223,9 @@ h1, h2, h3, h4 {
     cursor: pointer;
     text-decoration: none;
   }
+  /* The solid accent fill is the action color: only conversion buttons
+     (audit, contact, form submit) use it. Selected states, badges, and
+     labels use ink or --accent-soft (CMC rule, 2026-10-16). */
   .btn-primary {
     background: var(--accent);
     color: var(--accent-ink);

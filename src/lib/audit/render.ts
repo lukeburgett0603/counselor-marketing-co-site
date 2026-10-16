@@ -179,7 +179,7 @@ export function renderAudit(d: AuditData, icons: Icons, opts: { contactHref: str
   const top = r.top
     .map(
       (f, i) => `<li class="card flex gap-4 p-5 sm:p-6">
-        <span class="grid size-8 shrink-0 place-items-center rounded-full bg-accent font-mono text-[15px] font-medium text-accent-ink">${i + 1}</span>
+        <span class="grid size-8 shrink-0 place-items-center rounded-full bg-ink font-mono text-[15px] font-medium text-page">${i + 1}</span>
         <div>
           <p class="text-[17px] font-semibold leading-snug text-ink">${esc(f.action ?? f.title)}</p>
           <p class="mt-1.5 text-[15px] text-muted">${esc(f.title)} <a href="#${f.step}" class="link-arrow">Details</a></p>

@@ -145,7 +145,7 @@ const trust = [
     <ol class="grid gap-8 md:grid-cols-3 md:gap-0">
       {timeline.map((t, i) => (
         <li class="relative border-t-2 border-line pt-6 md:pr-8">
-          <span class:list={['absolute -top-[7px] left-0 size-3 rounded-full', i === 0 ? 'bg-accent' : 'border-2 border-accent bg-page']} />
+          <span class:list={['absolute -top-[7px] left-0 size-3 rounded-full', i === 0 ? 'bg-ink' : 'border-2 border-ink bg-page']} />
           <p class="font-mono text-sm text-accent">{t.when}</p>
           <p class="mt-2 text-[17px] text-ink">{t.what}</p>
         </li>
