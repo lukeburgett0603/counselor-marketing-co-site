@@ -114,7 +114,7 @@ ${counts.join('\n')}
 FILES
 - ${downloaded} uploaded file(s) in the files/ folder.
 ${linkedOnly.length ? `\nLARGE FILES (download these separately while the links still work)\n${linkedOnly.join('\n')}\n` : ''}${
-    problems.length ? `\nNOT INCLUDED (tell your Counselor Marketing Co. contact)\n${problems.join('\n')}\n` : ''
+    problems.length ? `\nNOT INCLUDED (tell your Therapy Marketing Co. contact)\n${problems.join('\n')}\n` : ''
   }
 PRIVACY
 This export contains names and contact details of people who reached out to

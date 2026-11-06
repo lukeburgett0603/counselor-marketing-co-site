@@ -1,6 +1,6 @@
 // The "starter plan" half of the audit (v2): for each finding, a one-line
 // "What to do" and step-by-step "Show me how"; the links worth getting;
-// one "How Counselor Marketing Co. helps" block per step; Watch It Work;
+// one "How Therapy Marketing Co. helps" block per step; Watch It Work;
 // ready-to-use templates; and the options section. Wording approved by
 // Luke on 2026-10-12 (audit-automation/audit-v2-wording.md). Same rules as
 // findings.ts: no promised results, no invented statistics, no em-dashes.

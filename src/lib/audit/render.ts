@@ -55,7 +55,7 @@ function howBlock(h: HowTo): string {
 
 function helpBlock(h: Help, group: boolean, pricingHref: string): string {
   return `<div class="mt-8 rounded-card border border-line bg-surface p-5 sm:p-6">
-    <p class="text-sm font-semibold text-ink">How Counselor Marketing Co. helps</p>
+    <p class="text-sm font-semibold text-ink">How Therapy Marketing Co. helps</p>
     <div class="mt-4 grid gap-5 md:grid-cols-2">
       <div><p class="text-sm font-medium text-accent">With the platform (Self-Guided)</p><p class="mt-1.5 text-[15px] text-muted">${esc(h.self)}</p></div>
       <div><p class="text-sm font-medium text-accent">We do it for you (Done for You)</p><p class="mt-1.5 text-[15px] text-muted">${esc(h.dfy)}${group && h.group ? ` <span class="text-ink">Group Practice adds:</span> ${esc(h.group)}` : ''}</p></div>
@@ -251,7 +251,7 @@ export function renderAudit(d: AuditData, icons: Icons, opts: { contactHref: str
     ${count != null ? `<p class="mt-4 text-sm text-muted">We counted about ${count} counselor${count === 1 ? '' : 's'} on your site, so we showed ${esc(price.label)} pricing. If that's off, <a href="${esc(opts.pricingHref)}" class="link-arrow">see all plans and pricing</a></p>` : ''}
     <ul class="mt-6 max-w-[70ch] space-y-2 text-[15px] text-muted">
       <li>Month-to-month. No contract.</li>
-      <li>Your data is yours: download it anytime, and it always goes with you. If you leave, you keep your website and domain; the CMC platform (dashboard, CRM, automations) stays with us.</li>
+      <li>Your data is yours: download it anytime, and it always goes with you. If you leave, you keep your website and domain; our platform (dashboard, CRM, automations) stays with us.</li>
       <li>Keeping your domain: your new site uses the domain you already have, registered in your name, and we set up redirects from your old pages so you keep what you've built in Google.</li>
     </ul>
     <div class="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -315,7 +315,7 @@ export function renderAudit(d: AuditData, icons: Icons, opts: { contactHref: str
       <h2 class="h3">How this audit was made</h2>
       <div class="max-w-[64ch] space-y-3 text-[15px] text-muted">
         <p>This audit was put together the moment you asked for it, from public information only: your website's own code, the site of the practice at the top of your main search, Google's PageSpeed and accessibility tests, and search data from Mangools. Nothing in it is estimated. If we couldn't check something, we left it out rather than guess.</p>
-        <p>Luke Burgett, a licensed counselor and the founder of Counselor Marketing Co., gets a copy too. If you'd like to talk it through, he'll already know your practice.</p>
+        <p>Luke Burgett, a licensed counselor and the founder of Therapy Marketing Co., gets a copy too. If you'd like to talk it through, he'll already know your practice.</p>
       </div>
     </div>
   </section>

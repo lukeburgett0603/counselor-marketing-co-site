@@ -18,7 +18,7 @@ const SHOTS: Record<string, { alt: string; caption: string | false }> = {
   caseload: { alt: 'Caseload: the practice meter and a card for each counselor showing how full they are', caption: 'Caseload for each counselor. Sample practice, illustrative data.' },
   referrals: { alt: 'Referral partners: active partners, follow-ups due, and each partner with their stage and the inquiries they sent', caption: 'Referral partners. Sample practice, illustrative data.' },
   'seo-insights': { alt: 'Search rankings: each tracked search with its Google position, monthly searches, and eight weeks of movement', caption: 'Search rankings. Sample practice, illustrative data.' },
-  'freedom-home': { alt: "Freedom Counseling Services' homepage, built by Counselor Marketing Co.", caption: "Freedom Counseling Services' live homepage." },
+  'freedom-home': { alt: "Freedom Counseling Services' homepage, built by Therapy Marketing Co.", caption: "Freedom Counseling Services' live homepage." },
 };
 const files = import.meta.glob<{ default: ImageMetadata }>('../../assets/shots/*.{png,webp,jpg}', { eager: true });
 const match = Object.entries(files).find(([path]) => path.split('/').pop()!.replace(/\.\w+$/, '') === Astro.props.shot);

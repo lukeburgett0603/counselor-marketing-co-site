@@ -4,7 +4,7 @@
 // Copy source: rebuild/copy/*.md; pricing decisions: rebuild/pricing-structure.md.
 
 export const SITE = {
-  name: 'Counselor Marketing Co.',
+  name: 'Therapy Marketing Co.',
   founder: 'Luke Burgett',
   credential: 'LPCA',
   credentialLong: 'Licensed Professional Counselor Associate',
@@ -357,7 +357,7 @@ export const TIER_MATRIX: { step: string; cells: [string, string, string] }[] = 
 ];
 
 export const DATA_PROMISE =
-  'Your data is yours: download it anytime, and it always goes with you. If you leave, you keep your website and domain; the CMC platform (dashboard, CRM, automations) stays with us.';
+  'Your data is yours: download it anytime, and it always goes with you. If you leave, you keep your website and domain; our platform (dashboard, CRM, automations) stays with us.';
 
 export const HIPAA_ANSWER =
   "Your clinical records stay in your practice's EHR (SimplePractice, TherapyNotes, and so on). The platform handles inquiries only: the contact details and short note someone sends when they reach out.";

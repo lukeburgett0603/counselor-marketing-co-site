@@ -12,10 +12,10 @@ import { rootUrl } from '../lib/siteSchema';
 const path = '/contact';
 const description = 'Talk with a licensed counselor about filling your practice\'s caseload. Call, or request your free Caseload Audit.';
 const siteUrl = rootUrl(Astro.site, Astro.url);
-const contactPage = { '@type': 'ContactPage', name: 'Contact Counselor Marketing Co.', url: `${siteUrl}${withTrailingSlash(path)}`, description };
+const contactPage = { '@type': 'ContactPage', name: 'Contact Therapy Marketing Co.', url: `${siteUrl}${withTrailingSlash(path)}`, description };
 ---
 
-<SiteLayout title="Contact Counselor Marketing Co." description={description} path={path} crumbs={[{ name: 'Contact', path }]} schema={[contactPage]}>
+<SiteLayout title="Contact Therapy Marketing Co." description={description} path={path} crumbs={[{ name: 'Contact', path }]} schema={[contactPage]}>
   <PageHero
     title="Let's talk about your practice."
     sub="The fastest way to a real answer is a free Caseload Audit. If you'd rather just talk, call or send a note."

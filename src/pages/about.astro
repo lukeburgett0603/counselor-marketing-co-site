@@ -12,15 +12,15 @@ import { rootUrl, webPage } from '../lib/siteSchema';
 
 const path = '/about';
 const description =
-  'Counselor Marketing Co. was built by Luke Burgett, a licensed counselor, to give counseling practices a client-getting system that respects their ethics code.';
+  'Therapy Marketing Co. was built by Luke Burgett, a licensed counselor, to give counseling practices a client-getting system that respects their ethics code.';
 const siteUrl = rootUrl(Astro.site, Astro.url);
-const aboutPage = { ...webPage(siteUrl, { name: 'About Counselor Marketing Co.', description, path }), '@type': 'AboutPage', mainEntity: { '@id': `${siteUrl}/about/#luke-burgett` } };
+const aboutPage = { ...webPage(siteUrl, { name: 'About Therapy Marketing Co.', description, path }), '@type': 'AboutPage', mainEntity: { '@id': `${siteUrl}/about/#luke-burgett` } };
 ---
 
-<SiteLayout title="About Counselor Marketing Co. | Built by a Licensed Counselor" description={description} path={path} crumbs={[{ name: 'About', path }]} schema={[aboutPage]}>
+<SiteLayout title="About Therapy Marketing Co. | Built by a Licensed Counselor" description={description} path={path} crumbs={[{ name: 'About', path }]} schema={[aboutPage]}>
   <PageHero
     title="A counselor marketing agency, built by a counselor."
-    sub="Counselor Marketing Co. exists because excellent counselors shouldn't lose clients to practices that are simply better at marketing."
+    sub="Therapy Marketing Co. exists because excellent counselors shouldn't lose clients to practices that are simply better at marketing."
     crumbs={[{ name: 'About', path }]}
     cta={false}
   />
@@ -30,7 +30,7 @@ const aboutPage = { ...webPage(siteUrl, { name: 'About Counselor Marketing Co.',
       <figure>
         <Image
           src={headshot}
-          alt="Luke Burgett, LPCA, founder of Counselor Marketing Co."
+          alt="Luke Burgett, LPCA, founder of Therapy Marketing Co."
           widths={[320, 640]}
           sizes="(min-width: 768px) 320px, 100vw"
           class="aspect-[4/5] w-full rounded-card object-cover"

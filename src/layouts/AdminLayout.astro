@@ -100,7 +100,7 @@ const ICONS: Record<string, string> = {
 // show or hide it per role; a group label hides itself when a role can
 // see none of its items (adminAuth.ts applyNavAccess).
 type NavItem = { key: string; label: string; href: string; icon: string; badge?: string };
-// CMC-ONLY MENU (2026-10-12): Counselor Marketing Co.'s own admin runs the
+// CMC-ONLY MENU (2026-10-12): Therapy Marketing Co.'s own admin runs the
 // agency, not a counseling practice, so its menu is shaped around CMC's
 // work: getting found, prospects (inquiries and instant audits), and
 // clients. Counselor-only screens (Caseload, Counselor settings, Referral
@@ -191,7 +191,7 @@ const svg = (name: string) =>
           <p id="forgot-password-status" class="a-status" style="color:var(--a-muted)" role="status"></p>
         </form>
       </div>
-      <p class="a-auth-foot">Powered by Counselor Marketing Co.</p>
+      <p class="a-auth-foot">Powered by Therapy Marketing Co.</p>
     </div>
 
     <div id="set-password-view" class="a-auth" style="display: none;">
@@ -253,7 +253,7 @@ const svg = (name: string) =>
             ))}
           </ul>
         </div>
-        <div class="a-powered">Powered by Counselor Marketing Co.</div>
+        <div class="a-powered">Powered by Therapy Marketing Co.</div>
       </aside>
 
       <div class="a-main" id="a-main">
@@ -354,7 +354,7 @@ const svg = (name: string) =>
   });
 
   // Filled in once adminAuth.ts knows who's signed in.
-  const ROLE_LABEL: Record<AdminUser['role'], string> = { owner: 'Owner', staff: 'Team member', agency: 'Counselor Marketing Co.' };
+  const ROLE_LABEL: Record<AdminUser['role'], string> = { owner: 'Owner', staff: 'Team member', agency: 'Therapy Marketing Co.' };
   window.addEventListener('admin:authed', (event) => {
     const user = (event as CustomEvent<AdminUser>).detail;
     const name = user.display_name?.trim() || (user.email || '').split('@')[0].replace(/[._-]+/g, ' ').trim();

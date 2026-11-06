@@ -26,16 +26,16 @@ export const COMPARISONS: Comparison[] = [
   {
     slug: 'websitetherapy',
     name: 'WebsiteTherapy',
-    title: 'Counselor Marketing Co. vs WebsiteTherapy',
-    metaTitle: 'Counselor Marketing Co. vs WebsiteTherapy | Honest Comparison',
+    title: 'Therapy Marketing Co. vs WebsiteTherapy',
+    metaTitle: 'Therapy Marketing Co. vs WebsiteTherapy | Honest Comparison',
     description:
-      'WebsiteTherapy is an affordable, AI-managed website for therapists. Counselor Marketing Co. is a client-getting system with a CRM, caseload tracking, and referrals. Who each is best for.',
+      'WebsiteTherapy is an affordable, AI-managed website for therapists. Therapy Marketing Co. is a client-getting system with a CRM, caseload tracking, and referrals. Who each is best for.',
     checked: 'September 28, 2026',
     source: 'websitetherapy.com (pricing, About page, homepage)',
     tldr:
-      "WebsiteTherapy gives you an affordable, AI-maintained website that's built to be read by AI search, from $99/mo with no setup fee. Counselor Marketing Co. builds your website and runs the rest of the path to a new client (referrals, fast follow-up, reviews) and shows new clients and caseload in one dashboard. If your caseload is full and you want a better site cheaply, WebsiteTherapy is a good fit. If you have open spots, you likely need more than a website.",
+      "WebsiteTherapy gives you an affordable, AI-maintained website that's built to be read by AI search, from $99/mo with no setup fee. Therapy Marketing Co. builds your website and runs the rest of the path to a new client (referrals, fast follow-up, reviews) and shows new clients and caseload in one dashboard. If your caseload is full and you want a better site cheaply, WebsiteTherapy is a good fit. If you have open spots, you likely need more than a website.",
     table: {
-      head: ['', 'WebsiteTherapy', 'Counselor Marketing Co.'],
+      head: ['', 'WebsiteTherapy', 'Therapy Marketing Co.'],
       rows: [
         ['Price', '$99/mo (Growth), $199/mo (Concierge), no setup fee', '$149/mo (Self-Guided), $800/mo (Done for You), from $1,200/mo (Group), plus a $1,500 build'],
         ['Website', 'AI-managed, strong structured data', 'Custom-built, strong structured data'],
@@ -63,16 +63,16 @@ export const COMPARISONS: Comparison[] = [
   {
     slug: 'therapysites',
     name: 'TherapySites',
-    title: 'Counselor Marketing Co. vs TherapySites',
-    metaTitle: 'Counselor Marketing Co. vs TherapySites | Honest Comparison',
+    title: 'Therapy Marketing Co. vs TherapySites',
+    metaTitle: 'Therapy Marketing Co. vs TherapySites | Honest Comparison',
     description:
       "TherapySites offers therapist websites from $69/mo with add-ons for SEO, reviews, and ads. Here's how that compares with the Full Caseload System, and who each fits.",
     checked: 'September 30, 2026',
     source: 'therapysites.com/pricing',
     tldr:
-      'TherapySites is a long-established therapist website platform with live support and online scheduling, starting at $69/mo, with marketing added through higher tiers and add-ons. Counselor Marketing Co. includes the whole client-getting system on every plan and measures it in new clients. TherapySites fits practices that want a supported site and prefer to add marketing piece by piece.',
+      'TherapySites is a long-established therapist website platform with live support and online scheduling, starting at $69/mo, with marketing added through higher tiers and add-ons. Therapy Marketing Co. includes the whole client-getting system on every plan and measures it in new clients. TherapySites fits practices that want a supported site and prefer to add marketing piece by piece.',
     table: {
-      head: ['', 'TherapySites', 'Counselor Marketing Co.'],
+      head: ['', 'TherapySites', 'Therapy Marketing Co.'],
       rows: [
         ['Setup', '$199 one-time design', '$1,500 one-time build (custom site, Google profile, platform setup)'],
         ['Entry plan', 'Core $69/mo', 'Self-Guided $149/mo (full platform included)'],
@@ -111,9 +111,9 @@ export const COMPARISONS: Comparison[] = [
       { h: "What it can't do", p: "Set you apart from the counselors listed next to you, give you a page you own, or show you which listings become clients." },
       {
         h: 'How to decide',
-        p: 'Add "How did you hear about us?" to your intake (it\'s built into every CMC site). If Psychology Today brings clients, keep it. If it hasn\'t in months, the $359 a year may do more elsewhere.',
+        p: 'Add "How did you hear about us?" to your intake (it\'s built into every site we build). If Psychology Today brings clients, keep it. If it hasn\'t in months, the $359 a year may do more elsewhere.',
       },
-      { h: 'How CMC fits with it', p: "We don't replace your listing. We build the channels you own around it, and track which ones bring clients." },
+      { h: 'How we fit with it', p: "We don't replace your listing. We build the channels you own around it, and track which ones bring clients." },
     ],
     theirFit: 'Nearly every practice, as one channel. It is a complement, not a replacement.',
     ourFit: 'Practices that want channels they own (a website, a Google profile, referral partners) working alongside their listing.',
@@ -121,7 +121,7 @@ export const COMPARISONS: Comparison[] = [
   {
     slug: 'diy-website-builders',
     name: 'DIY website builders',
-    title: 'Counselor Marketing Co. vs DIY website builders',
+    title: 'Therapy Marketing Co. vs DIY website builders',
     metaTitle: 'Squarespace or Wix for Therapists vs a Done-for-You System',
     description: "DIY builders like Squarespace start around $19/mo. Here's what they give a counseling practice, what they leave to you, and when that's the right call.",
     checked: 'September 30, 2026',
@@ -135,12 +135,12 @@ export const COMPARISONS: Comparison[] = [
   {
     slug: 'marketing-agencies',
     name: 'General marketing agencies',
-    title: 'Counselor Marketing Co. vs general marketing agencies',
+    title: 'Therapy Marketing Co. vs general marketing agencies',
     metaTitle: "Therapist Marketing Agency vs a General Agency | What's Different",
     description:
       "General agencies can run good campaigns, but rarely know counseling ethics or measure new clients. Here's how a counselor-built system compares, and when a big agency fits.",
     checked: 'September 30, 2026',
-    source: "CMC's market research on agency retainers",
+    source: "Our market research on agency retainers",
     note: 'Agency prices vary widely. The range here is typical retainer pricing for this niche, not any one agency\'s price list.',
     tldr:
       'A general digital agency (typically about $500 to $5,000+ a month) brings broad skills and a team. What they often lack for a counseling practice is knowledge of your ethics code (testimonials, outcome claims, gifts for referrals, ad tracking) and reporting in clients rather than clicks. Large, multi-location organizations may need a big agency. Most private practices need a system built for them.',

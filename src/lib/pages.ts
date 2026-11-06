@@ -337,7 +337,7 @@ export interface Business {
   // footer (send-nurture-emails) and, site-wide, in Footer.astro. Defaults
   // true — see 0032_crisis_resource_line.sql and CLAUDE.md's "Nurture
   // email crisis-resource line" section for why a non-counseling client
-  // like Counselor Marketing Co. must override this to false explicitly.
+  // like Therapy Marketing Co. must override this to false explicitly.
   show_crisis_resources: boolean;
   // Heading for the CTA band shown directly above the footer on every
   // page — null falls back to a display_name-based default, same
@@ -405,7 +405,7 @@ export function getCounselorOptions(allPages: Page[]): { id: string; title: stri
 // getCounselorOptions above. Returns null (renders no avatar, never a
 // broken image) for any author with no matching Counselor Profile page —
 // the normal case for a client with no Counselor Profile page type at
-// all (e.g. Counselor Marketing Co.'s own site).
+// all (e.g. Therapy Marketing Co.'s own site).
 export function getAuthorHeadshot(authorName: string | null, allPages: Page[]): ImageSlot | null {
   if (!authorName) return null;
   const normalized = authorName.trim().toLowerCase();

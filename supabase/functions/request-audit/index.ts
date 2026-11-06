@@ -306,7 +306,7 @@ async function sendEmails(db: SupabaseClient, a: Record<string, any>, data: Reco
 <p><a href="${link}" style="display:inline-block;background:#2447d6;color:#fff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:8px">Open your audit</a></p>
 <p>It covers how people find you on Google, what happens when they land on your site, and the three changes most likely to bring you new clients first.</p>
 <p>If you'd like to talk it through, just reply to this email.</p>
-<p>Luke Burgett, LPCA<br>Counselor Marketing Co.</p>
+<p>Luke Burgett, LPCA<br>Therapy Marketing Co.</p>
 </div>`,
   });
   if (sent) await db.from('audits').update({ emailed_at: new Date().toISOString() }).eq('id', a.id);
