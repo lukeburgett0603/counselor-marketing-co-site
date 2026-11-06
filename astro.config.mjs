@@ -3,7 +3,8 @@ import tailwindcss from '@tailwindcss/vite';
 import sitemap from '@astrojs/sitemap';
 import mdx from '@astrojs/mdx';
 
-const BASE = '/counselor-marketing-co-site';
+// Served from the domain root since the custom domain (2026-11-06).
+const BASE = '';
 
 // MDX page bodies link internally as "/pricing" (no base). This rehype
 // step prefixes the base at build time, the same job withBase() does in
@@ -50,8 +51,8 @@ const redirects = {
 // src/lib/url.ts's withBase() to pick this up automatically. Once a custom
 // domain is added, set `site` to that domain and `base` back to '/'.
 export default defineConfig({
-  site: 'https://lukeburgett0603.github.io',
-  base: BASE,
+  site: 'https://www.therapymarketingco.com',
+  base: '/',
   // Pages are folders (slug/index.html) and GitHub Pages redirects /slug
   // to /slug/, so every address ends in a slash. See src/lib/url.ts.
   trailingSlash: 'always',
