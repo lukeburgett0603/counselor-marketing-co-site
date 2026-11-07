@@ -228,6 +228,7 @@ export const TIERS: Tier[] = [
       'A content plan telling you what to publish next.',
       'Google Business Profile checklist, plus a review policy, front-desk script, and HIPAA-safe reply library.',
       'A referral outreach kit.',
+      'A Psychology Today profile guide and fill-in template.',
       'Ranking tracking for 10 searches.',
     ],
     cta: 'Start with Self-Guided',
@@ -244,6 +245,7 @@ export const TIERS: Tier[] = [
       '2 articles a month written for you.',
       'Google Business Profile managed, including Trusted Without Asking, our ethical review program.',
       'Local SEO upkeep.',
+      'Your Psychology Today profile rewritten at the start, then refreshed twice a year.',
       'Ranking tracking for 30 searches.',
       'Referral coaching.',
       'A monthly strategy call with Luke.',
@@ -308,6 +310,7 @@ export const BUILD_INCLUDES = [
   'Full SEO foundation: comprehensive schema markup (your practice, each clinician, each service, and your FAQs), sitemap, a page for each specialty, descriptive image text.',
   'A native appointment request form, with no hand-off to a third-party tool.',
   'Your Google Business Profile claimed, fixed, and optimized.',
+  "Every clinician's Psychology Today profile checked against your new website (name, address, phone, and link), with the exact fixes for each.",
   'Your domain registered in your name, plus migration from your old site with redirects.',
   'Your platform set up for your practice: dashboard, CRM, caseload meter, automatic reply, review tracking, referral outreach kit and practice handout, and Google Ads tracking.',
 ];
@@ -316,9 +319,9 @@ export const TIER_MATRIX: { step: string; cells: [string, string, string] }[] = 
   {
     step: 'Get Found',
     cells: [
-      'Hosting, security, updates. Search ranking tracking for 10 target searches. A content roadmap telling you what to publish next. Google Business Profile checklist, plus Trusted Without Asking tools: a review and social media policy draft, a front-desk script, and a HIPAA-safe reply library.',
-      'Everything in Self-Guided, plus 2 new articles a month written for you, Google Business Profile managed (posts, photos, Q&A, new reviews checked and replies drafted, and workshop QR kits), local SEO and citation upkeep, rank tracking for up to 30 searches.',
-      'Everything in Done for You, plus 4 articles a month, a page for each clinician and specialty, rank tracking for up to 60 searches.',
+      'Hosting, security, updates. Search ranking tracking for 10 target searches. A content roadmap telling you what to publish next. Google Business Profile checklist, plus Trusted Without Asking tools: a review and social media policy draft, a front-desk script, and a HIPAA-safe reply library. A Psychology Today profile guide and fill-in template.',
+      'Everything in Self-Guided, plus 2 new articles a month written for you, Google Business Profile managed (posts, photos, Q&A, new reviews checked and replies drafted, and workshop QR kits), local SEO and citation upkeep, your Psychology Today profile rewritten and refreshed twice a year, rank tracking for up to 30 searches.',
+      "Everything in Done for You (the owner's Psychology Today profile rewritten and refreshed twice a year), plus 4 articles a month, a page for each clinician and specialty, rank tracking for up to 60 searches.",
     ],
   },
   {

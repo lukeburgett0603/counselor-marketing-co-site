@@ -120,9 +120,15 @@ export function howTo(f: Finding, d: AuditData): HowTo | null {
     case 'directories': {
       const dir = main?.directories?.[0] ?? 'Psychology Today';
       return {
-        todo: `Keep your ${dir} profile complete and current.`,
+        // Same five steps as the platform's Psychology Today guide
+        // (template src/lib/psychologyToday.ts). Approved by Luke 2026-11-07.
+        todo: `Make your ${dir} profile do more than list you.`,
         steps: [
-          'Use the same practice name, address, and phone number as your website, add your specialties and a recent photo, and link to your website from the profile.',
+          'Use the same practice name, address, and phone number as your website. A different number on a directory is a common mistake, and it confuses both clients and Google.',
+          'Open with the client, not your credentials: two or three sentences, in their words, about what they’re struggling with, then how you help.',
+          'Name your top specialties, who you see (ages, couples, families), your fees or insurance, and whether you offer telehealth.',
+          'Add a recent, warm photo, and a short video if your plan allows it.',
+          'Link to your website, so people who want to know more land on your pages.',
         ],
       };
     }
