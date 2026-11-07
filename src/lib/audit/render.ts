@@ -323,8 +323,8 @@ export function renderAudit(d: AuditData, icons: Icons, opts: { contactHref: str
   <section class="wrap py-10">
     <div class="rounded-card band px-6 py-12 sm:px-12 lg:flex lg:items-center lg:justify-between lg:gap-12">
       <div class="max-w-2xl">
-        <h2 class="text-[clamp(26px,3vw,36px)] font-semibold leading-[1.15] tracking-[-0.03em]">Want a hand with any of this?</h2>
-        <p class="mt-3 opacity-80">Luke will walk through your audit with you and answer questions. No pressure, and the plan is yours to use either way.</p>
+        <h2 class="text-[clamp(26px,3vw,36px)] font-semibold leading-[1.15] tracking-[-0.03em]">Want this done for you?</h2>
+        <p class="mt-3 opacity-80">Luke will walk through your audit with you, answer your questions, and show you exactly how we'd run it for your practice. No pressure, and the plan is yours to use either way.</p>
       </div>
       <div class="mt-8 flex shrink-0 flex-col gap-3 sm:flex-row lg:mt-0">
         <a href="${esc(opts.contactHref)}" class="btn-primary">Talk it through with Luke</a>

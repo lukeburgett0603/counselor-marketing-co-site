@@ -99,7 +99,7 @@ function emailFor(step: number, a: Record<string, any>): Email | null {
         paragraphs: [
           hi,
           `The last piece is knowing what's working. Three numbers a week is enough to start: ${link('watch', 'open Watch It Work')}`,
-          `If you'd like a hand with any of this, that's what we do. You can see your options here: ${link('options', 'your options')}, or just reply and we'll talk it through.`,
+          `If you'd rather have it done for you, that's exactly what we do: we run this whole system for practices like yours. You can see your options here: ${link('options', 'your options')}, or just reply and we'll talk it through.`,
           sign,
         ],
       };
