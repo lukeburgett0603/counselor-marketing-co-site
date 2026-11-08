@@ -46,6 +46,8 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { buildLeadAutoReply } from '../_shared/leadAutoReply.ts';
+import { BRAND } from '../_shared/brand.ts'; // CMC-ONLY: keep when syncing
+import { renderEmail } from '../_shared/emailLayout.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -317,13 +319,15 @@ Deno.serve(async (req: Request) => {
         ['Current website', insertPayload.existing_website_url as string | null],
         ['From page', (insertPayload.source_page as string | null) ?? '(homepage)'],
       ];
-      const rowsHtml = rows
-        .filter(([, value]) => value)
-        .map(([label, value]) => `<p style="margin:0 0 8px;"><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value!)}</p>`)
-        .join('\n');
-      const messageHtml = insertPayload.message
-        ? `<p style="margin:16px 0 4px;"><strong>Message:</strong></p><p style="margin:0;white-space:pre-wrap;">${escapeHtml(insertPayload.message as string)}</p>`
-        : '';
+      const isCalculator = insertPayload.source_page === 'caseload-calculator';
+      const notificationHtml = renderEmail({
+        brand: BRAND,
+        label: isCalculator ? 'Caseload Calculator' : 'New inquiry',
+        preheader: name,
+        facts: [...rows, ['Message', (insertPayload.message as string | null) ?? null]],
+        button: { text: 'Open the inquiry', url: `${BRAND.siteUrl}admin/crm/?lead=${lead.id}` },
+        after: [`<span style="font-size:14px;color:#52525b;">Reply to this email to write to ${escapeHtml(name)} directly.</span>`],
+      });
 
       const fromHeader = business.display_name ? `${business.display_name} <${senderEmail}>` : senderEmail;
 
@@ -335,8 +339,8 @@ Deno.serve(async (req: Request) => {
           to: notificationRecipients,
           reply_to: email,
           // CMC-ONLY subject (keep when syncing from the template).
-          subject: `${insertPayload.source_page === 'caseload-calculator' ? 'Caseload Calculator results' : 'New audit request'} from ${name}`,
-          html: `${rowsHtml}\n${messageHtml}\n<hr style="border:none;border-top:1px solid #ddd;margin:20px 0;">\n<p style="font-size:12px;color:#888;">Reply directly to this email to respond to ${escapeHtml(name)}.</p>`,
+          subject: `${isCalculator ? 'Caseload Calculator results' : 'New audit request'} from ${name}`,
+          html: notificationHtml,
         }),
       });
       // fetch() only rejects on a network-level failure — a non-2xx from
@@ -383,6 +387,7 @@ Deno.serve(async (req: Request) => {
         responseTimeNote: biz.lead_response_time_note,
         telephone: biz.telephone,
         showCrisisResources: biz.show_crisis_resources !== false,
+        brand: BRAND,
       });
       // Replies go to the practice's own inbox (the first lead-notification
       // address), never to the no-reply sending address.

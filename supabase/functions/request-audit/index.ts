@@ -24,6 +24,8 @@ import { locate, normalizeUrl, scanSite, siteName, nameFromTitle, stateAbbr, typ
 import { authority, directoryName, findLocation, pace, serp, volumes, type SerpResult } from './mangools.ts';
 import { backlinks } from './links.ts';
 import { pagespeed } from './pagespeed.ts';
+import { renderEmail } from '../_shared/emailLayout.ts';
+import { BRAND, LUKE_SIGNATURE } from '../_shared/brand.ts';
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
 
@@ -300,14 +302,18 @@ async function sendEmails(db: SupabaseClient, a: Record<string, any>, data: Reco
     to: [a.email],
     ...(luke[0] ? { reply_to: luke[0] } : {}),
     subject: `Your Caseload Audit for ${a.practice_name}`,
-    html: `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:#18181b;max-width:560px">
-<p>Hi ${esc(firstName(a.name))},</p>
-<p>Your Caseload Audit for ${practice} is ready:</p>
-<p><a href="${link}" style="display:inline-block;background:#2447d6;color:#fff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:8px">Open your audit</a></p>
-<p>It covers how people find you on Google, what happens when they land on your site, and the three changes most likely to bring you new clients first.</p>
-<p>If you'd like to talk it through, just reply to this email.</p>
-<p>Luke Burgett, LPCA<br>Therapy Marketing Co.</p>
-</div>`,
+    html: renderEmail({
+      brand: BRAND,
+      preheader: 'How people find you, what happens when they land, and the first changes to make.',
+      paragraphs: [`Hi ${esc(firstName(a.name))},`, `Your Caseload Audit for ${practice} is ready:`],
+      button: { text: 'Open your audit', url: link },
+      after: [
+        'It covers how people find you on Google, what happens when they land on your site, and the three changes most likely to bring you new clients first.',
+        "If you'd like to talk it through, just reply to this email.",
+      ],
+      signature: LUKE_SIGNATURE,
+      footer: ["You're getting this because you asked for a Caseload Audit at therapymarketingco.com."],
+    }),
   });
   if (sent) await db.from('audits').update({ emailed_at: new Date().toISOString() }).eq('id', a.id);
 
@@ -331,11 +337,17 @@ async function sendEmails(db: SupabaseClient, a: Record<string, any>, data: Reco
     to: luke,
     reply_to: a.email,
     subject: `Audit sent: ${a.practice_name} (${a.name ?? a.email})`,
-    html: `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.5;color:#18181b">
-<p><a href="${link}&preview=1">Open ${practice}'s audit</a> (opening it from here doesn't count as their view)</p>
-${rows.filter(([, v]) => v).map(([k, v]) => `<p style="margin:0 0 6px"><strong>${esc(k)}:</strong> ${esc(String(v))}</p>`).join('\n')}
-<p style="font-size:12px;color:#71717a;margin-top:16px">Reply to this email to write to ${esc(a.name ?? a.email)} directly.</p>
-</div>`,
+    html: renderEmail({
+      brand: BRAND,
+      label: sent ? 'Audit sent' : 'Audit sent, email failed',
+      preheader: `${a.practice_name}, ${a.city}, ${a.state}`,
+      facts: rows,
+      button: { text: 'Open their audit', url: `${link}&preview=1` },
+      after: [
+        "Opening it from here doesn't count as their view.",
+        `<span style="font-size:14px;color:#52525b;">Reply to this email to write to ${esc(a.name ?? a.email)} directly.</span>`,
+      ],
+    }),
   });
 }
 
@@ -348,8 +360,16 @@ async function notifyFailure(db: SupabaseClient, a: Record<string, any>, error: 
     to: luke,
     reply_to: a.email,
     subject: `Audit FAILED: ${a.practice_name ?? a.practice_input} (${a.name ?? a.email})`,
-    html: `<p>The instant audit couldn't finish, so the prospect hasn't received one. Send it by hand.</p>
-<p><strong>Name:</strong> ${esc(a.name ?? '')}<br><strong>Email:</strong> ${esc(a.email)}<br><strong>Practice:</strong> ${esc(a.practice_input)}</p>
-<p><strong>Error:</strong> ${esc(error)}</p>`,
+    html: renderEmail({
+      brand: BRAND,
+      label: 'Audit failed',
+      paragraphs: ["The instant audit couldn't finish, so the prospect hasn't received one. Send it by hand."],
+      facts: [
+        ['Name', a.name ?? ''],
+        ['Email', a.email],
+        ['Practice', a.practice_input],
+        ['Error', error],
+      ],
+    }),
   });
 }

@@ -52,6 +52,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { buildLeadAutoReply } from '../_shared/leadAutoReply.ts';
+import { BRAND } from '../_shared/brand.ts'; // CMC-ONLY: keep when syncing
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -184,6 +185,7 @@ Deno.serve(async (req: Request) => {
       responseTimeNote: biz.lead_response_time_note,
       telephone: biz.telephone,
       showCrisisResources: biz.show_crisis_resources !== false,
+      brand: BRAND,
     });
     if (action === 'preview-auto-reply') {
       return jsonResponse({ ok: true, subject: email.subject, html: email.html });

@@ -42,6 +42,8 @@
 // into every Edge Function's environment.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { renderEmail } from '../_shared/emailLayout.ts';
+import { BRAND } from '../_shared/brand.ts'; // CMC-ONLY: keep when syncing
 
 // Index i (0-based) is step_order i+1's day offset from the lead's
 // created_at. Keep in sync with src/lib/nurtureSequence.ts.
@@ -172,15 +174,18 @@ Deno.serve(async (req: Request) => {
 
     const firstName = firstNameOf(lead.name);
     const unsubscribeUrl = `${supabaseUrl}/functions/v1/unsubscribe-lead?lead=${lead.id}`;
-    const crisisLine = showCrisisResources
-      ? '<p style="font-size:12px;color:#888;">If you are in a mental health crisis, call or text 988 to reach the Suicide &amp; Crisis Lifeline, available 24/7.</p>\n'
-      : '';
-    const html = `${renderEmailBody(applyMergeTags(step.body, firstName))}
-<hr style="border:none;border-top:1px solid #ddd;margin:24px 0;">
-${crisisLine}<p style="font-size:12px;color:#888;">
-  ${mailingAddress ? mailingAddress + '<br>' : ''}
-  <a href="${unsubscribeUrl}">Unsubscribe from these emails</a>
-</p>`;
+    // The step's body is admin-written markdown; renderEmailBody makes
+    // <p> blocks, which the shared layout wraps in its card as-is.
+    const html = renderEmail({
+      brand: BRAND,
+      bodyHtml: renderEmailBody(applyMergeTags(step.body, firstName)),
+      footer: [
+        ...(showCrisisResources
+          ? ['If you are in a mental health crisis, call or text 988 to reach the Suicide &amp; Crisis Lifeline, available 24/7.']
+          : []),
+        `${mailingAddress ? mailingAddress + '<br>' : ''}<a href="${unsubscribeUrl}" style="color:#71717a;">Unsubscribe from these emails</a>`,
+      ],
+    });
 
     const sendRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',

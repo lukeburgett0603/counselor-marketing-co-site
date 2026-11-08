@@ -15,6 +15,8 @@
 // content plan item in the admin UI today.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { renderEmail } from '../_shared/emailLayout.ts';
+import { BRAND } from '../_shared/brand.ts'; // CMC-ONLY: keep when syncing
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -141,12 +143,14 @@ Deno.serve(async (req: Request) => {
   ];
   if (item.keyword) rows.push(['Target keyword', item.keyword as string]);
 
-  const rowsHtml = rows
-    .map(([label, value]) => `<p style="margin:0 0 8px;"><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</p>`)
-    .join('\n');
-  const buttonHtml = redirectTo
-    ? `<p style="margin:20px 0 0;"><a href="${redirectTo}" style="display:inline-block;padding:10px 20px;background:#1a1a1a;color:#ffffff;border-radius:6px;text-decoration:none;font-weight:600;">View my content assignments</a></p>`
-    : '';
+  const html = renderEmail({
+    brand: BRAND,
+    label: 'New assignment',
+    preheader: item.title as string,
+    paragraphs: [`You've been assigned a new content piece: <strong>${escapeHtml(item.title as string)}</strong>`],
+    facts: rows,
+    button: redirectTo ? { text: 'View my content assignments', url: redirectTo } : undefined,
+  });
 
   try {
     const resendResponse = await fetch('https://api.resend.com/emails', {
@@ -156,7 +160,7 @@ Deno.serve(async (req: Request) => {
         from: fromHeader,
         to: [assignee.email],
         subject: `You've been assigned: ${item.title}`,
-        html: `<p style="margin:0 0 16px;">You've been assigned a new content piece: <strong>${escapeHtml(item.title as string)}</strong></p>\n${rowsHtml}\n${buttonHtml}`,
+        html,
       }),
     });
     if (!resendResponse.ok) {

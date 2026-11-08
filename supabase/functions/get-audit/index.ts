@@ -5,6 +5,8 @@
 // (alertLuke). The internal-only `mapPack` field is
 // stripped before anything reaches the browser.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { renderEmail } from '../_shared/emailLayout.ts';
+import { BRAND } from '../_shared/brand.ts';
 
 const PAGE_URL = Deno.env.get('AUDIT_PAGE_URL') ?? 'https://www.therapymarketingco.com/audit/';
 
@@ -37,10 +39,20 @@ async function alertLuke(db: ReturnType<typeof createClient>, id: string) {
     const practice = a.practice_name ?? a.practice_input;
     const who = a.name ?? a.email;
     const sent = new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' });
-    const links = [
-      `<a href="${PAGE_URL}?t=${a.token}&preview=1">Open their audit</a> (doesn't count as their view)`,
-      a.lead_id ? `<a href="${ADMIN_URL}/crm?lead=${a.lead_id}">Open their inquiry</a>` : '',
-    ].filter(Boolean);
+    const where = a.city ? ` in ${esc(a.city)}, ${esc(a.state ?? '')}` : '';
+    const html = renderEmail({
+      brand: BRAND,
+      label: 'Audit opened',
+      preheader: `Sent ${sent}.`,
+      paragraphs: [`<strong>${esc(who)}</strong> just opened the Caseload Audit for <strong>${esc(practice)}</strong>${where}. It was sent ${esc(sent)}.`],
+      button: a.lead_id
+        ? { text: 'Open their inquiry', url: `${ADMIN_URL}/crm/?lead=${a.lead_id}` }
+        : { text: 'Open their audit', url: `${PAGE_URL}?t=${a.token}&preview=1` },
+      after: [
+        ...(a.lead_id ? [`<a href="${PAGE_URL}?t=${a.token}&preview=1">Open their audit</a> (doesn't count as their view)`] : []),
+        `<span style="font-size:14px;color:#52525b;">Reply to this email to write to ${esc(who)} directly.</span>`,
+      ],
+    });
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
@@ -49,11 +61,7 @@ async function alertLuke(db: ReturnType<typeof createClient>, id: string) {
         to,
         reply_to: a.email,
         subject: `${who} just opened their audit (${practice})`,
-        html: `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.5;color:#18181b">
-<p><strong>${esc(who)}</strong> just opened the Caseload Audit for <strong>${esc(practice)}</strong>${a.city ? ` in ${esc(a.city)}, ${esc(a.state ?? '')}` : ''}. It was sent ${esc(sent)}.</p>
-<p>${links.join('<br>')}</p>
-<p style="font-size:12px;color:#71717a">Reply to this email to write to ${esc(who)} directly.</p>
-</div>`,
+        html,
       }),
     });
     if (!res.ok) console.error('get-audit: alert rejected', res.status, (await res.text()).slice(0, 200));

@@ -12,6 +12,8 @@
 // as CAN-SPAM requires.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { buildReport } from '../../../src/lib/audit/findings.ts';
+import { renderEmail } from '../_shared/emailLayout.ts';
+import { BRAND } from '../_shared/brand.ts';
 
 const DAYS = [1, 4, 7, 10, 14];
 const CLOSED = ['scheduled', 'referred', 'withdrawn'];
@@ -27,14 +29,15 @@ function firstName(full: string | null): string {
   return parts[0] || 'there';
 }
 
-type Email = { subject: string; paragraphs: string[] }; // paragraphs are HTML
+// paragraphs/after are HTML; the button is each email's one main link.
+type Email = { subject: string; preheader: string; paragraphs: string[]; button: { text: string; url: string }; after?: string[] };
 
 function emailFor(step: number, a: Record<string, any>): Email | null {
   const d = a.data;
   const report = buildReport(d);
-  const link = (section: string, label: string) => `<a href="${PAGE_URL}?t=${a.token}#${section}">${esc(label)}</a>`;
+  const url = (section: string) => `${PAGE_URL}?t=${a.token}#${section}`;
+  const link = (section: string, label: string) => `<a href="${url(section)}">${esc(label)}</a>`;
   const hi = `Hi ${esc(firstName(a.name))},`;
-  const sign = 'Luke';
   const main = d.rankings?.[0];
   switch (step) {
     case 0: {
@@ -42,14 +45,15 @@ function emailFor(step: number, a: Record<string, any>): Email | null {
       if (!top) return null;
       return {
         subject: 'Your first step from your Caseload Audit',
+        preheader: 'If you only do one thing this week, do this.',
         paragraphs: [
           hi,
           "Yesterday's audit had a lot in it, so I'll make it simple: if you only do one thing this week, do this:",
           `<strong>${esc(top.action ?? top.title)}</strong>`,
-          `The steps are in your audit: ${link(top.step, 'open your audit')}`,
-          "Over the next two weeks I'll send one short email for each part of the system, so nothing gets lost. Reply anytime with questions.",
-          sign,
+          'The steps are in your audit:',
         ],
+        button: { text: 'Open your audit', url: url(top.step) },
+        after: ["Over the next two weeks I'll send one short email for each part of the system, so nothing gets lost. Reply anytime with questions."],
       };
     }
     case 1: {
@@ -62,12 +66,13 @@ function emailFor(step: number, a: Record<string, any>): Email | null {
             : `You're on page one, at #${main.position}, and moving up a few places is worth more than it sounds.`;
       return {
         subject: 'Getting found by people searching near you',
+        preheader: 'Your Get Found plan, including the links worth getting first.',
         paragraphs: [
           hi,
           `When someone in ${esc(d.practice.city ?? 'your area')} searches "${esc(main.keyword)}", the practices they find are the ones Google trusts most. ${esc(status)}`,
-          `Your Get Found plan, including the links worth getting first: ${link('found', 'open Get Found')}`,
-          sign,
+          'Your Get Found plan, including the links worth getting first:',
         ],
+        button: { text: 'Open Get Found', url: url('found') },
       };
     }
     case 2: {
@@ -75,32 +80,36 @@ function emailFor(step: number, a: Record<string, any>): Email | null {
       const point = chosen ? chosen.title : 'Your site already does a lot right here, and there are still a few improvements worth making.';
       return {
         subject: 'What happens when they land on your site',
+        preheader: "Here's what to change, step by step.",
         paragraphs: [
           hi,
           `Someone who finally decides to look for a counselor usually gives a website a few seconds. ${esc(point)}`,
-          `Here's what to change, step by step: ${link('chosen', 'open Get Chosen')}`,
-          sign,
+          "Here's what to change, step by step:",
         ],
+        button: { text: 'Open Get Chosen', url: url('chosen') },
       };
     }
     case 3:
       return {
         subject: "The referrals you're not getting yet",
+        preheader: 'The local professionals worth getting to know first.',
         paragraphs: [
           hi,
           'Many clients come from someone they already trust: a doctor, a pastor, a school counselor. Your audit lists the local professionals worth getting to know first, and includes a letter you can send this week:',
-          link('referred', 'open Get Referred'),
-          sign,
         ],
+        button: { text: 'Open Get Referred', url: url('referred') },
       };
     case 4:
       return {
         subject: "How to know it's working",
+        preheader: 'Three numbers a week is enough to start.',
         paragraphs: [
           hi,
-          `The last piece is knowing what's working. Three numbers a week is enough to start: ${link('watch', 'open Watch It Work')}`,
+          "The last piece is knowing what's working. Three numbers a week is enough to start:",
+        ],
+        button: { text: 'Open Watch It Work', url: url('watch') },
+        after: [
           `If you'd rather have it done for you, that's exactly what we do: we run this whole system for practices like yours. You can see your options here: ${link('options', 'your options')}, or just reply and we'll talk it through.`,
-          sign,
         ],
       };
   }
@@ -144,11 +153,15 @@ Deno.serve(async () => {
     }
     if (email) {
       const unsubscribe = `${FN_URL}/unsubscribe-audit?t=${a.token}`;
-      const html = `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:#18181b;max-width:560px">
-${email.paragraphs.map((p) => `<p>${p}</p>`).join('\n')}
-<hr style="border:none;border-top:1px solid #e4e4e7;margin:24px 0 12px">
-<p style="font-size:12px;color:#71717a">You're getting this because you asked for a Caseload Audit. <a href="${unsubscribe}" style="color:#71717a">Unsubscribe</a><br>${esc(address)}</p>
-</div>`;
+      const html = renderEmail({
+        brand: BRAND,
+        preheader: email.preheader,
+        paragraphs: email.paragraphs,
+        button: email.button,
+        after: email.after,
+        signature: { name: 'Luke' },
+        footer: [`You're getting this because you asked for a Caseload Audit. <a href="${unsubscribe}" style="color:#71717a;">Unsubscribe</a><br>${esc(address)}`],
+      });
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
