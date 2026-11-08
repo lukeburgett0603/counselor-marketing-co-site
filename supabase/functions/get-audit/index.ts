@@ -86,6 +86,22 @@ Deno.serve(async (req) => {
   if (!a) return json({ error: 'Not found' }, 404);
 
   if (a.status === 'done' && body.count !== false) {
+    // CRM timeline (0103): one "opened" event per visit, at most one an hour.
+    try {
+      const { data: row } = await db.from('audits').select('lead_id').eq('id', a.id).single();
+      if (row?.lead_id) {
+        const { data: recent } = await db
+          .from('lead_events')
+          .select('id')
+          .eq('lead_id', row.lead_id)
+          .eq('kind', 'audit_opened')
+          .gte('created_at', new Date(Date.now() - 3_600_000).toISOString())
+          .limit(1);
+        if (!recent?.length) await db.from('lead_events').insert({ lead_id: row.lead_id, kind: 'audit_opened', detail: { first: !a.first_viewed_at } });
+      }
+    } catch (err) {
+      console.error('get-audit: timeline event failed', String(err));
+    }
     if (!a.first_viewed_at) {
       // Only the request that actually sets first_viewed_at sends the
       // alert, so two tabs opening at once can't send it twice.

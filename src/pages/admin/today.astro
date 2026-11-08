@@ -33,7 +33,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   import { initAdminAuth, supabase, type AdminUser } from '../../lib/adminAuth';
   import { withBase } from '../../lib/url';
 
-  type Lead = { id: string; name: string | null; created_at: string; status: string | null; follow_up_date: string | null; lead_magnet_id: string | null };
+  type Lead = { id: string; name: string | null; created_at: string; status: string | null; follow_up_date: string | null; lead_magnet_id: string | null; next_step: string | null; unread_reply_at: string | null };
   type Audit = {
     id: string;
     token: string;
@@ -88,7 +88,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const [l, a, k] = await Promise.all([
-      supabase.from('leads').select('id, name, created_at, status, follow_up_date, lead_magnet_id').is('archived_at', null).order('created_at', { ascending: false }).limit(500),
+      supabase.from('leads').select('id, name, created_at, status, follow_up_date, lead_magnet_id, next_step, unread_reply_at').is('archived_at', null).order('created_at', { ascending: false }).limit(500),
       supabase.from('audits').select('id, token, name, practice_name, practice_input, status, created_at, first_viewed_at, lead_id, lead:leads(status)').order('created_at', { ascending: false }).limit(200),
       supabase.from('link_opportunities').select('id, name, status, next_step_date'),
     ]);
@@ -110,6 +110,10 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       }
       lead.status = status;
       return true;
+    }
+    // CRM (0103): a reply from a prospect beats everything else.
+    for (const x of leads.filter((y) => y.unread_reply_at).slice(0, 4)) {
+      moves.push({ title: `${nameOf(x)} replied`, sub: `Their reply came in ${ago(x.unread_reply_at!)}.`, tag: 'Reply', warn: true, link: `${crm}?lead=${x.id}`, linkText: 'Open' });
     }
     for (const x of leads.filter((y) => y.status === 'new').slice(0, 4)) {
       moves.push({
@@ -143,13 +147,19 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       });
     }
     for (const x of leads.filter((y) => y.follow_up_date && y.follow_up_date <= today && y.status !== 'new' && !closed(y.status)).slice(0, 3)) {
+      const when = x.follow_up_date! < today ? `was due ${new Date(x.follow_up_date! + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : 'due today';
       moves.push({
-        title: `Follow up with ${nameOf(x)}`,
-        sub: x.follow_up_date! < today ? `Follow-up was due ${new Date(x.follow_up_date! + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : 'Follow-up due today',
+        title: x.next_step ? `${nameOf(x)}: ${x.next_step}` : `Follow up with ${nameOf(x)}`,
+        sub: `Next step ${when}.`,
+        warn: x.follow_up_date! < today,
         tag: 'Inquiry',
         link: `${crm}?lead=${x.id}`,
         linkText: 'Open',
       });
+    }
+    // Every open prospect should have a next step; flag the ones that don't.
+    for (const x of leads.filter((y) => y.status && !['new'].includes(y.status) && !closed(y.status) && !y.follow_up_date).slice(0, 3)) {
+      moves.push({ title: `Set a next step for ${nameOf(x)}`, sub: 'An open prospect with no next step goes quiet.', tag: 'Inquiry', link: `${crm}?lead=${x.id}`, linkText: 'Open' });
     }
     for (const x of links.filter((y) => y.next_step_date && y.next_step_date <= today && !['live', 'skipped'].includes(y.status)).slice(0, 2)) {
       moves.push({ title: `Next step: ${x.name}`, sub: 'A link-building step is due.', tag: 'Links', link: withBase('/admin/links'), linkText: 'Open' });

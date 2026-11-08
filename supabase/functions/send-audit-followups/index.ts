@@ -139,7 +139,10 @@ Deno.serve(async () => {
     const due = Date.parse(a.emailed_at) + DAYS[a.followup_step] * 86_400_000;
     if (Date.now() < due) continue;
     if (a.lead_id) {
-      const { data: lead } = await db.from('leads').select('status').eq('id', a.lead_id).maybeSingle();
+      // Stops for good once Luke steps in: a personal email from Inquiries
+      // or a stage past Contacted sets followups_paused_at (0103).
+      const { data: lead } = await db.from('leads').select('status, followups_paused_at').eq('id', a.lead_id).maybeSingle();
+      if (lead?.followups_paused_at) continue;
       if (lead && CLOSED.includes(lead.status)) {
         await db.from('audits').update({ followup_step: DAYS.length }).eq('id', a.id);
         continue;
@@ -179,6 +182,9 @@ Deno.serve(async () => {
         continue; // try again next run
       }
       sent++;
+      if (a.lead_id) {
+        await db.from('lead_events').insert({ lead_id: a.lead_id, kind: 'followup_sent', detail: { step: a.followup_step + 1, subject: email.subject } });
+      }
     }
     // Advance even when a step had nothing to say (e.g. no top fix), so the
     // series keeps moving.

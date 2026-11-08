@@ -225,13 +225,55 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
           </div>
         </section>
 
+        <!-- CMC-ONLY (keep when syncing): write to the prospect (send-lead-email). -->
+        <section class="t-card c-compose" id="cmc-compose">
+          <h2><span id="cmc-compose-title">Email</span><button type="button" class="t-aside a-link" id="cmc-tpl-manage">Edit templates</button></h2>
+          <p id="cmc-no-email" class="i-faint" hidden>This inquiry has no email address, so you can't write from here.</p>
+          <div id="cmc-compose-form">
+            <div class="i-field">
+              <label for="cmc-tpl">Start from</label>
+              <select id="cmc-tpl"><option value="">A blank email</option></select>
+            </div>
+            <div class="i-field">
+              <label for="cmc-subject">Subject</label>
+              <input id="cmc-subject" type="text" maxlength="200" />
+            </div>
+            <div class="i-field">
+              <label for="cmc-body">Message</label>
+              <textarea id="cmc-body" rows="9" placeholder="Write it like a normal email. Your signature is added for you."></textarea>
+              <span class="i-hint">Blank line = new paragraph. Lines starting with "- " become a list. Fill in anything in [brackets] before sending.</span>
+            </div>
+            <div class="i-inline c-compose-actions">
+              <button type="button" class="a-btn a-btn-primary i-btn" id="cmc-send">Send email</button>
+              <button type="button" class="a-btn i-btn" id="cmc-preview">Preview</button>
+              <span id="cmc-compose-status" class="i-hint" role="status"></span>
+            </div>
+            <p class="i-hint" id="cmc-reply-note"></p>
+          </div>
+        </section>
+
         <section class="t-card">
-          <h2>Notes<span class="t-aside">Newest first</span></h2>
+          <h2>Timeline<span class="t-aside">Newest first</span></h2>
           <form id="add-note-form" class="i-note-form">
-            <textarea id="note-text" rows="2" placeholder="Called and left a voicemail..." required aria-label="New note"></textarea>
+            <textarea id="note-text" rows="2" placeholder="Add a note..." required aria-label="New note"></textarea>
             <button type="submit" class="a-btn a-btn-primary i-btn">Add note</button>
           </form>
-          <div id="notes-list" class="i-notes"></div>
+          <!-- CMC-ONLY (keep when syncing): log a call. -->
+          <div class="c-call">
+            <button type="button" class="a-link" id="cmc-call-toggle">Log a call</button>
+            <form id="cmc-call-form" class="c-call-form" hidden>
+              <select id="cmc-call-outcome" aria-label="How it went">
+                <option value="talked">We talked</option>
+                <option value="voicemail">Left a voicemail</option>
+                <option value="no_answer">No answer</option>
+              </select>
+              <input id="cmc-call-note" type="text" placeholder="What you learned (optional)" aria-label="Call note" />
+              <button type="submit" class="a-btn i-btn">Log call</button>
+            </form>
+          </div>
+          <div id="notes-list" class="i-notes cmc-hide"></div>
+          <!-- CMC-ONLY (keep when syncing): the timeline (notes are shown in it). -->
+          <div id="cmc-timeline" class="c-tl"></div>
         </section>
       </div>
 
@@ -252,12 +294,34 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
             <span id="cmc-deal-status" class="i-hint" role="status"></span>
           </div>
         </section>
+        <!-- CMC-ONLY (keep when syncing): next step (text + the follow-up date) and the automatic follow-ups. -->
+        <section class="t-card i-fields" id="cmc-next">
+          <h2>Next step</h2>
+          <div class="i-field">
+            <label for="cmc-next-text">What</label>
+            <input id="cmc-next-text" type="text" maxlength="160" placeholder="Send the plan, call Thursday..." />
+          </div>
+          <div class="i-field">
+            <label for="cmc-next-date">When</label>
+            <input id="cmc-next-date" type="date" />
+          </div>
+          <div class="i-inline">
+            <button id="cmc-next-save" type="button" class="a-btn a-btn-primary i-btn">Save</button>
+            <button id="cmc-next-done" type="button" class="a-link">Done, clear it</button>
+            <span id="cmc-next-status" class="i-hint" role="status"></span>
+          </div>
+          <div class="i-field c-auto">
+            <span>Automatic audit follow-ups</span>
+            <b id="cmc-auto-state"></b>
+            <button id="cmc-auto-toggle" type="button" class="a-link" hidden></button>
+          </div>
+        </section>
         <section class="t-card i-fields">
           <div class="i-field">
             <span>Status</span>
             <div id="detail-status-container"></div>
           </div>
-          <div class="i-field">
+          <div class="i-field cmc-hide">
             <label for="detail-follow-up">Follow-up</label>
             <div class="i-inline">
               <input id="detail-follow-up" type="date" />
@@ -307,6 +371,35 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
           </div>
         </section>
       </aside>
+    </div>
+  </div>
+
+  <!-- CMC-ONLY (keep when syncing): email preview and template editor. -->
+  <div id="cmc-preview-modal" class="c-modal" hidden>
+    <div class="c-modal-box c-modal-wide">
+      <div class="c-modal-head"><b>Preview</b><button type="button" class="a-link" data-close>Close</button></div>
+      <iframe id="cmc-preview-frame" title="Email preview" class="c-frame"></iframe>
+    </div>
+  </div>
+  <div id="cmc-tpl-modal" class="c-modal" hidden>
+    <div class="c-modal-box">
+      <div class="c-modal-head"><b>Email templates</b><button type="button" class="a-link" data-close>Close</button></div>
+      <div class="i-field">
+        <label for="cmc-tpl-pick">Template</label>
+        <select id="cmc-tpl-pick"></select>
+      </div>
+      <div class="i-field"><label for="cmc-tpl-name">Name</label><input id="cmc-tpl-name" type="text" maxlength="80" /></div>
+      <div class="i-field"><label for="cmc-tpl-subject">Subject</label><input id="cmc-tpl-subject" type="text" maxlength="200" /></div>
+      <div class="i-field">
+        <label for="cmc-tpl-body">Message</label>
+        <textarea id="cmc-tpl-body" rows="10"></textarea>
+        <span class="i-hint">Filled in for you: {'{{first_name}}'}, {'{{practice}}'}, {'{{audit_link}}'}. Use [brackets] for parts you write each time.</span>
+      </div>
+      <div class="i-inline">
+        <button type="button" class="a-btn a-btn-primary i-btn" id="cmc-tpl-save">Save</button>
+        <button type="button" class="a-btn i-btn i-danger" id="cmc-tpl-delete">Delete</button>
+        <span id="cmc-tpl-status" class="i-hint" role="status"></span>
+      </div>
     </div>
   </div>
 </AdminLayout>
@@ -1383,3 +1476,601 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
   });
 </script>
 
+
+<!-- CMC-ONLY (keep when syncing from the template): CRM phase 1
+     (2026-11-08, migration 0103, plan in ../crm/build-plan.md). Write to a
+     prospect from here (send-lead-email), one timeline of everything that
+     happened, a next step, and the automatic audit follow-ups' state. -->
+<style is:global>
+  .c-compose h2,
+  #cmc-next h2 {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  #cmc-compose-form {
+    display: grid;
+    gap: 12px;
+  }
+  #cmc-compose-form textarea,
+  #cmc-tpl-body {
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid var(--a-line2);
+    border-radius: 8px;
+    font: 14px/1.5 var(--a-font);
+    resize: vertical;
+    background: var(--a-field);
+    color: var(--a-fg);
+  }
+  .c-call {
+    margin: -6px 0 14px;
+  }
+  .c-call-form {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .c-call-form select,
+  .c-call-form input {
+    padding: 7px 10px;
+    border: 1px solid var(--a-line2);
+    border-radius: 8px;
+    font: 13.5px var(--a-font);
+  }
+  .c-tl {
+    display: grid;
+  }
+  .c-tl-item {
+    position: relative;
+    padding: 10px 0 12px 20px;
+    margin-left: 4px;
+    border-left: 1px solid var(--a-line2);
+  }
+  .c-tl-item::before {
+    content: '';
+    position: absolute;
+    left: -4px;
+    top: 16px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--a-faint);
+  }
+  .c-tl-item.k-out::before {
+    background: var(--a-accent);
+    box-shadow: 0 0 10px var(--a-accent-glow);
+  }
+  .c-tl-item.k-in::before {
+    background: var(--a-good);
+    box-shadow: 0 0 10px var(--a-good-line);
+  }
+  .c-tl-item.k-note::before,
+  .c-tl-item.k-call::before {
+    background: var(--a-violet);
+  }
+  .c-tl-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    align-items: baseline;
+  }
+  .c-tl-head b {
+    font-weight: 600;
+  }
+  .c-tl-head small {
+    color: var(--a-faint);
+    font-size: 12px;
+  }
+  .c-tl-body {
+    margin: 6px 0 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--a-raise);
+    color: var(--a-fg2);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 13.5px;
+    line-height: 1.5;
+  }
+  .c-tl-body.clip {
+    max-height: 9.5em;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(#000 70%, transparent);
+    mask-image: linear-gradient(#000 70%, transparent);
+  }
+  .c-tl-item.k-in .c-tl-body {
+    border-left: 2px solid var(--a-good);
+  }
+  .c-tl-more {
+    margin-top: 4px;
+    font-size: 12px;
+  }
+  .c-tl-quiet .c-tl-head b {
+    font-weight: 500;
+    color: var(--a-fg2);
+  }
+  .c-auto b {
+    font-weight: 500;
+  }
+  .c-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: var(--a-scrim);
+  }
+  .c-modal[hidden] {
+    display: none;
+  }
+  .c-modal-box {
+    display: grid;
+    gap: 12px;
+    width: 100%;
+    max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 20px;
+    border-radius: 12px;
+    background: var(--a-panel);
+    box-shadow: var(--a-shadow);
+  }
+  .c-modal-wide {
+    max-width: 720px;
+  }
+  .c-modal-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .c-frame {
+    width: 100%;
+    height: 70vh;
+    border: 0;
+    border-radius: 8px;
+    background: #fafafa;
+  }
+  @media (max-width: 640px) {
+    .c-call-form {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>
+
+<script>
+  import { supabase } from '../../lib/adminAuth';
+  import { STATUS_LABELS } from '../../lib/leadStatus';
+
+  type Lead = {
+    id: string;
+    name: string | null;
+    email: string | null;
+    status: string | null;
+    created_at: string;
+    message: string | null;
+    source_page: string | null;
+    next_step: string | null;
+    follow_up_date: string | null;
+    followups_paused_at: string | null;
+    unread_reply_at: string | null;
+  };
+  type Msg = { id: string; direction: 'out' | 'in'; subject: string | null; body_text: string | null; from_email: string | null; created_at: string };
+  type Ev = { id: string; kind: string; detail: Record<string, unknown>; created_at: string };
+  type Note = { id: string; note: string; created_at: string };
+  type Audit = {
+    id: string;
+    token: string;
+    practice_name: string | null;
+    practice_input: string;
+    status: string;
+    created_at: string;
+    emailed_at: string | null;
+    first_viewed_at: string | null;
+    view_count: number;
+    followup_step: number;
+    followup_last_sent_at: string | null;
+    unsubscribed_at: string | null;
+  };
+  type Tpl = { id: string; name: string; subject: string; body: string; sort_order: number };
+  type Item = { at: string; kind: string; title: string; body?: string; quiet?: boolean };
+
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+  const esc = (v: string) => v.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+  const FOLLOWUPS = 5;
+  // Always the public address, even when the admin runs elsewhere (local dev).
+  const AUDIT_URL = 'https://www.therapymarketingco.com/audit/';
+  const SEND_URL = `${import.meta.env.PUBLIC_SUPABASE_URL}/functions/v1/send-lead-email`;
+
+  let lead: Lead | null = null;
+  let audit: Audit | null = null;
+  let templates: Tpl[] = [];
+  let me: string | null = null;
+
+  function when(iso: string): string {
+    const d = new Date(iso);
+    const sameYear = d.getFullYear() === new Date().getFullYear();
+    return d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: sameYear ? undefined : 'numeric', hour: 'numeric', minute: '2-digit' });
+  }
+  const stage = (s: unknown) => STATUS_LABELS[String(s ?? 'new')] ?? String(s);
+  const firstName = () => (lead?.name ?? '').trim().split(/\s+/)[0] || '';
+  const practice = () => audit?.practice_name ?? audit?.practice_input ?? '';
+
+  // Fill the merge fields we know; leave the rest visible so they get noticed.
+  function merge(text: string): string {
+    return text
+      .replace(/\{\{\s*first_name\s*\}\}/g, (m) => firstName() || m)
+      .replace(/\{\{\s*practice\s*\}\}/g, (m) => practice() || m)
+      .replace(/\{\{\s*audit_link\s*\}\}/g, (m) => (audit?.status === 'done' ? `${AUDIT_URL}?t=${audit.token}` : m));
+  }
+
+  async function call(body: Record<string, unknown>): Promise<{ ok: boolean; error?: string; html?: string }> {
+    const { data } = await supabase.auth.getSession();
+    try {
+      const res = await fetch(SEND_URL, {
+        method: 'POST',
+        headers: {
+          apikey: import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${data.session?.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+      const out = await res.json().catch(() => ({}));
+      return res.ok ? { ok: true, html: out.html } : { ok: false, error: out.error ?? 'Something went wrong.' };
+    } catch (err) {
+      return { ok: false, error: String(err) };
+    }
+  }
+
+  // ------------------------------------------------------------ timeline
+  function items(msgs: Msg[], evs: Ev[], notes: Note[]): Item[] {
+    const out: Item[] = [];
+    if (!lead) return out;
+    const fromAudit = !!audit;
+    out.push({
+      at: lead.created_at,
+      kind: 'start',
+      title: fromAudit ? 'Asked for a Caseload Audit' : lead.source_page === 'Manually added' ? 'Added by hand' : 'Reached out through the website',
+      body: lead.message?.trim() || undefined,
+    });
+    if (audit) {
+      if (audit.emailed_at) out.push({ at: audit.emailed_at, kind: 'auto', title: `Audit emailed for ${practice()}`, quiet: true });
+      else if (audit.status === 'failed') out.push({ at: audit.created_at, kind: 'auto', title: "The automatic audit couldn't finish", quiet: true });
+      // Opens and follow-ups from before the timeline existed (0103) only
+      // live on the audit row; show them once so nothing looks missing.
+      if (audit.first_viewed_at && !evs.some((e) => e.kind === 'audit_opened')) {
+        out.push({ at: audit.first_viewed_at, kind: 'auto', title: `Opened their audit${audit.view_count > 1 ? ` (${audit.view_count} views so far)` : ''}`, quiet: true });
+      }
+      const logged = evs.filter((e) => e.kind === 'followup_sent').length;
+      if (audit.followup_step > logged && audit.followup_last_sent_at) {
+        out.push({ at: audit.followup_last_sent_at, kind: 'auto', title: `Automatic follow-ups sent: ${audit.followup_step - logged} of ${FOLLOWUPS} (before the timeline started)`, quiet: true });
+      }
+      if (audit.unsubscribed_at) out.push({ at: audit.unsubscribed_at, kind: 'auto', title: 'Unsubscribed from the automatic follow-ups', quiet: true });
+    }
+    for (const m of msgs) {
+      out.push({
+        at: m.created_at,
+        kind: m.direction,
+        title: m.direction === 'out' ? `You emailed: ${m.subject ?? '(no subject)'}` : `They replied: ${m.subject ?? '(no subject)'}`,
+        body: m.body_text ?? undefined,
+      });
+    }
+    for (const n of notes) out.push({ at: n.created_at, kind: 'note', title: 'Note', body: n.note });
+    const CALL: Record<string, string> = { talked: 'Call: you talked', voicemail: 'Call: left a voicemail', no_answer: 'Call: no answer' };
+    for (const e of evs) {
+      const d = e.detail ?? {};
+      if (e.kind === 'stage') out.push({ at: e.created_at, kind: 'stage', title: `Stage: ${stage(d.from)} → ${stage(d.to)}`, quiet: true });
+      else if (e.kind === 'followup_sent') out.push({ at: e.created_at, kind: 'auto', title: `Automatic follow-up ${d.step} of ${FOLLOWUPS} sent: ${d.subject ?? ''}`, quiet: true });
+      else if (e.kind === 'audit_opened') out.push({ at: e.created_at, kind: 'auto', title: d.first ? 'Opened their audit for the first time' : 'Opened their audit again', quiet: true });
+      else if (e.kind === 'followups_paused') out.push({ at: e.created_at, kind: 'auto', title: d.why === 'email' ? 'Automatic follow-ups paused (you emailed them)' : 'Automatic follow-ups paused', quiet: true });
+      else if (e.kind === 'followups_resumed') out.push({ at: e.created_at, kind: 'auto', title: 'Automatic follow-ups resumed', quiet: true });
+      else if (e.kind === 'call') out.push({ at: e.created_at, kind: 'call', title: CALL[String(d.outcome)] ?? 'Call', body: d.note ? String(d.note) : undefined });
+    }
+    return out.sort((a, b) => (a.at < b.at ? 1 : -1));
+  }
+
+  async function loadTimeline() {
+    if (!lead) return;
+    const id = lead.id;
+    const [m, e, n] = await Promise.all([
+      supabase.from('lead_messages').select('id, direction, subject, body_text, from_email, created_at').eq('lead_id', id),
+      supabase.from('lead_events').select('id, kind, detail, created_at').eq('lead_id', id),
+      supabase.from('lead_notes').select('id, note, created_at').eq('lead_id', id),
+    ]);
+    if (lead?.id !== id) return; // switched inquiries while loading
+    const list = items((m.data ?? []) as Msg[], (e.data ?? []) as Ev[], (n.data ?? []) as Note[]);
+    $('cmc-timeline').innerHTML = list
+      .map((it, i) => {
+        const long = (it.body ?? '').split('\n').length > 7 || (it.body ?? '').length > 520;
+        return `<div class="c-tl-item k-${it.kind}${it.quiet ? ' c-tl-quiet' : ''}">
+          <div class="c-tl-head"><b>${esc(it.title)}</b><small>${when(it.at)}</small></div>
+          ${it.body ? `<div class="c-tl-body${long ? ' clip' : ''}" id="c-tl-b${i}">${esc(it.body)}</div>${long ? `<button type="button" class="a-link c-tl-more" data-more="c-tl-b${i}">Show all</button>` : ''}` : ''}
+        </div>`;
+      })
+      .join('');
+  }
+  $('cmc-timeline').addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLElement>('[data-more]');
+    if (!b) return;
+    document.getElementById(b.dataset.more!)?.classList.remove('clip');
+    b.remove();
+  });
+  // The shared notes code re-renders #notes-list (hidden here) after every
+  // load or new note; refresh the timeline whenever it does.
+  new MutationObserver(() => void loadTimeline()).observe($('notes-list'), { childList: true });
+
+  // ------------------------------------------------------------ next step + automation
+  function renderNext() {
+    if (!lead) return;
+    $<HTMLInputElement>('cmc-next-text').value = lead.next_step ?? '';
+    $<HTMLInputElement>('cmc-next-date').value = lead.follow_up_date ?? '';
+    $('cmc-next-status').textContent = '';
+    const state = $('cmc-auto-state');
+    const toggle = $('cmc-auto-toggle');
+    toggle.hidden = true;
+    if (!audit || audit.status !== 'done') state.textContent = 'None (no audit)';
+    else if (audit.unsubscribed_at) state.textContent = 'Stopped: they unsubscribed';
+    else if (audit.followup_step >= FOLLOWUPS) state.textContent = `Finished (${FOLLOWUPS} of ${FOLLOWUPS} sent)`;
+    else if (lead.followups_paused_at) {
+      state.textContent = `Paused after ${audit.followup_step} of ${FOLLOWUPS}`;
+      toggle.textContent = 'Resume';
+      toggle.hidden = false;
+    } else {
+      state.textContent = `Running: ${audit.followup_step} of ${FOLLOWUPS} sent`;
+      toggle.textContent = 'Pause';
+      toggle.hidden = false;
+    }
+  }
+
+  async function saveNext(clear: boolean) {
+    if (!lead) return;
+    const update = clear
+      ? { next_step: null, follow_up_date: null }
+      : { next_step: $<HTMLInputElement>('cmc-next-text').value.trim() || null, follow_up_date: $<HTMLInputElement>('cmc-next-date').value || null };
+    const status = $('cmc-next-status');
+    status.textContent = 'Saving...';
+    status.className = 'i-hint';
+    const { error } = await supabase.from('leads').update(update).eq('id', lead.id);
+    if (error) {
+      status.textContent = 'Could not save: ' + error.message;
+      status.className = 'i-hint r-err';
+      return;
+    }
+    Object.assign(lead, update);
+    renderNext();
+    status.textContent = clear ? 'Cleared. Set the next one when you know it.' : 'Saved.';
+    status.className = 'i-hint r-ok';
+    // Keep the shared list's follow-up date in step (its due list reads it).
+    const shared = $<HTMLInputElement>('detail-follow-up');
+    shared.value = update.follow_up_date ?? '';
+    $('save-follow-up-button').click();
+  }
+  $('cmc-next-save').addEventListener('click', () => void saveNext(false));
+  $('cmc-next-done').addEventListener('click', () => void saveNext(true));
+
+  $('cmc-auto-toggle').addEventListener('click', async () => {
+    if (!lead) return;
+    const pausing = !lead.followups_paused_at;
+    const value = pausing ? new Date().toISOString() : null;
+    const { error } = await supabase.from('leads').update({ followups_paused_at: value }).eq('id', lead.id);
+    if (error) return window.alert('Could not update: ' + error.message);
+    lead.followups_paused_at = value;
+    await supabase.from('lead_events').insert({ lead_id: lead.id, kind: pausing ? 'followups_paused' : 'followups_resumed', detail: {}, created_by: me });
+    renderNext();
+    void loadTimeline();
+  });
+
+  // ------------------------------------------------------------ calls
+  $('cmc-call-toggle').addEventListener('click', () => {
+    const f = $('cmc-call-form');
+    f.hidden = !f.hidden;
+  });
+  $('cmc-call-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!lead) return;
+    const note = $<HTMLInputElement>('cmc-call-note').value.trim();
+    const { error } = await supabase
+      .from('lead_events')
+      .insert({ lead_id: lead.id, kind: 'call', detail: { outcome: $<HTMLSelectElement>('cmc-call-outcome').value, ...(note ? { note } : {}) }, created_by: me });
+    if (error) return window.alert('Could not log the call: ' + error.message);
+    $<HTMLInputElement>('cmc-call-note').value = '';
+    $('cmc-call-form').hidden = true;
+    void loadTimeline();
+  });
+
+  // ------------------------------------------------------------ compose
+  const tplSelect = $<HTMLSelectElement>('cmc-tpl');
+  const subject = $<HTMLInputElement>('cmc-subject');
+  const bodyField = $<HTMLTextAreaElement>('cmc-body');
+  const composeStatus = $('cmc-compose-status');
+
+  function renderTemplateOptions() {
+    tplSelect.innerHTML = '<option value="">A blank email</option>' + templates.map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
+  }
+  async function loadTemplates() {
+    const { data } = await supabase.from('email_templates').select('id, name, subject, body, sort_order').order('sort_order').order('name');
+    templates = (data ?? []) as Tpl[];
+    renderTemplateOptions();
+  }
+
+  tplSelect.addEventListener('change', () => {
+    const t = templates.find((x) => x.id === tplSelect.value);
+    if ((subject.value.trim() || bodyField.value.trim()) && !window.confirm('Replace what you have written with this template?')) {
+      tplSelect.value = tplSelect.dataset.last ?? '';
+      return;
+    }
+    tplSelect.dataset.last = tplSelect.value;
+    subject.value = t ? merge(t.subject) : '';
+    bodyField.value = t ? merge(t.body) : '';
+    composeStatus.textContent = '';
+    bodyField.focus();
+  });
+
+  function resetCompose() {
+    tplSelect.value = '';
+    tplSelect.dataset.last = '';
+    subject.value = '';
+    bodyField.value = '';
+    composeStatus.textContent = '';
+    const hasEmail = !!lead?.email;
+    $('cmc-compose-form').hidden = !hasEmail;
+    $('cmc-no-email').hidden = hasEmail;
+    $('cmc-compose-title').textContent = `Email ${firstName() || 'them'}`;
+    $('cmc-reply-note').textContent = hasEmail ? `Sends to ${lead!.email} from Luke Burgett. Their reply comes to your inbox.` : '';
+  }
+
+  $('cmc-preview').addEventListener('click', async () => {
+    if (!lead) return;
+    composeStatus.textContent = 'Building the preview...';
+    composeStatus.className = 'i-hint';
+    const r = await call({ action: 'preview', lead_id: lead.id, subject: subject.value, body: bodyField.value });
+    if (!r.ok) {
+      composeStatus.textContent = r.error!;
+      composeStatus.className = 'i-hint r-err';
+      return;
+    }
+    composeStatus.textContent = '';
+    $<HTMLIFrameElement>('cmc-preview-frame').srcdoc = r.html ?? '';
+    $('cmc-preview-modal').hidden = false;
+  });
+
+  $('cmc-send').addEventListener('click', async () => {
+    if (!lead?.email) return;
+    const text = subject.value + '\n' + bodyField.value;
+    composeStatus.className = 'i-hint r-err';
+    if (!subject.value.trim() || !bodyField.value.trim()) return void (composeStatus.textContent = 'Add a subject and a message.');
+    if (/\{\{\s*\w+\s*\}\}|\[[^\]]*\]/.test(text)) return void (composeStatus.textContent = 'Fill in the parts in {{ }} or [ ] first.');
+    if (!window.confirm(`Send this email to ${lead.email}?`)) return;
+    const button = $<HTMLButtonElement>('cmc-send');
+    button.disabled = true;
+    composeStatus.textContent = 'Sending...';
+    composeStatus.className = 'i-hint';
+    const r = await call({ action: 'send', lead_id: lead.id, subject: subject.value, body: bodyField.value, template_id: tplSelect.value || null });
+    button.disabled = false;
+    if (!r.ok) {
+      composeStatus.textContent = r.error!;
+      composeStatus.className = 'i-hint r-err';
+      return;
+    }
+    resetCompose();
+    composeStatus.textContent = `Sent to ${lead.email}.`;
+    composeStatus.className = 'i-hint r-ok';
+    await refreshLead();
+  });
+
+  // ------------------------------------------------------------ templates editor
+  const tplModal = $('cmc-tpl-modal');
+  const pick = $<HTMLSelectElement>('cmc-tpl-pick');
+  const tName = $<HTMLInputElement>('cmc-tpl-name');
+  const tSubject = $<HTMLInputElement>('cmc-tpl-subject');
+  const tBody = $<HTMLTextAreaElement>('cmc-tpl-body');
+  const tStatus = $('cmc-tpl-status');
+
+  function fillPick(selected?: string) {
+    pick.innerHTML = templates.map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join('') + '<option value="new">+ New template</option>';
+    pick.value = selected ?? templates[0]?.id ?? 'new';
+    showPicked();
+  }
+  function showPicked() {
+    const t = templates.find((x) => x.id === pick.value);
+    tName.value = t?.name ?? '';
+    tSubject.value = t?.subject ?? '';
+    tBody.value = t?.body ?? '';
+    $('cmc-tpl-delete').hidden = !t;
+    tStatus.textContent = '';
+  }
+  pick.addEventListener('change', showPicked);
+  $('cmc-tpl-manage').addEventListener('click', () => {
+    fillPick();
+    tplModal.hidden = false;
+  });
+  $('cmc-tpl-save').addEventListener('click', async () => {
+    const row = { name: tName.value.trim(), subject: tSubject.value.trim(), body: tBody.value, updated_at: new Date().toISOString() };
+    if (!row.name) return void (tStatus.textContent = 'Give it a name.');
+    const isNew = pick.value === 'new';
+    const q = isNew
+      ? supabase.from('email_templates').insert({ ...row, sort_order: (templates.at(-1)?.sort_order ?? 0) + 1 }).select('id').single()
+      : supabase.from('email_templates').update(row).eq('id', pick.value).select('id').single();
+    const { data, error } = await q;
+    if (error) return void (tStatus.textContent = 'Could not save: ' + error.message);
+    await loadTemplates();
+    fillPick(data.id);
+    tStatus.textContent = 'Saved.';
+  });
+  $('cmc-tpl-delete').addEventListener('click', async () => {
+    const t = templates.find((x) => x.id === pick.value);
+    if (!t || !window.confirm(`Delete the "${t.name}" template? This can't be undone.`)) return;
+    const { error } = await supabase.from('email_templates').delete().eq('id', t.id);
+    if (error) return void (tStatus.textContent = 'Could not delete: ' + error.message);
+    await loadTemplates();
+    fillPick();
+  });
+
+  document.querySelectorAll<HTMLElement>('.c-modal').forEach((m) => {
+    m.addEventListener('click', (e) => {
+      const t = e.target as HTMLElement;
+      if (t === m || t.closest('[data-close]')) m.hidden = true;
+    });
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') document.querySelectorAll<HTMLElement>('.c-modal').forEach((m) => (m.hidden = true));
+  });
+
+  // ------------------------------------------------------------ open an inquiry
+  async function refreshLead() {
+    if (!lead) return;
+    const id = lead.id;
+    const [l, a] = await Promise.all([
+      supabase
+        .from('leads')
+        .select('id, name, email, status, created_at, message, source_page, next_step, follow_up_date, followups_paused_at, unread_reply_at')
+        .eq('id', id)
+        .single(),
+      supabase
+        .from('audits')
+        .select('id, token, practice_name, practice_input, status, created_at, emailed_at, first_viewed_at, view_count, followup_step, followup_last_sent_at, unsubscribed_at')
+        .eq('lead_id', id)
+        .order('created_at', { ascending: false })
+        .limit(1),
+    ]);
+    if (lead?.id !== id || !l.data) return;
+    lead = l.data as Lead;
+    audit = ((a.data ?? [])[0] as Audit) ?? null;
+    // The shared status select on this page shows the stage; keep it current
+    // after a send moved Waiting to Contacted.
+    const sel = document.querySelector<HTMLSelectElement>('#detail-status-container .status-select');
+    if (sel && sel.value !== (lead.status ?? 'new')) {
+      sel.value = lead.status ?? 'new';
+      sel.dataset.previousStatus = sel.value;
+    }
+    renderNext();
+    await loadTimeline();
+  }
+
+  // A stage change from the shared select lands on the timeline (trigger in 0103).
+  $('detail-status-container').addEventListener('change', () => setTimeout(() => void refreshLead(), 700));
+
+  document.addEventListener('cmc:lead-opened', async (e) => {
+    const id = (e as CustomEvent<string>).detail;
+    lead = { id } as Lead;
+    audit = null;
+    $('cmc-timeline').innerHTML = '<div class="t-skel" style="height:80px"></div>';
+    await refreshLead();
+    resetCompose();
+    if (lead?.unread_reply_at) {
+      await supabase.from('leads').update({ unread_reply_at: null }).eq('id', id);
+      lead.unread_reply_at = null;
+    }
+  });
+
+  supabase.auth.onAuthStateChange((event, session) => {
+    if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
+      me = session.user.id;
+      if (!templates.length) void loadTemplates();
+    }
+  });
+</script>
