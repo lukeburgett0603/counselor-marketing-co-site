@@ -26,6 +26,7 @@ import { backlinks } from './links.ts';
 import { pagespeed } from './pagespeed.ts';
 import { renderEmail } from '../_shared/emailLayout.ts';
 import { BRAND, LUKE_SIGNATURE } from '../_shared/brand.ts';
+import { replyAddressFor } from '../_shared/replyAddress.ts';
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
 
@@ -297,10 +298,12 @@ async function sendEmails(db: SupabaseClient, a: Record<string, any>, data: Reco
   const luke = await lukeAddresses(db);
   const practice = esc(String(a.practice_name));
 
+  // CMC-ONLY: replies file on the prospect's timeline (CRM phase 2).
+  const replyTo = (await replyAddressFor(db, a.lead_id)) ?? luke[0];
   const sent = await resend({
     from: `Luke Burgett <${sender}>`,
     to: [a.email],
-    ...(luke[0] ? { reply_to: luke[0] } : {}),
+    ...(replyTo ? { reply_to: replyTo } : {}),
     subject: `Your Caseload Audit for ${a.practice_name}`,
     html: renderEmail({
       brand: BRAND,

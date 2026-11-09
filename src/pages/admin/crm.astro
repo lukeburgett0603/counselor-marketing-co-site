@@ -1591,6 +1591,11 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
     font-weight: 500;
     color: var(--a-fg2);
   }
+  .c-replied {
+    color: var(--a-good);
+    border-color: var(--a-good-line);
+    background: var(--a-good-soft);
+  }
   .c-auto b {
     font-weight: 500;
   }
@@ -1689,6 +1694,7 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
   let audit: Audit | null = null;
   let templates: Tpl[] = [];
   let me: string | null = null;
+  let lastInSubject: string | null = null;
 
   function when(iso: string): string {
     const d = new Date(iso);
@@ -1782,7 +1788,10 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
       supabase.from('lead_notes').select('id, note, created_at').eq('lead_id', id),
     ]);
     if (lead?.id !== id) return; // switched inquiries while loading
-    const list = items((m.data ?? []) as Msg[], (e.data ?? []) as Ev[], (n.data ?? []) as Note[]);
+    const msgs = (m.data ?? []) as Msg[];
+    lastInSubject = msgs.filter((x) => x.direction === 'in').sort((a, b) => (a.created_at < b.created_at ? 1 : -1))[0]?.subject ?? null;
+    if (!subject.value.trim() && lastInSubject) subject.value = /^re:/i.test(lastInSubject) ? lastInSubject : `Re: ${lastInSubject}`;
+    const list = items(msgs, (e.data ?? []) as Ev[], (n.data ?? []) as Note[]);
     $('cmc-timeline').innerHTML = list
       .map((it, i) => {
         const long = (it.body ?? '').split('\n').length > 7 || (it.body ?? '').length > 520;
@@ -1920,7 +1929,7 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
     $('cmc-compose-form').hidden = !hasEmail;
     $('cmc-no-email').hidden = hasEmail;
     $('cmc-compose-title').textContent = `Email ${firstName() || 'them'}`;
-    $('cmc-reply-note').textContent = hasEmail ? `Sends to ${lead!.email} from Luke Burgett. Their reply comes to your inbox.` : '';
+    $('cmc-reply-note').textContent = hasEmail ? `Sends to ${lead!.email} from Luke Burgett. Their reply lands on this timeline and in your inbox.` : '';
   }
 
   $('cmc-preview').addEventListener('click', async () => {
@@ -2061,15 +2070,39 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
     $('cmc-timeline').innerHTML = '<div class="t-skel" style="height:80px"></div>';
     await refreshLead();
     resetCompose();
+    if (lastInSubject) subject.value = /^re:/i.test(lastInSubject) ? lastInSubject : `Re: ${lastInSubject}`;
     if (lead?.unread_reply_at) {
+      unread.delete(id);
       await supabase.from('leads').update({ unread_reply_at: null }).eq('id', id);
       lead.unread_reply_at = null;
     }
   });
 
+  // A "Replied" tag on list rows with an unread reply (phase 2).
+  const unread = new Set<string>();
+  function markUnread() {
+    document.querySelectorAll<HTMLElement>('#leads-table-body tr[data-lead-id]').forEach((tr) => {
+      const has = unread.has(tr.dataset.leadId!);
+      const b = tr.querySelector('.i-who b');
+      if (!b) return;
+      const tag = b.querySelector('.c-replied');
+      if (has && !tag) b.insertAdjacentHTML('beforeend', ' <span class="i-tag c-replied">Replied</span>');
+      if (!has && tag) tag.remove();
+    });
+  }
+  async function loadUnread() {
+    const { data } = await supabase.from('leads').select('id').not('unread_reply_at', 'is', null);
+    unread.clear();
+    (data ?? []).forEach((r: { id: string }) => unread.add(r.id));
+    markUnread();
+  }
+  new MutationObserver(markUnread).observe($('leads-table-body'), { childList: true });
+  $('back-to-list-button').addEventListener('click', () => setTimeout(markUnread, 50));
+
   supabase.auth.onAuthStateChange((event, session) => {
     if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
       me = session.user.id;
+      void loadUnread();
       if (!templates.length) void loadTemplates();
     }
   });

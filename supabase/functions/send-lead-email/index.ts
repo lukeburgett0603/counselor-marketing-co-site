@@ -18,6 +18,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { renderEmail, escapeHtml } from '../_shared/emailLayout.ts';
 import { BRAND, LUKE_SIGNATURE } from '../_shared/brand.ts';
+import { replyAddressFor } from '../_shared/replyAddress.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -99,14 +100,7 @@ Deno.serve(async (req) => {
   if (!key || !sender) return json({ error: 'Email is not set up.' }, 500);
   const fromEmail = Deno.env.get('LUKE_SENDER_EMAIL') ?? `luke@${sender.split('@')[1]}`;
 
-  const inboundDomain = Deno.env.get('INBOUND_REPLY_DOMAIN');
-  let replyTo: string | undefined;
-  if (inboundDomain && lead.reply_token) {
-    replyTo = `r-${lead.reply_token}@${inboundDomain}`;
-  } else {
-    const { data: biz } = await db.from('business').select('lead_notification_email').maybeSingle();
-    replyTo = String(biz?.lead_notification_email ?? '').split(',').map((s) => s.trim()).filter(Boolean)[0];
-  }
+  const replyTo = await replyAddressFor(db, lead.id);
 
   // Thread under their latest reply, when there is one (phase 2).
   const { data: lastIn } = await db

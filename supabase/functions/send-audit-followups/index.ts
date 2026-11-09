@@ -14,6 +14,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { buildReport } from '../../../src/lib/audit/findings.ts';
 import { renderEmail } from '../_shared/emailLayout.ts';
 import { BRAND } from '../_shared/brand.ts';
+import { replyAddressFor } from '../_shared/replyAddress.ts';
 
 const DAYS = [1, 4, 7, 10, 14];
 const CLOSED = ['scheduled', 'referred', 'withdrawn'];
@@ -123,8 +124,6 @@ Deno.serve(async () => {
   const address = Deno.env.get('AUDIT_MAILING_ADDRESS');
   if (!key || !sender || !address) return new Response(JSON.stringify({ skipped: 'email not configured' }), { status: 200 });
 
-  const { data: business } = await db.from('business').select('lead_notification_email').maybeSingle();
-  const replyTo = String(business?.lead_notification_email ?? '').split(',').map((s) => s.trim()).filter(Boolean)[0];
 
   const { data: audits } = await db
     .from('audits')
@@ -156,6 +155,7 @@ Deno.serve(async () => {
     }
     if (email) {
       const unsubscribe = `${FN_URL}/unsubscribe-audit?t=${a.token}`;
+      const replyTo = await replyAddressFor(db, a.lead_id);
       const html = renderEmail({
         brand: BRAND,
         preheader: email.preheader,
