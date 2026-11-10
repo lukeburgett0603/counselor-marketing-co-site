@@ -22,10 +22,24 @@ export const SITE = {
 // that dashboard before quoting a new figure.
 export const FREEDOM_CONVERSION = {
   rate: '76%',
-  clients: 19,
-  leads: 25,
-  asOf: 'October 2026',
-  detail: '19 of 25, as of October 2026',
+  clients: 50,
+  leads: 66,
+  asOf: 'November 2026',
+  detail: '50 of 66, as of November 10, 2026',
+};
+
+// Freedom's results four weeks after the October 14, 2026 relaunch
+// (client-site-system/freedom/reports/freedom-four-week-report.html).
+// Rankings: Mangools daily tracker, 76 Louisville searches. Inquiries:
+// Freedom's admin records (Oct 14 to Nov 10) against Freedom's own
+// January to July 2026 inquiry log (18.3 inquiries and 16.3 new clients
+// a month). PUBLISH ONLY WITH FREEDOM'S OK (inquiry numbers are theirs).
+export const FREEDOM_RESULTS = {
+  asOf: 'November 10, 2026',
+  firstPage: { before: 3, now: 19, of: 76 },
+  topThree: { before: 1, now: 11 },
+  inquiries: { before: 18.3, now: 32, change: '+75%' },
+  newClients: { before: 16.3, now: 24, change: '+47%' },
 };
 
 export interface NavLink {

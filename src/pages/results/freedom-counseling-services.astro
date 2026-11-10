@@ -1,22 +1,52 @@
 ---
-// rebuild/copy/17-results-and-freedom.md (case study). Freedom's site
-// screenshots approved 2026-09-30. Freedom approved publishing its
-// lead-to-client rate on 2026-10-02 (FREEDOM_CONVERSION in lib/site.ts).
+// Freedom Counseling Services case study. Rewritten 2026-11-10 around the
+// four-week results after the October 14 relaunch (numbers in
+// FREEDOM_RESULTS / FREEDOM_CONVERSION, lib/site.ts; full report in
+// client-site-system/freedom/reports/). Rankings are public; inquiry and
+// client numbers are Freedom's and need Freedom's OK before publishing.
+// Never promise another practice the same numbers: promise the work.
 import SiteLayout from '../../layouts/SiteLayout.astro';
 import PageHero from '../../components/site/PageHero.astro';
 import Section from '../../components/site/Section.astro';
 import StepsGrid from '../../components/site/StepsGrid.astro';
 import ProductShot from '../../components/site/ProductShot.astro';
+import DataTable from '../../components/site/DataTable.astro';
 import TestimonialSlot from '../../components/site/TestimonialSlot.astro';
 import CtaBand from '../../components/site/CtaBand.astro';
 import { rootUrl, article } from '../../lib/siteSchema';
-import { FREEDOM_CONVERSION } from '../../lib/site';
+import { FREEDOM_CONVERSION, FREEDOM_RESULTS as R } from '../../lib/site';
 
 const path = '/results/freedom-counseling-services';
-const description =
-  `How a five-counselor Christian counseling practice in Louisville moved to the Full Caseload System: ${FREEDOM_CONVERSION.rate} of inquiries became clients.`;
+const pct = R.inquiries.change.slice(1);
+const description = `How a six-counselor Christian counseling practice in Louisville went from ${R.firstPage.before} to ${R.firstPage.now} first-page Google rankings and received ${pct} more inquiries in its first four weeks on the Full Caseload System.`;
 const crumbs = [{ name: 'Results', path: '/results' }, { name: 'Freedom Counseling Services', path }];
 const siteUrl = rootUrl(Astro.site, Astro.url);
+
+const stats = [
+  { value: `${R.firstPage.now}`, unit: `of ${R.firstPage.of}`, label: "Searches where Freedom is on Google's first page", note: `Was ${R.firstPage.before} at launch` },
+  { value: R.inquiries.change, label: 'Inquiries, against their monthly average earlier in the year', note: `${R.inquiries.now} in four weeks, against ${R.inquiries.before} a month` },
+  { value: R.newClients.change, label: 'New clients, against the same average', note: `${R.newClients.now} in four weeks, against ${R.newClients.before} a month` },
+  { value: FREEDOM_CONVERSION.rate, label: 'Inquiries that became clients', note: FREEDOM_CONVERSION.detail },
+];
+
+const rankings = [
+  ['christian counseling louisville ky', '#38', '<b>#1</b>'],
+  ['christian counselor louisville ky', '#23', '<b>#2</b>'],
+  ['porn addiction therapist', 'Not in the top 100', '<b>#1</b>'],
+  ['christian marriage counselor near me', '#57', '<b>#2</b>'],
+  ['pastor counseling near me', 'Not in the top 100', '<b>#2</b>'],
+  ['christian based counselors near me', '#75', '<b>#3</b>'],
+  ['anxiety counseling louisville ky', 'Not in the top 100', '<b>#8</b>'],
+  ['teen counseling louisville ky', 'Not in the top 100', '<b>#8</b>'],
+  ['counselor louisville ky', '#20', '<b>#10</b>'],
+  ['grief counselors louisville ky', 'Not in the top 100', '<b>#10</b>'],
+];
+
+const inquiries = [
+  ['Inquiries', `${R.inquiries.before}`, `<b>${R.inquiries.now}</b> (${R.inquiries.change})`],
+  ['New clients', `${R.newClients.before}`, `<b>${R.newClients.now}</b> (${R.newClients.change})`],
+  ['Best month on the old site', '26', `${R.inquiries.now} in four weeks`],
+];
 ---
 
 <SiteLayout
@@ -27,36 +57,35 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
   ogType="article"
   schema={[
     article(siteUrl, {
-      headline: 'Freedom Counseling Services: from a template website to the Full Caseload System',
+      headline: `Freedom Counseling Services: ${pct} more inquiries in four weeks on the Full Caseload System`,
       description,
       path,
       datePublished: '2026-09-30',
+      dateModified: '2026-11-10',
     }),
   ]}
 >
   <PageHero
-    eyebrow="Case study"
-    title="Freedom Counseling Services: from a template website to the Full Caseload System."
+    eyebrow="Case study · Louisville, Kentucky"
+    title={`Freedom Counseling Services: ${pct} more inquiries in the first four weeks.`}
+    sub="A six-counselor Christian counseling practice moved off a template website and onto the Full Caseload System. Here is what changed, with the real numbers."
     crumbs={crumbs}
     cta={false}
   />
 
   <section class="wrap">
-    <dl class="card grid divide-y divide-line md:grid-cols-3 md:divide-x md:divide-y-0">
-      <div class="p-6">
-        <dt class="text-sm text-muted">Inquiries that became clients</dt>
-        <dd class="mt-1 font-mono text-3xl font-medium tracking-tight text-ink">{FREEDOM_CONVERSION.rate}</dd>
-        <dd class="mt-1 text-xs text-muted">{FREEDOM_CONVERSION.detail}</dd>
-      </div>
-      <div class="p-6">
-        <dt class="text-sm text-muted">Counselors, each with a page and caseload meter</dt>
-        <dd class="mt-1 font-mono text-3xl font-medium tracking-tight text-ink">5</dd>
-      </div>
-      <div class="p-6">
-        <dt class="text-sm text-muted">Live on the platform since</dt>
-        <dd class="mt-1 font-mono text-3xl font-medium tracking-tight text-ink">Sep 2026</dd>
-      </div>
+    <dl class="card grid divide-y divide-line sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x">
+      {stats.map((s) => (
+        <div class="p-6">
+          <dt class="text-sm text-muted">{s.label}</dt>
+          <dd class="mt-2 font-mono text-3xl font-medium tracking-tight text-ink">
+            {s.value}{s.unit && <span class="ml-1.5 text-base text-muted">{s.unit}</span>}
+          </dd>
+          <dd class="mt-1 text-xs text-muted">{s.note}</dd>
+        </div>
+      ))}
     </dl>
+    <p class="mt-3 text-sm text-muted">As of {R.asOf}, four weeks after the new site went live on October 14, 2026.</p>
   </section>
 
   <Section>
@@ -64,38 +93,72 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
       <div>
         <h2 class="h3">The practice</h2>
         <p class="mt-3 text-[17px] text-muted">
-          Freedom Counseling Services is a Christian counseling practice in Louisville, Kentucky, with six counselors across
-          specialties including anxiety, grief, couples and family counseling, EMDR and trauma, and work with teens.
+          Freedom Counseling Services is a Christian counseling practice in Louisville, Kentucky, with six counselors. They see adults,
+          couples, families and teens for anxiety, depression, grief, trauma and EMDR, OCD, and faith questions, in person and by
+          telehealth.
         </p>
       </div>
       <div>
         <h2 class="h3">Where they started</h2>
         <p class="mt-3 text-[17px] text-muted">
-          The practice ran on a Squarespace website. It looked fine, but it wasn't built to help the right clients find each counselor,
-          and there was no way to see where inquiries came from or whether they turned into clients.
+          The practice ran on a Squarespace website. It looked fine, but most of what Freedom offers had no page of its own. Before the
+          relaunch, Freedom didn't appear in Google's top 100 for "anxiety counseling louisville ky" or "teen counseling louisville ky."
+          Inquiries were tallied by hand, and there was no way to see which searches brought people in.
         </p>
       </div>
     </div>
-    <ProductShot shot="freedom-home" class="mt-12" />
   </Section>
 
-  <Section title="What we did, step by step">
+  <Section title="What we did" intro="The five steps of the Full Caseload System, built for one practice.">
     <StepsGrid
       details={[
-        'Migrated them to a new site with a page for each counselor and specialty, their domain kept, and redirects in place. Fully optimized their Google Business Profile: every question answered, fresh photos of the practice, and regular posts. Set up rank tracking for the searches that matter in Louisville.',
-        "Rewrote every counselor's and specialty page around the clients each one serves and the questions a first-time client asks, with a clear path to reaching out and a way to contact them always in view.",
-        'Set up their referral partner tracker and outreach kit, with a practice handout and church-specific outreach.',
-        'Instant alerts to their office, a CRM with a "due this week" list, and speed-to-lead tracking.',
-        'A dashboard with a caseload meter for each counselor and a printable monthly report.',
+        'Studied what ranks in Louisville for every service, then built 49 pages, each written for a real search: one for every service, a profile for every counselor, location pages, and a fees page. Every old address redirects to its new page, so nothing Freedom had built up was lost. Daily rank tracking for 76 searches.',
+        'Rewrote every page around the people each counselor serves and the questions a first-time client asks. Rates are shown plainly, and every request button opens a short form on the same page that takes a phone number or an email.',
+        'Set up their referral partner tracker and outreach kit, including outreach to churches, some of which already link to Freedom from their care pages.',
+        'Instant alerts to the office, a CRM with every inquiry and its next step, and response-time tracking.',
+        'A dashboard with a caseload meter for each counselor, rankings, and a monthly report.',
       ]}
     />
   </Section>
 
-  <Section title="The result so far" narrow>
+  <Section title="Found on Google" intro={`We track ${R.firstPage.of} searches people in Louisville use to find a counselor. At launch, Freedom was on Google's first page for ${R.firstPage.before} of them. Four weeks later, it's ${R.firstPage.now}, and ${R.topThree.now} are in the top 3.`}>
+    <DataTable caption="Freedom's Google position before and after the relaunch" head={['Search', 'At launch', 'Four weeks later']} rows={rankings} highlight={2} />
+    <p class="mt-3 text-sm text-muted">
+      Google positions from daily checks in Louisville. "At launch" is the first check after the new site went live. Anyone can look
+      these up.
+    </p>
+  </Section>
+
+  <Section title="Chosen and booked" intro="Freedom's own inquiry log from January to July, on the old site, gives the before. The after is the first four weeks on the new site.">
+    <DataTable caption="Freedom's inquiries before and after the relaunch" head={['', 'Old site, monthly average', 'New site, first four weeks']} rows={inquiries} highlight={2} />
+    <div class="mt-10 grid gap-8 lg:grid-cols-2">
+      <div>
+        <h3 class="h3">People reach out from the page that fits them</h3>
+        <p class="mt-3 text-[17px] text-muted">
+          Before, the homepage was where most website inquiries started. Now nearly half start on a counselor's profile, and others
+          on the page for their need: child and teen, depression, Christian counseling, Southern Indiana.
+        </p>
+      </div>
+      <div>
+        <h3 class="h3">More people, still booked</h3>
+        <p class="mt-3 text-[17px] text-muted">
+          {FREEDOM_CONVERSION.rate} of everyone who has reached out since Freedom joined the platform became a client
+          ({FREEDOM_CONVERSION.detail}). Every inquiry sends the office an instant alert and gets a tracked next step, so replies go
+          out fast.
+        </p>
+      </div>
+    </div>
+  </Section>
+
+  <Section>
+    <ProductShot shot="freedom-home" />
+  </Section>
+
+  <Section title="What this means for your practice" narrow>
     <p class="text-[17px] text-muted">
-      <strong class="font-medium text-ink">{FREEDOM_CONVERSION.rate} of the people who reached out became clients</strong>
-      ({FREEDOM_CONVERSION.detail}). The system has only been live since September 2026, so these are early numbers from one practice, not a promise. We'll add
-      results here as they mature, with Freedom's permission.
+      These are four weeks from one practice, and every market is different, so we won't promise you Freedom's numbers. We will
+      promise you the same work: a page for every service you offer, written for the searches your future clients make, tracked every
+      day, with every inquiry followed up. Your data is yours, and if you ever leave, you keep your website and your domain.
     </p>
     <TestimonialSlot slot="results" class="mt-8" />
   </Section>
