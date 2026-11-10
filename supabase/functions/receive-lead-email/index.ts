@@ -91,7 +91,8 @@ Deno.serve(async (req) => {
   const emailId = String(event.data?.email_id ?? '');
   if (!emailId) return ok({ skipped: 'no email id' });
 
-  const readKey = Deno.env.get('RESEND_RECEIVING_API_KEY');
+  // Saved in Supabase as Resend_receiving_API_key (2026-11-09); either spelling works.
+  const readKey = Deno.env.get('RESEND_RECEIVING_API_KEY') ?? Deno.env.get('Resend_receiving_API_key');
   const sendKey = Deno.env.get('NURTURE_RESEND_API_KEY');
   const sender = Deno.env.get('NURTURE_SENDER_EMAIL');
   const domain = (Deno.env.get('INBOUND_REPLY_DOMAIN') ?? sender?.split('@')[1] ?? '').toLowerCase();
