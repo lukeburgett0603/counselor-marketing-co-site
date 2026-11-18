@@ -47,6 +47,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { buildLeadAutoReply } from '../_shared/leadAutoReply.ts';
 import { BRAND } from '../_shared/brand.ts'; // CMC-ONLY: keep when syncing
+import { practiceDomain, domainFromUrl, domainFromEmail } from '../_shared/practiceDomain.ts'; // CMC-ONLY: keep when syncing
 import { renderEmail } from '../_shared/emailLayout.ts';
 
 const corsHeaders = {
@@ -122,18 +123,38 @@ Deno.serve(async (req: Request) => {
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
     const { data: existing } = await admin
       .from('leads')
-      .select('id, email, message, phone, created_at')
+      .select('id, email, message, phone, created_at, returned_at')
       .eq('id', body.details_for)
       .maybeSingle();
-    const fresh = existing && Date.now() - new Date(existing.created_at).getTime() < 2 * 60 * 60 * 1000;
+    const within2h = (t: string | null) => !!t && Date.now() - new Date(t).getTime() < 2 * 60 * 60 * 1000;
+    // CMC-ONLY (phase 4): a returning person's details go on their latest
+    // "reached out again" entry, not into their original message.
+    const returnedNow = existing && !within2h(existing.created_at) && within2h(existing.returned_at);
+    const fresh = existing && (within2h(existing.created_at) || returnedNow);
     if (!existing || !fresh || String(existing.email).trim().toLowerCase() !== detailEmail) {
       return jsonResponse({ error: 'Could not add details' }, 400);
     }
     const update: Record<string, unknown> = {};
-    if (details) update.message = existing.message ? `${existing.message}\n\n${details}` : details;
+    if (details && returnedNow) {
+      const { data: ev } = await admin
+        .from('lead_events')
+        .select('id, detail')
+        .eq('lead_id', existing.id)
+        .eq('kind', 'returned')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (ev) {
+        const prev = (ev.detail ?? {}) as Record<string, unknown>;
+        const message = prev.message ? `${prev.message}\n\n${details}` : details;
+        await admin.from('lead_events').update({ detail: { ...prev, message } }).eq('id', ev.id);
+      }
+    } else if (details) update.message = existing.message ? `${existing.message}\n\n${details}` : details;
     if (detailPhone && !existing.phone) update.phone = detailPhone;
-    const { error: updateError } = await admin.from('leads').update(update).eq('id', existing.id);
-    if (updateError) return jsonResponse({ error: 'Could not add details' }, 500);
+    if (Object.keys(update).length) {
+      const { error: updateError } = await admin.from('leads').update(update).eq('id', existing.id);
+      if (updateError) return jsonResponse({ error: 'Could not add details' }, 500);
+    }
     return jsonResponse({ ok: true });
   }
 
@@ -241,14 +262,76 @@ Deno.serve(async (req: Request) => {
     insertPayload.lead_magnet_id = body.lead_magnet_id || null;
   }
 
-  const { data: lead, error: insertError } = await supabase
-    .from('leads')
-    .insert(insertPayload)
-    .select('id')
-    .single();
+  // CMC-ONLY (keep when syncing; CRM phase 4, migration 0106): one record
+  // per person. Someone who already has an inquiry and reaches out again
+  // with the same email joins that record instead of starting a new one:
+  // the new message goes on their timeline, blanks get filled, and a Lost /
+  // Not a fit record goes back to Waiting. Guide downloads stay separate.
+  let returning = false;
+  let lead: { id: string } | null = null;
+  if (!insertPayload.lead_magnet_id && email) {
+    const pattern = email.replace(/[\\%_]/g, (c) => `\\${c}`);
+    const { data: prior } = await supabase
+      .from('leads')
+      .select('id, status, phone, existing_website_url, practice_domain, return_count')
+      .ilike('email', pattern)
+      .is('lead_magnet_id', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (prior) {
+      const now = new Date().toISOString();
+      const update: Record<string, unknown> = {
+        returned_at: now,
+        unread_return_at: now,
+        return_count: (prior.return_count ?? 0) + 1,
+        last_activity_at: now,
+      };
+      if (!prior.phone && insertPayload.phone) update.phone = insertPayload.phone;
+      if (!prior.existing_website_url && insertPayload.existing_website_url) update.existing_website_url = insertPayload.existing_website_url;
+      // A website beats a work-email domain; never replace one website with another.
+      const siteDomain = domainFromUrl(insertPayload.existing_website_url as string | null);
+      if (siteDomain && (!prior.practice_domain || prior.practice_domain === domainFromEmail(email))) update.practice_domain = siteDomain;
+      else if (!prior.practice_domain) {
+        const d = domainFromEmail(email);
+        if (d) update.practice_domain = d;
+      }
+      // A fresh start: back to Waiting, and a new audit's follow-ups may run.
+      if (prior.status === 'referred' || prior.status === 'withdrawn') {
+        update.status = 'new';
+        update.followups_paused_at = null;
+      }
+      const { error: updateError } = await supabase.from('leads').update(update).eq('id', prior.id);
+      if (updateError) return jsonResponse({ error: 'Could not save lead: ' + updateError.message }, 500);
+      await supabase.from('lead_events').insert({
+        lead_id: prior.id,
+        kind: 'returned',
+        detail: {
+          source_page: insertPayload.source_page ?? null,
+          message: insertPayload.message ?? null,
+          website: insertPayload.existing_website_url ?? null,
+          name,
+        },
+      });
+      lead = { id: prior.id };
+      returning = true;
+    }
+  }
+  if (!lead) {
+    if (!insertPayload.lead_magnet_id) {
+      const d = practiceDomain(insertPayload.existing_website_url as string | null, email);
+      if (d) insertPayload.practice_domain = d;
+    }
+    const { data: created, error: insertError } = await supabase
+      .from('leads')
+      .insert(insertPayload)
+      .select('id')
+      .single();
 
-  if (insertError) {
-    return jsonResponse({ error: 'Could not save lead: ' + insertError.message }, 500);
+    if (insertError) {
+      return jsonResponse({ error: 'Could not save lead: ' + insertError.message }, 500);
+    }
+    lead = created;
   }
 
   // Everything from here down is best-effort. A failure here still
@@ -322,7 +405,7 @@ Deno.serve(async (req: Request) => {
       const isCalculator = insertPayload.source_page === 'caseload-calculator';
       const notificationHtml = renderEmail({
         brand: BRAND,
-        label: isCalculator ? 'Caseload Calculator' : 'New inquiry',
+        label: returning ? 'Reached out again' : isCalculator ? 'Caseload Calculator' : 'New inquiry',
         preheader: name,
         facts: [...rows, ['Message', (insertPayload.message as string | null) ?? null]],
         button: { text: 'Open the inquiry', url: `${BRAND.siteUrl}admin/crm/?lead=${lead.id}` },
@@ -339,7 +422,7 @@ Deno.serve(async (req: Request) => {
           to: notificationRecipients,
           reply_to: email,
           // CMC-ONLY subject (keep when syncing from the template).
-          subject: `${isCalculator ? 'Caseload Calculator results' : 'New audit request'} from ${name}`,
+          subject: `${returning ? 'Reached out again: ' : ''}${isCalculator ? 'Caseload Calculator results' : 'New audit request'} from ${name}`,
           html: notificationHtml,
         }),
       });

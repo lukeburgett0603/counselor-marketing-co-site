@@ -223,6 +223,22 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
             <span>What they wrote</span>
             <p id="detail-message"></p>
           </div>
+          <!-- CMC-ONLY (CRM phase 4): their practice, and anyone else from it. -->
+          <div class="c-practice">
+            <div class="i-field">
+              <label for="cmc-practice-name">Practice</label>
+              <div class="i-inline">
+                <input id="cmc-practice-name" type="text" maxlength="160" placeholder="Practice name" />
+                <button id="cmc-practice-save" type="button" class="a-btn i-btn">Save</button>
+                <span id="cmc-practice-status" class="i-hint" role="status"></span>
+              </div>
+              <span id="cmc-practice-domain" class="i-hint"></span>
+            </div>
+            <div id="cmc-practice-others" class="i-field" hidden>
+              <span>Others at this practice</span>
+              <div id="cmc-practice-list" class="c-others"></div>
+            </div>
+          </div>
         </section>
 
         <!-- CMC-ONLY (keep when syncing): write to the prospect (send-lead-email). -->
@@ -1656,6 +1672,29 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
     font-weight: 500;
     color: var(--a-fg2);
   }
+  .c-practice {
+    display: grid;
+    gap: 12px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--a-line);
+  }
+  .c-practice input[type='text'] {
+    flex: 1;
+    min-width: 0;
+  }
+  .c-others {
+    font-size: 13.5px;
+    line-height: 1.8;
+  }
+  .c-prac {
+    color: var(--a-fg2);
+  }
+  .c-returned {
+    color: var(--a-accent);
+    border-color: var(--a-accent-soft);
+    background: var(--a-accent-soft);
+  }
   .c-replied {
     color: var(--a-good);
     border-color: var(--a-good-line);
@@ -1727,6 +1766,9 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
     follow_up_date: string | null;
     followups_paused_at: string | null;
     unread_reply_at: string | null;
+    unread_return_at: string | null;
+    practice_name: string | null;
+    practice_domain: string | null;
   };
   type Msg = { id: string; direction: 'out' | 'in'; subject: string | null; body_text: string | null; from_email: string | null; created_at: string };
   type Ev = { id: string; kind: string; detail: Record<string, unknown>; created_at: string };
@@ -1756,7 +1798,8 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
   const SEND_URL = `${import.meta.env.PUBLIC_SUPABASE_URL}/functions/v1/send-lead-email`;
 
   let lead: Lead | null = null;
-  let audit: Audit | null = null;
+  let audit: Audit | null = null; // the latest audit (merge fields, follow-up state)
+  let audits: Audit[] = []; // every audit this person asked for (phase 4)
   let templates: Tpl[] = [];
   let me: string | null = null;
   let lastInSubject: string | null = null;
@@ -1801,27 +1844,33 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
   function items(msgs: Msg[], evs: Ev[], notes: Note[]): Item[] {
     const out: Item[] = [];
     if (!lead) return out;
-    const fromAudit = !!audit;
+    // An audit asked for with the first inquiry; later ones mean they came back.
+    const startMs = Date.parse(lead.created_at);
+    const firstAudit = audits.find((x) => Math.abs(Date.parse(x.created_at) - startMs) < 2 * 3_600_000);
     out.push({
       at: lead.created_at,
       kind: 'start',
-      title: fromAudit ? 'Asked for a Caseload Audit' : lead.source_page === 'Manually added' ? 'Added by hand' : 'Reached out through the website',
+      title: firstAudit ? 'Asked for a Caseload Audit' : lead.source_page === 'Manually added' ? 'Added by hand' : 'Reached out through the website',
       body: lead.message?.trim() || undefined,
     });
-    if (audit) {
-      if (audit.emailed_at) out.push({ at: audit.emailed_at, kind: 'auto', title: `Audit emailed for ${practice()}`, quiet: true });
-      else if (audit.status === 'failed') out.push({ at: audit.created_at, kind: 'auto', title: "The automatic audit couldn't finish", quiet: true });
+    const logged = evs.filter((e) => e.kind === 'followup_sent').length;
+    [...audits].reverse().forEach((x, i) => {
+      const name = x.practice_name ?? x.practice_input;
+      if (x !== firstAudit) out.push({ at: x.created_at, kind: 'auto', title: `Asked for another Caseload Audit (${name})`, quiet: true });
+      if (x.emailed_at) out.push({ at: x.emailed_at, kind: 'auto', title: `Audit emailed for ${name}`, quiet: true });
+      else if (x.status === 'failed') out.push({ at: x.created_at, kind: 'auto', title: "The automatic audit couldn't finish", quiet: true });
       // Opens and follow-ups from before the timeline existed (0103) only
       // live on the audit row; show them once so nothing looks missing.
-      if (audit.first_viewed_at && !evs.some((e) => e.kind === 'audit_opened')) {
-        out.push({ at: audit.first_viewed_at, kind: 'auto', title: `Opened their audit${audit.view_count > 1 ? ` (${audit.view_count} views so far)` : ''}`, quiet: true });
+      if (i === 0) {
+        if (x.first_viewed_at && !evs.some((e) => e.kind === 'audit_opened')) {
+          out.push({ at: x.first_viewed_at, kind: 'auto', title: `Opened their audit${x.view_count > 1 ? ` (${x.view_count} views so far)` : ''}`, quiet: true });
+        }
+        if (x.followup_step > logged && x.followup_last_sent_at) {
+          out.push({ at: x.followup_last_sent_at, kind: 'auto', title: `Automatic follow-ups sent: ${x.followup_step - logged} of ${FOLLOWUPS} (before the timeline started)`, quiet: true });
+        }
       }
-      const logged = evs.filter((e) => e.kind === 'followup_sent').length;
-      if (audit.followup_step > logged && audit.followup_last_sent_at) {
-        out.push({ at: audit.followup_last_sent_at, kind: 'auto', title: `Automatic follow-ups sent: ${audit.followup_step - logged} of ${FOLLOWUPS} (before the timeline started)`, quiet: true });
-      }
-      if (audit.unsubscribed_at) out.push({ at: audit.unsubscribed_at, kind: 'auto', title: 'Unsubscribed from the automatic follow-ups', quiet: true });
-    }
+      if (x.unsubscribed_at) out.push({ at: x.unsubscribed_at, kind: 'auto', title: 'Unsubscribed from the automatic follow-ups', quiet: true });
+    });
     for (const m of msgs) {
       out.push({
         at: m.created_at,
@@ -1844,6 +1893,9 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
         const OUT: Record<string, string> = { price: 'Price', timing: 'Timing: not ready yet', competitor: 'Went with someone else', no_response: 'Stopped responding', diy: 'Doing it themselves', not_a_fit: 'Not a fit for what we do', other: 'Other' };
         const back = d.check_back ? ` Check back ${new Date(String(d.check_back) + 'T12:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.` : '';
         out.push({ at: e.created_at, kind: 'note', title: `Why it ended: ${OUT[String(d.reason)] ?? 'Other'}`, body: ((d.note ? String(d.note) : '') + back).trim() || undefined });
+      } else if (e.kind === 'returned') {
+        const where = d.source_page === 'caseload-calculator' ? 'the Caseload Calculator' : d.source_page === 'free-caseload-audit' || String(d.source_page ?? '').includes('audit') ? 'the audit form' : 'the website';
+        out.push({ at: e.created_at, kind: 'in', title: `Reached out again through ${where}`, body: [d.message, d.website ? `Website: ${d.website}` : ''].filter(Boolean).join('\n\n') || undefined });
       } else if (e.kind === 'client_added') out.push({ at: e.created_at, kind: 'auto', title: `Added to the client list as ${d.name ?? 'a client'}`, quiet: true });
     }
     return out.sort((a, b) => (a.at < b.at ? 1 : -1));
@@ -2106,19 +2158,20 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
     const [l, a] = await Promise.all([
       supabase
         .from('leads')
-        .select('id, name, email, status, created_at, message, source_page, next_step, follow_up_date, followups_paused_at, unread_reply_at')
+        .select('id, name, email, status, created_at, message, source_page, next_step, follow_up_date, followups_paused_at, unread_reply_at, unread_return_at, practice_name, practice_domain')
         .eq('id', id)
         .single(),
       supabase
         .from('audits')
         .select('id, token, practice_name, practice_input, status, created_at, emailed_at, first_viewed_at, view_count, followup_step, followup_last_sent_at, unsubscribed_at')
         .eq('lead_id', id)
-        .order('created_at', { ascending: false })
-        .limit(1),
+        .order('created_at', { ascending: false }),
     ]);
     if (lead?.id !== id || !l.data) return;
     lead = l.data as Lead;
-    audit = ((a.data ?? [])[0] as Audit) ?? null;
+    audits = (a.data ?? []) as Audit[];
+    audit = audits[0] ?? null;
+    void renderPractice();
     // The shared status select on this page shows the stage; keep it current
     // after a send moved Waiting to Contacted.
     const sel = document.querySelector<HTMLSelectElement>('#detail-status-container .status-select');
@@ -2143,31 +2196,86 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
     await refreshLead();
     resetCompose();
     if (lastInSubject) subject.value = /^re:/i.test(lastInSubject) ? lastInSubject : `Re: ${lastInSubject}`;
-    if (lead?.unread_reply_at) {
+    if (lead?.unread_reply_at || lead?.unread_return_at) {
       unread.delete(id);
-      await supabase.from('leads').update({ unread_reply_at: null }).eq('id', id);
+      returned.delete(id);
+      await supabase.from('leads').update({ unread_reply_at: null, unread_return_at: null }).eq('id', id);
       lead.unread_reply_at = null;
+      lead.unread_return_at = null;
     }
   });
 
-  // A "Replied" tag on list rows with an unread reply (phase 2).
+  // A "Replied" tag on list rows with an unread reply (phase 2), a "Came
+  // back" tag when they reached out again (phase 4), and each person's
+  // practice next to their contact details.
   const unread = new Set<string>();
+  const returned = new Set<string>();
+  const practices = new Map<string, string>();
   function markUnread() {
     document.querySelectorAll<HTMLElement>('#leads-table-body tr[data-lead-id]').forEach((tr) => {
-      const has = unread.has(tr.dataset.leadId!);
+      const id = tr.dataset.leadId!;
       const b = tr.querySelector('.i-who b');
       if (!b) return;
-      const tag = b.querySelector('.c-replied');
-      if (has && !tag) b.insertAdjacentHTML('beforeend', ' <span class="i-tag c-replied">Replied</span>');
-      if (!has && tag) tag.remove();
+      const tags: [Set<string>, string, string][] = [
+        [unread, 'c-replied', 'Replied'],
+        [returned, 'c-returned', 'Came back'],
+      ];
+      for (const [set, cls, label] of tags) {
+        const tag = b.querySelector(`.${cls}`);
+        if (set.has(id) && !tag) b.insertAdjacentHTML('beforeend', ` <span class="i-tag ${cls}">${label}</span>`);
+        if (!set.has(id) && tag) tag.remove();
+      }
+      const small = tr.querySelector('.i-who small');
+      const p = practices.get(id);
+      if (small && p && !small.querySelector('.c-prac')) small.insertAdjacentHTML('afterbegin', `<span class="c-prac">${esc(p)}</span> · `);
     });
   }
   async function loadUnread() {
-    const { data } = await supabase.from('leads').select('id').not('unread_reply_at', 'is', null);
+    const { data } = await supabase.from('leads').select('id, unread_reply_at, unread_return_at, practice_name').or('unread_reply_at.not.is.null,unread_return_at.not.is.null,practice_name.not.is.null');
     unread.clear();
-    (data ?? []).forEach((r: { id: string }) => unread.add(r.id));
+    returned.clear();
+    practices.clear();
+    (data ?? []).forEach((r: { id: string; unread_reply_at: string | null; unread_return_at: string | null; practice_name: string | null }) => {
+      if (r.unread_reply_at) unread.add(r.id);
+      if (r.unread_return_at) returned.add(r.id);
+      if (r.practice_name) practices.set(r.id, r.practice_name);
+    });
     markUnread();
   }
+
+  // ------------------------------------------------------------ practice (phase 4)
+  const pracName = $<HTMLInputElement>('cmc-practice-name');
+  async function renderPractice() {
+    if (!lead) return;
+    const id = lead.id;
+    pracName.value = lead.practice_name ?? '';
+    $('cmc-practice-status').textContent = '';
+    $('cmc-practice-domain').textContent = lead.practice_domain ? `Matched by ${lead.practice_domain}` : '';
+    $('cmc-practice-others').hidden = true;
+    if (!lead.practice_domain) return;
+    const { data } = await supabase.from('leads').select('id, name, status').eq('practice_domain', lead.practice_domain).neq('id', id).order('created_at');
+    if (lead?.id !== id || !data?.length) return;
+    $('cmc-practice-list').innerHTML = data
+      .map((o: { id: string; name: string | null; status: string | null }) => `<a class="a-link" href="?lead=${o.id}">${esc(o.name || '(no name)')}</a> <span class="i-faint">${esc(STATUS_LABELS[o.status ?? 'new'] ?? '')}</span>`)
+      .join('<br>');
+    $('cmc-practice-others').hidden = false;
+  }
+  $('cmc-practice-save').addEventListener('click', async () => {
+    if (!lead) return;
+    const value = pracName.value.trim() || null;
+    const { error } = await supabase.from('leads').update({ practice_name: value }).eq('id', lead.id);
+    const st = $('cmc-practice-status');
+    if (error) {
+      st.textContent = 'Could not save: ' + error.message;
+      st.className = 'i-hint r-err';
+      return;
+    }
+    lead.practice_name = value;
+    if (value) practices.set(lead.id, value);
+    else practices.delete(lead.id);
+    st.textContent = 'Saved.';
+    st.className = 'i-hint r-ok';
+  });
   new MutationObserver(markUnread).observe($('leads-table-body'), { childList: true });
   $('back-to-list-button').addEventListener('click', () => setTimeout(markUnread, 50));
 

@@ -33,7 +33,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   import { initAdminAuth, supabase, type AdminUser } from '../../lib/adminAuth';
   import { withBase } from '../../lib/url';
 
-  type Lead = { id: string; name: string | null; created_at: string; status: string | null; follow_up_date: string | null; lead_magnet_id: string | null; next_step: string | null; unread_reply_at: string | null; check_back_date: string | null };
+  type Lead = { id: string; name: string | null; created_at: string; status: string | null; follow_up_date: string | null; lead_magnet_id: string | null; next_step: string | null; unread_reply_at: string | null; check_back_date: string | null; unread_return_at: string | null };
   type Audit = {
     id: string;
     token: string;
@@ -88,7 +88,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const [l, a, k] = await Promise.all([
-      supabase.from('leads').select('id, name, created_at, status, follow_up_date, lead_magnet_id, next_step, unread_reply_at, check_back_date').is('archived_at', null).order('created_at', { ascending: false }).limit(500),
+      supabase.from('leads').select('id, name, created_at, status, follow_up_date, lead_magnet_id, next_step, unread_reply_at, check_back_date, unread_return_at').is('archived_at', null).order('created_at', { ascending: false }).limit(500),
       supabase.from('audits').select('id, token, name, practice_name, practice_input, status, created_at, first_viewed_at, lead_id, lead:leads(status)').order('created_at', { ascending: false }).limit(200),
       supabase.from('link_opportunities').select('id, name, status, next_step_date'),
     ]);
@@ -115,7 +115,11 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     for (const x of leads.filter((y) => y.unread_reply_at).slice(0, 4)) {
       moves.push({ title: `${nameOf(x)} replied`, sub: `Their reply came in ${ago(x.unread_reply_at!)}.`, tag: 'Reply', warn: true, link: `${crm}?lead=${x.id}`, linkText: 'Open' });
     }
-    for (const x of leads.filter((y) => y.status === 'new').slice(0, 4)) {
+    // CRM phase 4: someone with an inquiry reached out again (joins their record).
+    for (const x of leads.filter((y) => y.unread_return_at && !y.unread_reply_at).slice(0, 4)) {
+      moves.push({ title: `${nameOf(x)} reached out again`, sub: `Came back ${ago(x.unread_return_at!)}. It's on their timeline.`, tag: 'Inquiry', warn: true, link: `${crm}?lead=${x.id}`, linkText: 'Open' });
+    }
+    for (const x of leads.filter((y) => y.status === 'new' && !y.unread_return_at).slice(0, 4)) {
       moves.push({
         title: `Reply to ${nameOf(x)}`,
         sub: `Asked ${ago(x.created_at)}. Check it off once you've reached out.`,

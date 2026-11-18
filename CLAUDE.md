@@ -2479,6 +2479,14 @@ emails" and "a full CRM for our own sales"); the code map is here.
   last CMC-ONLY script in `crm.astro`; it listens for any `.status-select`
   change. The Sales report is CMC-only `src/pages/admin/sales-report.astro`
   (menu key `sales-report` in `AdminLayout.astro` and `adminAuth.ts`).
+- **CRM phase 4 (migration 0106):** one record per person. The join happens in
+  `submit-lead` (CMC-ONLY block before the insert; non-guide submissions match
+  an existing inquiry by email), `request-audit` accepts a rejoined inquiry and
+  several audits per person, and `_shared/practiceDomain.ts` gives the practice
+  key (website, else work-email domain). In `crm.astro`: practice field and
+  "Others at this practice" in the person card, "Came back" tag and practice in
+  list rows (`markUnread`), every audit and each `returned` event on the
+  timeline. Anything that assumed one audit per inquiry must now pick the latest.
 - **Production database and function changes are blocked in auto mode**; switch
   to Manual mode so Luke approves each command.
 - **Freedom case study** (`src/pages/results/freedom-counseling-services.astro`,

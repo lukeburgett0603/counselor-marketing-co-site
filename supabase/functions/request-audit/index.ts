@@ -27,6 +27,7 @@ import { pagespeed } from './pagespeed.ts';
 import { renderEmail } from '../_shared/emailLayout.ts';
 import { BRAND, LUKE_SIGNATURE } from '../_shared/brand.ts';
 import { replyAddressFor } from '../_shared/replyAddress.ts';
+import { domainFromUrl, domainFromEmail } from '../_shared/practiceDomain.ts';
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
 
@@ -79,11 +80,23 @@ Deno.serve(async (req) => {
   const practice = typeof body.practice === 'string' ? body.practice.trim().slice(0, 300) : '';
   const name = typeof body.name === 'string' ? body.name.trim().slice(0, 120) : '';
   if (!leadId || !practice) return json({ error: 'Missing details' }, 400);
-  const { data: lead } = await db.from('leads').select('id, email, created_at').eq('id', leadId).maybeSingle();
-  if (!lead || String(lead.email).trim().toLowerCase() !== email || Date.now() - Date.parse(lead.created_at) > 2 * 60 * 60 * 1000) {
+  // CMC-ONLY (CRM phase 4): a returning person keeps one inquiry, so the
+  // inquiry may be old. It must have been created or rejoined (returned_at)
+  // in the last 2 hours, and one person can now have several audits; only
+  // an audit started in that same window counts as a retry of this one.
+  const { data: lead } = await db.from('leads').select('id, email, created_at, returned_at, practice_name, practice_domain').eq('id', leadId).maybeSingle();
+  const recent = (t: string | null) => !!t && Date.now() - Date.parse(t) <= 2 * 60 * 60 * 1000;
+  if (!lead || String(lead.email).trim().toLowerCase() !== email || !(recent(lead.created_at) || recent(lead.returned_at))) {
     return json({ error: 'Could not start an audit' }, 400);
   }
-  const { data: existing } = await db.from('audits').select('id, token, status').eq('lead_id', leadId).maybeSingle();
+  const { data: existing } = await db
+    .from('audits')
+    .select('id, token, status')
+    .eq('lead_id', leadId)
+    .gte('created_at', new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString())
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
   if (existing) return json(existing.status === 'needs_city' ? { ok: true, needs_city: true, audit_id: existing.id } : { ok: true, token: existing.token });
 
   const since = new Date(Date.now() - DAY).toISOString();
@@ -132,6 +145,13 @@ Deno.serve(async (req) => {
   };
   const { data: created, error } = await db.from('audits').insert(row).select('id, token').single();
   if (error || !created) return json({ error: 'Could not start an audit' }, 500);
+  // CMC-ONLY (CRM phase 4): the practice this person belongs to.
+  const fill: Record<string, string> = {};
+  if (!lead.practice_name && practiceName) fill.practice_name = practiceName;
+  const dom = domainFromUrl(finalUrl);
+  // A website beats a work-email domain.
+  if (dom && (!lead.practice_domain || lead.practice_domain === domainFromEmail(email))) fill.practice_domain = dom;
+  if (Object.keys(fill).length) await db.from('leads').update(fill).eq('id', leadId);
   if (row.status === 'needs_city') return json({ ok: true, needs_city: true, audit_id: created.id });
   EdgeRuntime.waitUntil(runAudit(created.id));
   return json({ ok: true, token: created.token });
