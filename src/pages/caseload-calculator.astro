@@ -115,6 +115,7 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
             </label>
             <button type="submit" class="btn-primary">Email Me My Results and a Plan</button>
           </div>
+          <div class="mt-3">{SITE.turnstileSiteKey && <div class="cf-turnstile" data-sitekey={SITE.turnstileSiteKey} data-appearance="interaction-only"></div>}</div>
           <p class="mt-3 text-[13px] text-muted">We'll send your numbers and one follow-up. That's it.</p>
           <p class="status mt-2 text-sm text-ink" role="status"></p>
       </form>
@@ -154,6 +155,7 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
 </style>
 
 <script>
+  import { loadTurnstileWhenNeeded, waitForTurnstileToken } from '../lib/turnstile';
   // Same rule as the platform's CASELOAD_MULTIPLIER (src/lib/caseload.ts on
   // client sites). Round money to the nearest $10.
   const MULTIPLIER = 1.5;
@@ -196,6 +198,7 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
   root?.querySelectorAll('input[type="number"]').forEach((el) => el.addEventListener('input', update));
   update();
 
+  loadTurnstileWhenNeeded();
   const capture = document.querySelector<HTMLFormElement>('.calc-capture');
   capture?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -218,6 +221,7 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
       `Full caseload: ${l.full}; open spots: ${l.open}`,
       `Client value: ${money(l.clientValue)}; monthly from open spots: ${money(l.monthlyGap)}`,
     ].join('\n');
+    const turnstileToken = await waitForTurnstileToken(capture);
     const res = await fetch(`${import.meta.env.PUBLIC_SUPABASE_URL}/functions/v1/submit-lead`, {
       method: 'POST',
       headers: {
@@ -225,7 +229,7 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
         apikey: import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
         Authorization: `Bearer ${import.meta.env.PUBLIC_SUPABASE_ANON_KEY}`,
       },
-      body: JSON.stringify({ name: email, email, message, source_page: 'caseload-calculator', hp_website: fd.get('hp_website') || '' }),
+      body: JSON.stringify({ name: email, email, message, source_page: 'caseload-calculator', hp_website: fd.get('hp_website') || '', turnstile_token: turnstileToken }),
     });
     status.textContent = res.ok ? "Sent. Watch your inbox for your numbers and a plan." : 'Something went wrong. Please try again.';
     if (res.ok) capture.reset();

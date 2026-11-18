@@ -1,6 +1,8 @@
 ---
 // Short message form for /contact. Same submit-lead endpoint and spam
-// honeypot as the audit form.
+// honeypot as the audit form, plus Turnstile when SITE.turnstileSiteKey
+// is set.
+import { SITE } from '../../lib/site';
 ---
 
 <form class="contact-form card space-y-4 p-6 sm:p-7" novalidate>
@@ -20,6 +22,7 @@
     <span class="mb-1.5 block text-sm font-medium text-ink">Message</span>
     <textarea name="message" rows="5" required class="cf-field"></textarea>
   </label>
+  {SITE.turnstileSiteKey && <div class="cf-turnstile" data-sitekey={SITE.turnstileSiteKey} data-appearance="interaction-only"></div>}
   <button type="submit" class="btn-primary w-full">Send</button>
   <p class="text-[13px] text-muted">I'll reply within one business day.</p>
   <p class="status text-sm text-ink" role="status" aria-live="polite"></p>
@@ -44,8 +47,10 @@
 </style>
 
 <script>
+  import { loadTurnstileWhenNeeded, waitForTurnstileToken } from '../../lib/turnstile';
   const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
   const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+  loadTurnstileWhenNeeded();
   document.querySelectorAll<HTMLFormElement>('.contact-form').forEach((form) => {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -56,6 +61,7 @@
         return;
       }
       status.textContent = 'Sending...';
+      const turnstileToken = await waitForTurnstileToken(form);
       const res = await fetch(`${SUPABASE_URL}/functions/v1/submit-lead`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
@@ -65,6 +71,7 @@
           message: fd.get('message'),
           source_page: 'contact',
           hp_website: fd.get('hp_website') || '',
+          turnstile_token: turnstileToken,
         }),
       });
       if (res.ok) {

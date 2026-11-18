@@ -145,6 +145,7 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
 </AdminLayout>
 
 <script>
+  import { uploadImage } from '../../lib/imageUpload';
   import { supabase, initAdminAuth, type AdminUser } from '../../lib/adminAuth';
   import { initRichTextEditor } from '../../lib/richTextEditor';
   import { triggerRebuild } from '../../lib/publishFunction';
@@ -533,13 +534,13 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
     const file = imageFileField.files?.[0];
     if (!file) return;
     imageStatus.textContent = 'Uploading...';
-    const path = `blog/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-    const { error } = await supabase.storage.from('site-images').upload(path, file);
-    if (error) {
-      imageStatus.textContent = 'Upload failed: ' + error.message;
+    // Shrunk to web size first (lib/imageUpload.ts).
+    const { url: uploadedUrl, error } = await uploadImage(supabase, 'site-images', 'blog', file);
+    if (error || !uploadedUrl) {
+      imageStatus.textContent = 'Upload failed: ' + error;
       return;
     }
-    const { data: urlData } = supabase.storage.from('site-images').getPublicUrl(path);
+    const urlData = { publicUrl: uploadedUrl };
     uploadedImageUrl = urlData.publicUrl;
     // A direct upload has no Unsplash attribution — clear any credit left
     // over from a previous Unsplash selection.

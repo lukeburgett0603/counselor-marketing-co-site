@@ -1,5 +1,6 @@
 ---
 import Header from '../components/Header.astro';
+import { localImageUrl, localizeSchemaImages } from '../lib/shareImages';
 import Footer from '../components/Footer.astro';
 import MobileCTABar from '../components/MobileCTABar.astro';
 import SchemaScript from '../components/SchemaScript.astro';
@@ -28,7 +29,8 @@ const title = page.meta_title ?? page.title;
 // planning metadata (has held pricing tiers) — it must never reach a
 // public tag. An empty description is a smaller problem than a leak.
 const description = page.meta_description ?? '';
-const ogImage = page.images.hero?.url ?? business.logo_url ?? undefined;
+// Served from the built site, not Supabase Storage (lib/shareImages.ts).
+const ogImage = await localImageUrl(page.images.hero?.url ?? business.logo_url, siteUrl);
 
 // True once any real 'Blog Post' rows exist — switches Article schema to
 // the more specific BlogPosting type (see buildArticleSchema).
@@ -36,6 +38,7 @@ const hasBlog = allPages.some((p) => p.page_type === 'Blog Post');
 const pageSchemas = buildPageSchemas(page, business, siteUrl, { hasBlog });
 const breadcrumbChain = buildBreadcrumbChain(page, allPages);
 const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbChain, siteUrl);
+const schemas = await localizeSchemaImages([...pageSchemas, breadcrumbSchema], siteUrl);
 ---
 
 <!doctype html>
@@ -80,7 +83,7 @@ const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbChain, siteUrl);
     <meta name="twitter:description" content={description} />
     {ogImage && <meta name="twitter:image" content={ogImage} />}
 
-    <SchemaScript schemas={[...pageSchemas, breadcrumbSchema]} />
+    <SchemaScript schemas={schemas} />
 
     {business.cloudflare_beacon_token && (
       // Cloudflare Web Analytics — cookieless, privacy-respecting page-view

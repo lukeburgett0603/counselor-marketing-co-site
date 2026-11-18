@@ -2493,3 +2493,22 @@ emails" and "a full CRM for our own sales"); the code map is here.
   Results card in `results/index.astro`): numbers come only from
   `FREEDOM_RESULTS` and `FREEDOM_CONVERSION` in `src/lib/site.ts`, approved by
   Freedom 2026-11-10. Change them there, with Freedom's OK, and nowhere else.
+
+## Supabase usage fixes (2026-11-18, from the usage audit)
+
+- **Image cache:** `src/lib/remoteImageCache.mjs` installed from
+  `astro.config.mjs`, with the `actions/cache` step in `deploy.yml`, so
+  blog images in Storage download once, not on every deploy (nothing on
+  the site used Storage images yet).
+- **Share and schema images:** `SiteLayout.astro` and `BaseLayout.astro`
+  run `og:image` and the JSON-LD graph through `src/lib/shareImages.ts`,
+  so the logo and any blog hero are served from the build.
+- **Uploads:** blog image uploads go through `src/lib/imageUpload.ts`
+  (2000px WebP, cacheable).
+- **Turnstile:** `ContactForm`, `AuditForm` and the Caseload Calculator
+  render a Turnstile widget (invisible unless a challenge is needed) when
+  `SITE.turnstileSiteKey` (`src/lib/site.ts`) is set, and send its token
+  to submit-lead. Only the first audit step needs it: the `details_for`
+  step skips the check by design (tokens are single-use) and request-audit
+  only runs for a lead created in the last 2 hours.
+- **Check:** `npm run build && npm run check:usage`.

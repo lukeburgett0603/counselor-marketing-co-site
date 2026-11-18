@@ -2,6 +2,12 @@ import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
 import sitemap from '@astrojs/sitemap';
 import mdx from '@astrojs/mdx';
+import { installRemoteImageCache } from './src/lib/remoteImageCache.mjs';
+
+// Each Supabase Storage image downloads once per build and is kept between
+// builds (see the module). Nothing on this site uses Storage images yet
+// (usage audit, 2026-11-18); this is in place before blog images arrive.
+installRemoteImageCache();
 
 // Served from the domain root since the custom domain (2026-11-06).
 const BASE = '';

@@ -14,6 +14,11 @@ export const SITE = {
   auditPath: '/free-caseload-audit',
   auditCta: 'Get My Free Caseload Audit',
   auditTurnaround: 'ready in minutes',
+  // Cloudflare Turnstile spam check on the contact, audit and calculator
+  // forms (usage audit, 2026-11-18). Public value (the widget's site key);
+  // null hides the widget. submit-lead enforces it only once the secret
+  // CLOUDFLARE_TURNSTILE_SECRET_KEY is set, so set this and deploy first.
+  turnstileSiteKey: null as string | null,
 };
 
 // Freedom Counseling Services' lead-to-client rate, approved for publishing

@@ -9,6 +9,7 @@ import SiteFooter from '../components/site/SiteFooter.astro';
 import Wordmark from '../components/site/Wordmark.astro';
 import { withBase, withTrailingSlash } from '../lib/url';
 import { organization, website, person, breadcrumbs, faqPage, type Node } from '../lib/siteSchema';
+import { localImageUrl, localizeSchemaImages } from '../lib/shareImages';
 
 interface Props {
   title: string;
@@ -34,10 +35,12 @@ const trail = path === '/' ? [] : [{ name: 'Home', path: '/' }, ...crumbs];
 const graph: Node[] = [organization(siteUrl), website(siteUrl), person(siteUrl), ...schema];
 if (trail.length) graph.push(breadcrumbs(siteUrl, trail));
 if (faqs.length) graph.push(faqPage(faqs));
-const jsonLd = JSON.stringify({ '@context': 'https://schema.org', '@graph': graph });
+// Storage images (the logo, blog heroes) are served from the built site,
+// not Supabase Storage (lib/shareImages.ts).
+const jsonLd = JSON.stringify({ '@context': 'https://schema.org', '@graph': await localizeSchemaImages(graph, siteUrl) });
 // Default link-preview image: 1200x630 brand card (public/og-default.png).
 // A page can pass its own ogImage; the square logo stays the schema logo.
-const image = ogImage ?? `${siteUrl}/og-default.png`;
+const image = (await localImageUrl(ogImage, siteUrl)) ?? `${siteUrl}/og-default.png`;
 const imageIsDefault = !ogImage;
 ---
 
