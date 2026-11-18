@@ -2446,3 +2446,35 @@ of the 53 built pages render these shared components (the rebuilt pages
 use their own layout, Geist is self-hosted, and the homepage already
 scores 100 / LCP 1.1s on Lighthouse mobile). It applies if a
 database-driven page ever renders through the old templates.
+
+## Branded emails, CRM email and the Freedom case study (2026-11-08 to 2026-11-15, CMC only)
+
+Full decisions live in the knowledge base (`../CLAUDE.md`, sections "Branded
+emails" and "a full CRM for our own sales"); the code map is here.
+
+- **One email layout:** `supabase/functions/_shared/emailLayout.ts`
+  (`renderEmail`: letters and notices, dark mode, inline styles) with the brand
+  in CMC-only `_shared/brand.ts`. Every Resend email uses it. The template
+  doesn't have it yet (backlog: port with each practice's brand).
+- **CRM (migrations 0103, 0104):** `lead_messages`, `lead_events`,
+  `email_templates`, and on `leads`: `next_step`, `reply_token`,
+  `followups_paused_at`, `first_reply_at`, `last_activity_at`,
+  `unread_reply_at`. A trigger logs stage changes and pauses the audit
+  follow-ups past Contacted. UI is the CMC-ONLY blocks at the end of
+  `src/pages/admin/crm.astro` (compose, timeline, next step, call log, template
+  editor, Replied tag); Today shows replies and next steps.
+- **Sending:** `send-lead-email` (signed-in owner/agency; preview and send;
+  from `luke@learn.therapymarketingco.com`). **Receiving:** `receive-lead-email`
+  (Resend `email.received` webhook, Svix signature with
+  `RESEND_WEBHOOK_SECRET`, body fetched with the full-access key saved as
+  `Resend_receiving_API_key`; `verify_jwt = false` in `supabase/config.toml`).
+  Reply address: `_shared/replyAddress.ts` (`r-<reply_token>@INBOUND_REPLY_DOMAIN`,
+  else Luke's inbox), used by send-lead-email, request-audit and
+  send-audit-followups. get-audit and send-audit-followups also write
+  timeline events.
+- **Production database and function changes are blocked in auto mode**; switch
+  to Manual mode so Luke approves each command.
+- **Freedom case study** (`src/pages/results/freedom-counseling-services.astro`,
+  Results card in `results/index.astro`): numbers come only from
+  `FREEDOM_RESULTS` and `FREEDOM_CONVERSION` in `src/lib/site.ts`, approved by
+  Freedom 2026-11-10. Change them there, with Freedom's OK, and nowhere else.
