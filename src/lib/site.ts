@@ -18,7 +18,7 @@ export const SITE = {
   // forms (usage audit, 2026-11-18). Public value (the widget's site key);
   // null hides the widget. submit-lead enforces it only once the secret
   // CLOUDFLARE_TURNSTILE_SECRET_KEY is set, so set this and deploy first.
-  turnstileSiteKey: null as string | null,
+  turnstileSiteKey: '0x4AAAAAAGHemvnfEHsbMuzv' as string | null,
 };
 
 // Freedom Counseling Services' lead-to-client rate, approved for publishing
