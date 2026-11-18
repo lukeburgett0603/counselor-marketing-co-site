@@ -5176,6 +5176,26 @@ html.cmc-admin[data-theme='light'] .bp-serp-t {
   border-color: var(--a-accent-soft);
 }
 
+/* CMC-ONLY (keep when syncing): the Call booked and Plan sent stages (CRM phase 3). */
+.a-view .bg-indigo-50 {
+  background: color-mix(in srgb, var(--a-cyan) 14%, transparent);
+}
+.a-view .text-indigo-800 {
+  color: var(--a-cyan);
+}
+.a-view .border-indigo-300 {
+  border-color: color-mix(in srgb, var(--a-cyan) 35%, transparent);
+}
+.a-view .bg-violet-50 {
+  background: color-mix(in srgb, var(--a-violet) 14%, transparent);
+}
+.a-view .text-violet-800 {
+  color: var(--a-violet);
+}
+.a-view .border-violet-300 {
+  border-color: color-mix(in srgb, var(--a-violet) 35%, transparent);
+}
+
 /* Native form controls inside screens. */
 .a-view input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']),
 .a-view select,

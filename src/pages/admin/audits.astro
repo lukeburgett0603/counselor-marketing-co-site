@@ -81,7 +81,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     followup_step: number;
     unsubscribed_at: string | null;
     lead_id: string | null;
-    lead: { status: string | null } | null;
+    lead: { status: string | null; followups_paused_at: string | null } | null;
   };
 
   const FOLLOWUPS = 5;
@@ -142,6 +142,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     if (a.status !== 'done') return '';
     if (a.unsubscribed_at) return '<span class="i-faint">Unsubscribed</span>';
     if (a.lead && ['scheduled', 'referred', 'withdrawn'].includes(a.lead.status ?? '')) return '<span class="i-faint">Stopped</span>';
+    if (a.lead?.followups_paused_at && a.followup_step < FOLLOWUPS) return `<span class="i-faint">Paused after ${a.followup_step}</span>`;
     if (a.followup_step >= FOLLOWUPS) return '<span class="i-muted">All 5 sent</span>';
     return `<span class="i-muted">${a.followup_step} of ${FOLLOWUPS} sent</span>`;
   }
@@ -186,7 +187,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   async function load() {
     const { data, error } = await supabase
       .from('audits')
-      .select('id, token, name, email, practice_input, practice_name, url, city, state, status, created_at, first_viewed_at, view_count, followup_step, unsubscribed_at, lead_id, lead:leads(status)')
+      .select('id, token, name, email, practice_input, practice_name, url, city, state, status, created_at, first_viewed_at, view_count, followup_step, unsubscribed_at, lead_id, lead:leads(status, followups_paused_at)')
       .order('created_at', { ascending: false });
     if (error) {
       document.getElementById('au-count')!.textContent = 'Could not load audits: ' + error.message;

@@ -7,7 +7,9 @@ import { supabase } from './supabase';
 // discipline on pulling a pattern into a shared module the second time it's
 // needed, rather than copy-pasting it again.
 
-export const LEAD_STATUSES = ['new', 'contacted', 'scheduled', 'referred', 'withdrawn'] as const;
+// CMC-ONLY (keep when syncing from the template): call_booked and plan_sent
+// are CMC's two sales stages (migration 0105). The template has five.
+export const LEAD_STATUSES = ['new', 'contacted', 'call_booked', 'plan_sent', 'scheduled', 'referred', 'withdrawn'] as const;
 
 // The two outcomes that mean "this lead is still active and needs
 // attention" are everything NOT in this set — kept as an explicit
@@ -23,6 +25,8 @@ export const TERMINAL_LEAD_STATUSES: readonly string[] = ['scheduled', 'referred
 export const STATUS_LABELS: Record<string, string> = {
   new: 'Waiting',
   contacted: 'Contacted',
+  call_booked: 'Call booked',
+  plan_sent: 'Plan sent',
   // CMC-ONLY labels (keep when syncing from the template): CMC's leads are
   // practices, so the stages read as a sales pipeline. Values are unchanged.
   scheduled: 'Became a client',
@@ -35,6 +39,8 @@ export const STATUS_LABELS: Record<string, string> = {
 export const STATUS_SELECT_CLASS: Record<string, string> = {
   new: 'border-amber-300 bg-amber-50 text-amber-800',
   contacted: 'border-sky-300 bg-sky-50 text-sky-800',
+  call_booked: 'border-indigo-300 bg-indigo-50 text-indigo-800',
+  plan_sent: 'border-violet-300 bg-violet-50 text-violet-800',
   scheduled: 'border-emerald-300 bg-emerald-50 text-emerald-800',
   referred: 'border-slate-300 bg-slate-50 text-slate-700',
   withdrawn: 'border-rose-300 bg-rose-50 text-rose-700',

@@ -43,6 +43,7 @@ interface Props {
     | 'content-plan'
     // CMC-only screens (see the CMC-ONLY MENU note below).
     | 'audits'
+    | 'sales-report'
     | 'testimonials'
     | 'directory';
 }
@@ -87,6 +88,7 @@ const ICONS: Record<string, string> = {
   partners: '<path d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm8 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM2 20c0-3 2.7-5 6-5s6 2 6 5m0-4.6c.6-.3 1.3-.4 2-.4 3.3 0 6 2 6 5"/>',
   inbox: '<path d="M3 13h5l1.5 3h5L16 13h5M5 5h14l2 8v6H3v-6z"/>',
   trends: '<path d="M4 19h16M7 15v-3m5 3V8m5 7v-5"/>',
+  funnel: '<path d="M4 5h16l-6 7v6l-4 2v-8z"/>',
   caseload: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5V12l6 6"/>',
   team: '<path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c.5-3.3 3.2-5 6.5-5s6 1.7 6.5 5M17 4.5a3.5 3.5 0 0 1 0 6.5M18.5 15c2 .6 3 2.3 3.2 5"/>',
   business: '<path d="M3 21h18M5 21V8l7-5 7 5v13M10 21v-5h4v5"/>',
@@ -126,6 +128,7 @@ const groups: { label?: string; items: NavItem[] }[] = [
       { key: 'crm', label: 'Inquiries', href: '/admin/crm', icon: 'inbox', badge: 'inquiries' },
       { key: 'audits', label: 'Audits', href: '/admin/audits', icon: 'audit' },
       { key: 'analytics-leads', label: 'Inquiry trends', href: '/admin/analytics/leads', icon: 'trends' },
+      { key: 'sales-report', label: 'Sales report', href: '/admin/sales-report', icon: 'funnel' },
     ],
   },
   {

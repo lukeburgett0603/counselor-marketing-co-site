@@ -1,0 +1,215 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<!--
+  CMC-only: the sales report (CRM phase 3, 2026-11-17). Where deals move
+  and where they leak, computed in the browser from leads, stage history
+  (lead_events, kind 'stage', since 0103), audits (to tell audit requests
+  apart) and deal values. Inquiries are counted by when they arrived, in the
+  chosen period. A deal that ended before stage history existed counts only
+  the stage it ended on.
+-->
+<AdminLayout title="Sales report | Admin" current="sales-report">
+  <div class="i-toolbar">
+    <p class="i-intro">Where prospects move, where they stop, and how fast deals close.</p>
+    <select id="sr-range" aria-label="Period">
+      <option value="30">Last 30 days</option>
+      <option value="90" selected>Last 90 days</option>
+      <option value="365">Last 12 months</option>
+      <option value="all">All time</option>
+    </select>
+  </div>
+
+  <div class="m-kpis">
+    <div class="t-kpi"><span class="t-lbl">Inquiries</span><span id="sr-total" class="t-v a-num">—</span><span id="sr-total-note" class="t-delta"></span></div>
+    <div class="t-kpi"><span class="t-lbl">Win rate</span><span id="sr-win" class="t-v a-num">—</span><span id="sr-win-note" class="t-delta"></span></div>
+    <div class="t-kpi"><span class="t-lbl">Time to first reply</span><span id="sr-reply" class="t-v a-num">—</span><span id="sr-reply-note" class="t-delta"></span></div>
+    <div class="t-kpi"><span class="t-lbl">Days to close</span><span id="sr-close" class="t-v a-num">—</span><span id="sr-close-note" class="t-delta"></span></div>
+  </div>
+
+  <div class="t-grid">
+    <section class="t-card t-s7">
+      <h2>How far prospects got<span class="t-aside">Inquiries in this period</span></h2>
+      <div id="sr-funnel" class="t-bars"></div>
+      <p class="i-hint q-note">Each bar counts everyone who reached that stage or a later one.</p>
+    </section>
+    <section class="t-card t-s5">
+      <h2>Open pipeline<span class="t-aside">Right now</span></h2>
+      <div id="sr-pipeline" class="t-bars"></div>
+      <p id="sr-pipeline-total" class="i-hint q-note"></p>
+    </section>
+    <section class="t-card t-s7">
+      <h2>Where clients come from</h2>
+      <div class="table-wrap"><table class="i-table">
+        <thead><tr><th>Source</th><th class="r-num">Inquiries</th><th class="r-num">Became clients</th><th class="r-num">Rate</th></tr></thead>
+        <tbody id="sr-sources"></tbody>
+      </table></div>
+    </section>
+    <section class="t-card t-s5">
+      <h2>Why deals ended<span class="t-aside">Not a fit or Lost</span></h2>
+      <div id="sr-reasons" class="t-bars"></div>
+    </section>
+  </div>
+</AdminLayout>
+
+<script>
+  import { initAdminAuth, supabase } from '../../lib/adminAuth';
+  import { STATUS_LABELS } from '../../lib/leadStatus';
+  import { money } from '../../lib/cmcPlans';
+
+  type Lead = {
+    id: string;
+    created_at: string;
+    status: string | null;
+    source_page: string | null;
+    lead_magnet_id: string | null;
+    first_contacted_at: string | null;
+    first_reply_at: string | null;
+    scheduled_at: string | null;
+    lost_reason: string | null;
+    deal_value: number | null;
+    name: string | null;
+  };
+  const RANK: Record<string, number> = { new: 0, contacted: 1, call_booked: 2, plan_sent: 3, scheduled: 4 };
+  const OPEN = ['new', 'contacted', 'call_booked', 'plan_sent'];
+  const REASONS: Record<string, string> = {
+    price: 'Price',
+    timing: 'Timing',
+    competitor: 'Went with someone else',
+    no_response: 'Stopped responding',
+    diy: 'Doing it themselves',
+    not_a_fit: 'Not a fit',
+    other: 'Other',
+  };
+  const $ = (id: string) => document.getElementById(id)!;
+  const esc = (v: string) => v.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+  const pct = (a: number, b: number) => (b ? `${Math.round((a / b) * 100)}%` : '—');
+  const median = (xs: number[]) => {
+    if (!xs.length) return null;
+    const s = [...xs].sort((a, b) => a - b);
+    const m = Math.floor(s.length / 2);
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  };
+  function duration(ms: number): string {
+    const h = ms / 3_600_000;
+    if (h < 1) return `${Math.max(1, Math.round(h * 60))} min`;
+    if (h < 48) return `${Math.round(h)} hr`;
+    return `${Math.round(h / 24)} days`;
+  }
+  function bars(rows: { label: string; n: number }[], max: number, value?: (n: number) => string): string {
+    if (!rows.length) return '<div class="t-empty"><b>Nothing yet.</b>This fills in as prospects move.</div>';
+    return rows
+      .map(
+        (r) =>
+          `<div class="t-bar"><span class="t-lbl">${esc(r.label)}</span><span class="t-track"><span class="t-fill" style="width:${max ? Math.round((r.n / max) * 100) : 0}%"></span></span><span class="a-num">${value ? value(r.n) : r.n}</span></div>`,
+      )
+      .join('');
+  }
+
+  let leads: Lead[] = [];
+  let reached = new Map<string, number>(); // furthest pipeline stage each lead reached
+  let auditLeads = new Set<string>();
+
+  function render() {
+    const range = (document.getElementById('sr-range') as HTMLSelectElement).value;
+    const since = range === 'all' ? '' : new Date(Date.now() - Number(range) * 86_400_000).toISOString();
+    const pool = leads.filter((l) => !since || l.created_at >= since);
+
+    $('sr-total').textContent = String(pool.length);
+    const wonCount = pool.filter((l) => (l.status ?? 'new') === 'scheduled').length;
+    $('sr-total-note').textContent = `${wonCount} became ${wonCount === 1 ? 'a client' : 'clients'}`;
+
+    // Win rate: of deals that ended, how many became clients.
+    const won = pool.filter((l) => l.status === 'scheduled');
+    const ended = pool.filter((l) => ['scheduled', 'referred', 'withdrawn'].includes(l.status ?? ''));
+    $('sr-win').textContent = pct(won.length, ended.length);
+    $('sr-win-note').textContent = ended.length ? `${won.length} of ${ended.length} decided` : 'No deals decided yet';
+
+    // First reply: the earlier of an email from Inquiries or leaving Waiting.
+    // Inquiries added by hand are logged after contact, so they're left out.
+    const replies = pool
+      .filter((l) => l.source_page !== 'Manually added')
+      .map((l) => {
+        const t = [l.first_reply_at, l.first_contacted_at].filter(Boolean).map((x) => Date.parse(x!));
+        return t.length ? Math.min(...t) - Date.parse(l.created_at) : null;
+      })
+      .filter((x): x is number => x != null && x >= 0);
+    const mr = median(replies);
+    $('sr-reply').textContent = mr == null ? '—' : duration(mr);
+    $('sr-reply-note').textContent = replies.length ? `Median of ${replies.length}` : 'No replies yet';
+
+    const closes = won.filter((l) => l.scheduled_at).map((l) => Date.parse(l.scheduled_at!) - Date.parse(l.created_at)).filter((x) => x >= 0);
+    const mc = median(closes);
+    $('sr-close').textContent = mc == null ? '—' : String(Math.max(0, Math.round(mc / 86_400_000)));
+    $('sr-close-note').textContent = closes.length ? `Median, inquiry to client (${closes.length})` : 'No clients yet';
+
+    // Funnel by furthest stage reached.
+    const stages = ['new', 'contacted', 'call_booked', 'plan_sent', 'scheduled'];
+    const funnel = stages.map((s) => ({
+      label: s === 'new' ? 'Reached out' : STATUS_LABELS[s],
+      n: pool.filter((l) => (reached.get(l.id) ?? 0) >= RANK[s]).length,
+    }));
+    $('sr-funnel').innerHTML = pool.length ? bars(funnel, pool.length, (n) => `${n}`) : bars([], 0);
+
+    // Open pipeline, right now, whatever the period.
+    const open = leads.filter((l) => OPEN.includes(l.status ?? 'new'));
+    const byStage = OPEN.map((s) => {
+      const these = open.filter((l) => (l.status ?? 'new') === s);
+      return { label: STATUS_LABELS[s], n: these.length, value: these.reduce((t, l) => t + (l.deal_value ?? 0), 0) };
+    });
+    $('sr-pipeline').innerHTML = open.length ? bars(byStage, Math.max(...byStage.map((b) => b.n), 1)) : bars([], 0);
+    const total = open.reduce((t, l) => t + (l.deal_value ?? 0), 0);
+    $('sr-pipeline-total').textContent = open.length
+      ? `${open.length} open, ${money(total)}/mo in plans being discussed${byStage.filter((b) => b.value).map((b) => ` · ${b.label} ${money(b.value)}`).join('')}`
+      : '';
+
+    // Sources.
+    const sourceOf = (l: Lead) =>
+      auditLeads.has(l.id) ? 'Caseload Audit' : l.source_page === 'Manually added' ? 'Added by hand' : l.source_page === 'caseload-calculator' ? 'Caseload Calculator' : 'Website form';
+    const groups = new Map<string, Lead[]>();
+    pool.forEach((l) => groups.set(sourceOf(l), [...(groups.get(sourceOf(l)) ?? []), l]));
+    const rows = [...groups.entries()].sort((a, b) => b[1].length - a[1].length);
+    $('sr-sources').innerHTML = rows.length
+      ? rows
+          .map(([name, ls]) => {
+            const c = ls.filter((l) => l.status === 'scheduled').length;
+            return `<tr><td>${esc(name)}</td><td class="r-num">${ls.length}</td><td class="r-num">${c}</td><td class="r-num">${pct(c, ls.length)}</td></tr>`;
+          })
+          .join('')
+      : '<tr><td colspan="4" class="i-faint">No inquiries in this period.</td></tr>';
+
+    // Reasons.
+    const lost = pool.filter((l) => ['referred', 'withdrawn'].includes(l.status ?? ''));
+    const counts = new Map<string, number>();
+    lost.forEach((l) => {
+      const k = l.lost_reason ? REASONS[l.lost_reason] : 'No reason recorded';
+      counts.set(k, (counts.get(k) ?? 0) + 1);
+    });
+    const reasonRows = [...counts.entries()].map(([label, n]) => ({ label, n })).sort((a, b) => b.n - a.n);
+    $('sr-reasons').innerHTML = bars(reasonRows, Math.max(...reasonRows.map((r) => r.n), 1));
+  }
+
+  async function load() {
+    const [l, e, a] = await Promise.all([
+      supabase
+        .from('leads')
+        .select('id, created_at, status, source_page, lead_magnet_id, first_contacted_at, first_reply_at, scheduled_at, lost_reason, deal_value, name')
+        .is('lead_magnet_id', null),
+      supabase.from('lead_events').select('lead_id, detail').eq('kind', 'stage'),
+      supabase.from('audits').select('lead_id').not('lead_id', 'is', null),
+    ]);
+    leads = ((l.data ?? []) as Lead[]).filter((x) => !/^zztest/i.test(x.name ?? ''));
+    reached = new Map();
+    for (const x of leads) reached.set(x.id, RANK[x.status ?? 'new'] ?? (x.first_contacted_at ? 1 : 0));
+    for (const ev of (e.data ?? []) as { lead_id: string; detail: { to?: string } }[]) {
+      const r = RANK[ev.detail?.to ?? ''];
+      if (r != null && r > (reached.get(ev.lead_id) ?? 0)) reached.set(ev.lead_id, r);
+    }
+    auditLeads = new Set(((a.data ?? []) as { lead_id: string }[]).map((x) => x.lead_id));
+    render();
+  }
+
+  document.getElementById('sr-range')!.addEventListener('change', render);
+  initAdminAuth(load, { allowedRoles: ['owner', 'agency'] });
+</script>

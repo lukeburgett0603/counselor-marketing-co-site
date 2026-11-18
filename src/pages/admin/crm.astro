@@ -35,7 +35,7 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
     <div class="r-kpis" id="cmc-pipeline">
       <div class="t-kpi"><span class="t-lbl">Open pipeline</span><span id="cmc-open" class="t-v a-num">—</span><span id="cmc-open-note" class="t-delta"></span></div>
       <div class="t-kpi"><span class="t-lbl">Won this month</span><span id="cmc-won" class="t-v a-num">—</span><span id="cmc-won-note" class="t-delta"></span></div>
-      <div class="t-kpi"><span class="t-lbl">Prospects with a plan</span><span id="cmc-priced" class="t-v a-num">—</span><span class="t-delta">Waiting or contacted</span></div>
+      <div class="t-kpi"><span class="t-lbl">Prospects with a plan</span><span id="cmc-priced" class="t-v a-num">—</span><span class="t-delta">Open prospects with a plan and value</span></div>
     </div>
 
     <!-- Status counts double as the status filter. -->
@@ -315,6 +315,17 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
             <b id="cmc-auto-state"></b>
             <button id="cmc-auto-toggle" type="button" class="a-link" hidden></button>
           </div>
+          <!-- CMC-ONLY (CRM phase 3): why it ended, or the client it became. -->
+          <div class="i-field" id="cmc-outcome" hidden>
+            <span>Why it ended</span>
+            <b id="cmc-outcome-text"></b>
+            <button id="cmc-outcome-edit" type="button" class="a-link">Edit</button>
+          </div>
+          <div class="i-field" id="cmc-won" hidden>
+            <span>Client list</span>
+            <b id="cmc-won-text"></b>
+            <button id="cmc-won-add" type="button" class="a-link" hidden>Add to client list</button>
+          </div>
         </section>
         <section class="t-card i-fields">
           <div class="i-field">
@@ -401,6 +412,60 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
         <span id="cmc-tpl-status" class="i-hint" role="status"></span>
       </div>
     </div>
+  </div>
+  <!-- CMC-ONLY (CRM phase 3): outcome and won-to-client dialogs. -->
+  <div id="cmc-outcome-modal" class="c-modal" hidden>
+    <form id="cmc-outcome-form" class="c-modal-box">
+      <div class="c-modal-head"><b id="cmc-outcome-title">Why didn't it go ahead?</b><button type="button" class="a-link" data-close>Skip</button></div>
+      <div class="i-field">
+        <label for="cmc-outcome-reason">Main reason</label>
+        <select id="cmc-outcome-reason" required>
+          <option value="">Choose one</option>
+          <option value="price">Price</option>
+          <option value="timing">Timing: not ready yet</option>
+          <option value="competitor">Went with someone else</option>
+          <option value="no_response">Stopped responding</option>
+          <option value="diy">Doing it themselves</option>
+          <option value="not_a_fit">Not a fit for what we do</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="i-field">
+        <label for="cmc-outcome-note">What happened (optional)</label>
+        <textarea id="cmc-outcome-note" rows="3" placeholder="Wants to revisit after the new year..."></textarea>
+      </div>
+      <div class="i-field">
+        <label for="cmc-outcome-date">Check back in on (optional)</label>
+        <div class="i-inline">
+          <input id="cmc-outcome-date" type="date" />
+          <button type="button" class="a-link" data-months="3">In 3 months</button>
+          <button type="button" class="a-link" data-months="6">In 6 months</button>
+        </div>
+        <span class="i-hint">Today reminds you on that date.</span>
+      </div>
+      <div class="i-inline">
+        <button type="submit" class="a-btn a-btn-primary i-btn">Save</button>
+        <span id="cmc-outcome-status" class="i-hint" role="status"></span>
+      </div>
+    </form>
+  </div>
+  <div id="cmc-won-modal" class="c-modal" hidden>
+    <form id="cmc-won-form" class="c-modal-box">
+      <div class="c-modal-head"><b>Add them to your client list</b><button type="button" class="a-link" data-close>Not now</button></div>
+      <p class="i-hint">Filled in from the inquiry. You can change any of it later in the Client list.</p>
+      <div class="i-field"><label for="cmc-won-name">Practice</label><input id="cmc-won-name" type="text" required /></div>
+      <div class="i-field">
+        <label for="cmc-won-plan">Plan</label>
+        <select id="cmc-won-plan"><option value="">Not set</option></select>
+      </div>
+      <div class="i-field"><label for="cmc-won-price">Plan price per month ($)</label><input id="cmc-won-price" type="number" min="0" step="1" inputmode="numeric" /></div>
+      <div class="i-field"><label for="cmc-won-start">Client since</label><input id="cmc-won-start" type="date" /></div>
+      <div class="i-field"><label for="cmc-won-url">Their dashboard address (optional)</label><input id="cmc-won-url" type="url" placeholder="https://theirpractice.com/admin" /></div>
+      <div class="i-inline">
+        <button type="submit" class="a-btn a-btn-primary i-btn">Add to client list</button>
+        <span id="cmc-won-status" class="i-hint" role="status"></span>
+      </div>
+    </form>
   </div>
 </AdminLayout>
 
@@ -1416,7 +1481,7 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
 
   function renderTotals() {
     const live = deals.filter((d) => !d.lead_magnet_id && !d.archived_at);
-    const open = live.filter((d) => ['new', 'contacted'].includes(d.status ?? 'new'));
+    const open = live.filter((d) => ['new', 'contacted', 'call_booked', 'plan_sent'].includes(d.status ?? 'new'));
     const openValue = open.reduce((s, d) => s + (d.deal_value ?? 0), 0);
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
@@ -1775,6 +1840,11 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
       else if (e.kind === 'followups_paused') out.push({ at: e.created_at, kind: 'auto', title: d.why === 'email' ? 'Automatic follow-ups paused (you emailed them)' : 'Automatic follow-ups paused', quiet: true });
       else if (e.kind === 'followups_resumed') out.push({ at: e.created_at, kind: 'auto', title: 'Automatic follow-ups resumed', quiet: true });
       else if (e.kind === 'call') out.push({ at: e.created_at, kind: 'call', title: CALL[String(d.outcome)] ?? 'Call', body: d.note ? String(d.note) : undefined });
+      else if (e.kind === 'outcome') {
+        const OUT: Record<string, string> = { price: 'Price', timing: 'Timing: not ready yet', competitor: 'Went with someone else', no_response: 'Stopped responding', diy: 'Doing it themselves', not_a_fit: 'Not a fit for what we do', other: 'Other' };
+        const back = d.check_back ? ` Check back ${new Date(String(d.check_back) + 'T12:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.` : '';
+        out.push({ at: e.created_at, kind: 'note', title: `Why it ended: ${OUT[String(d.reason)] ?? 'Other'}`, body: ((d.note ? String(d.note) : '') + back).trim() || undefined });
+      } else if (e.kind === 'client_added') out.push({ at: e.created_at, kind: 'auto', title: `Added to the client list as ${d.name ?? 'a client'}`, quiet: true });
     }
     return out.sort((a, b) => (a.at < b.at ? 1 : -1));
   }
@@ -2060,6 +2130,8 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
     await loadTimeline();
   }
 
+  document.addEventListener('cmc:timeline-changed', () => void loadTimeline());
+
   // A stage change from the shared select lands on the timeline (trigger in 0103).
   $('detail-status-container').addEventListener('change', () => setTimeout(() => void refreshLead(), 700));
 
@@ -2105,5 +2177,213 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
       void loadUnread();
       if (!templates.length) void loadTemplates();
     }
+  });
+</script>
+
+<!-- CMC-ONLY (keep when syncing from the template): CRM phase 3 (2026-11-17,
+     migration 0105). Not a fit / Lost ask why and when to check back;
+     Became a client offers to add them to the Client list (client_sites,
+     linked by lead_id). Works for a stage changed from the list or from an
+     open inquiry. -->
+<style is:global>
+  #i-pipeline {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .i-chip-call_booked b {
+    color: var(--a-cyan);
+  }
+  .i-chip-plan_sent b {
+    color: var(--a-violet);
+  }
+  @media (max-width: 640px) {
+    #i-pipeline {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+</style>
+
+<script>
+  import { supabase } from '../../lib/adminAuth';
+  import { PLANS, money } from '../../lib/cmcPlans';
+
+  const REASONS: Record<string, string> = {
+    price: 'Price',
+    timing: 'Timing: not ready yet',
+    competitor: 'Went with someone else',
+    no_response: 'Stopped responding',
+    diy: 'Doing it themselves',
+    not_a_fit: 'Not a fit for what we do',
+    other: 'Other',
+  };
+  type Lead = {
+    id: string;
+    name: string | null;
+    status: string | null;
+    lost_reason: string | null;
+    lost_note: string | null;
+    check_back_date: string | null;
+    deal_plan: string | null;
+    deal_value: number | null;
+  };
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+  // Local calendar date (toISOString is UTC, a day ahead in US evenings).
+  const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const today = () => ymd(new Date());
+  let me: string | null = null;
+  let openId: string | null = null; // the inquiry open in the detail view
+  let target: Lead | null = null; // the inquiry a dialog is about
+  let client: { id: string; name: string } | null = null;
+
+  supabase.auth.onAuthStateChange((_e, session) => {
+    if (session) me = session.user.id;
+  });
+
+  async function fetchLead(id: string): Promise<Lead | null> {
+    const { data } = await supabase
+      .from('leads')
+      .select('id, name, status, lost_reason, lost_note, check_back_date, deal_plan, deal_value')
+      .eq('id', id)
+      .maybeSingle();
+    return (data as Lead) ?? null;
+  }
+  async function fetchClient(id: string) {
+    const { data } = await supabase.from('client_sites').select('id, name').eq('lead_id', id).maybeSingle();
+    return data as { id: string; name: string } | null;
+  }
+
+  // ------------------------------------------------------------ side panel
+  async function renderSide() {
+    if (!openId) return;
+    const lead = await fetchLead(openId);
+    if (!lead || lead.id !== openId) return;
+    const ended = lead.status === 'referred' || lead.status === 'withdrawn';
+    $('cmc-outcome').hidden = !ended;
+    if (ended) {
+      const parts = [lead.lost_reason ? REASONS[lead.lost_reason] : 'No reason given'];
+      if (lead.lost_note) parts.push(lead.lost_note);
+      if (lead.check_back_date) parts.push(`Check back ${new Date(lead.check_back_date + 'T12:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`);
+      $('cmc-outcome-text').textContent = parts.join(' · ');
+    }
+    const won = lead.status === 'scheduled';
+    $('cmc-won').hidden = !won;
+    if (won) {
+      client = await fetchClient(lead.id);
+      $('cmc-won-text').textContent = client ? `On the list as ${client.name}` : 'Not on the list yet';
+      $('cmc-won-add').hidden = !!client;
+    }
+  }
+
+  // ------------------------------------------------------------ dialogs
+  const outcomeModal = $('cmc-outcome-modal');
+  const wonModal = $('cmc-won-modal');
+  const reason = $<HTMLSelectElement>('cmc-outcome-reason');
+  const note = $<HTMLTextAreaElement>('cmc-outcome-note');
+  const checkBack = $<HTMLInputElement>('cmc-outcome-date');
+
+  function openOutcome(lead: Lead) {
+    target = lead;
+    $('cmc-outcome-title').textContent = `Why didn't ${lead.name?.trim() || 'this one'} go ahead?`;
+    reason.value = lead.lost_reason ?? (lead.status === 'referred' ? 'not_a_fit' : '');
+    note.value = lead.lost_note ?? '';
+    checkBack.value = lead.check_back_date ?? '';
+    $('cmc-outcome-status').textContent = '';
+    outcomeModal.hidden = false;
+    reason.focus();
+  }
+  outcomeModal.querySelectorAll<HTMLButtonElement>('[data-months]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const d = new Date();
+      d.setMonth(d.getMonth() + Number(b.dataset.months));
+      checkBack.value = ymd(d);
+    }),
+  );
+  $('cmc-outcome-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!target || !reason.value) return;
+    const update = { lost_reason: reason.value, lost_note: note.value.trim() || null, check_back_date: checkBack.value || null };
+    const { error } = await supabase.from('leads').update(update).eq('id', target.id);
+    if (error) return void ($('cmc-outcome-status').textContent = 'Could not save: ' + error.message);
+    await supabase
+      .from('lead_events')
+      .insert({ lead_id: target.id, kind: 'outcome', detail: { reason: update.lost_reason, note: update.lost_note, check_back: update.check_back_date }, created_by: me });
+    outcomeModal.hidden = true;
+    if (target.id === openId) void renderSide();
+    document.dispatchEvent(new CustomEvent('cmc:timeline-changed'));
+  });
+
+  async function openWon(lead: Lead) {
+    target = lead;
+    if (await fetchClient(lead.id)) return; // already on the list
+    const { data: audit } = await supabase
+      .from('audits')
+      .select('practice_name, practice_input')
+      .eq('lead_id', lead.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const plan = $<HTMLSelectElement>('cmc-won-plan');
+    if (plan.options.length === 1) plan.insertAdjacentHTML('beforeend', PLANS.map((p) => `<option value="${p.value}">${p.label}${p.price ? ` (${money(p.price)}/mo)` : ''}</option>`).join(''));
+    $<HTMLInputElement>('cmc-won-name').value = audit?.practice_name ?? audit?.practice_input ?? lead.name ?? '';
+    plan.value = lead.deal_plan ?? '';
+    $<HTMLInputElement>('cmc-won-price').value = lead.deal_value != null ? String(lead.deal_value) : '';
+    $<HTMLInputElement>('cmc-won-start').value = today();
+    $<HTMLInputElement>('cmc-won-url').value = '';
+    $('cmc-won-status').textContent = '';
+    wonModal.hidden = false;
+  }
+  $<HTMLSelectElement>('cmc-won-plan').addEventListener('change', (e) => {
+    const p = PLANS.find((x) => x.value === (e.target as HTMLSelectElement).value);
+    if (p?.price) $<HTMLInputElement>('cmc-won-price').value = String(p.price);
+  });
+  $('cmc-won-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!target) return;
+    const price = $<HTMLInputElement>('cmc-won-price').value;
+    const row = {
+      lead_id: target.id,
+      name: $<HTMLInputElement>('cmc-won-name').value.trim(),
+      plan: $<HTMLSelectElement>('cmc-won-plan').value || null,
+      monthly_price: price ? Math.max(0, Math.round(Number(price))) : null,
+      start_date: $<HTMLInputElement>('cmc-won-start').value || null,
+      admin_url: $<HTMLInputElement>('cmc-won-url').value.trim() || null,
+      status: 'active',
+    };
+    if (!row.name) return;
+    const { error } = await supabase.from('client_sites').insert(row);
+    if (error) return void ($('cmc-won-status').textContent = 'Could not add: ' + error.message);
+    await supabase.from('lead_events').insert({ lead_id: target.id, kind: 'client_added', detail: { name: row.name }, created_by: me });
+    wonModal.hidden = true;
+    if (target.id === openId) void renderSide();
+    document.dispatchEvent(new CustomEvent('cmc:timeline-changed'));
+  });
+
+  $('cmc-outcome-edit').addEventListener('click', async () => {
+    const lead = openId ? await fetchLead(openId) : null;
+    if (lead) openOutcome(lead);
+  });
+  $('cmc-won-add').addEventListener('click', async () => {
+    const lead = openId ? await fetchLead(openId) : null;
+    if (lead) void openWon(lead);
+  });
+
+  // A stage change anywhere on the page (list row or open inquiry). The
+  // shared handler saves the stage; wait for it, then ask.
+  document.addEventListener('change', (e) => {
+    const select = e.target as HTMLSelectElement;
+    if (!select.classList?.contains('status-select')) return;
+    const id = select.dataset.leadId!;
+    const value = select.value;
+    setTimeout(async () => {
+      const lead = await fetchLead(id);
+      if (!lead || lead.status !== value) return; // the save failed or was undone
+      if (value === 'referred' || value === 'withdrawn') openOutcome(lead);
+      else if (value === 'scheduled') void openWon(lead);
+      if (id === openId) void renderSide();
+    }, 600);
+  });
+
+  document.addEventListener('cmc:lead-opened', (e) => {
+    openId = (e as CustomEvent<string>).detail;
+    void renderSide();
   });
 </script>

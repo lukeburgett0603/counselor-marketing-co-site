@@ -67,7 +67,7 @@ import { MONTHLY_ADDONS, PLANS } from '../../lib/cmcPlans';
         </div>
         <div>
           <label for="cd-url" class="block text-xs font-semibold text-slate-500">Dashboard address</label>
-          <input id="cd-url" name="admin_url" type="url" required placeholder="https://clientdomain.com/admin" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+          <input id="cd-url" name="admin_url" type="url" placeholder="https://clientdomain.com/admin" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
@@ -126,7 +126,7 @@ import { MONTHLY_ADDONS, PLANS } from '../../lib/cmcPlans';
   type Client = {
     id: string;
     name: string;
-    admin_url: string;
+    admin_url: string | null;
     notes: string | null;
     plan: string | null;
     monthly_price: number | null;
@@ -163,7 +163,7 @@ import { MONTHLY_ADDONS, PLANS } from '../../lib/cmcPlans';
     document.getElementById('cd-empty')!.hidden = rows.length > 0;
     document.getElementById('cd-body')!.innerHTML = rows
       .map((c) => {
-        const safe = /^https?:\/\//i.test(c.admin_url.trim());
+        const safe = /^https?:\/\//i.test((c.admin_url ?? '').trim());
         const addons = (c.addons ?? []).map((a) => MONTHLY_ADDONS.find((x) => x.value === a)?.label).filter(Boolean);
         const statusTag = c.status === 'active' ? '' : ` <span class="i-tag">${c.status === 'paused' ? 'Paused' : 'Ended'}</span>`;
         return `<tr data-edit="${c.id}" class="cd-row ${c.status === 'ended' ? 'i-archived' : ''}">
@@ -171,7 +171,7 @@ import { MONTHLY_ADDONS, PLANS } from '../../lib/cmcPlans';
           <td class="i-hide-sm i-muted">${esc(planLabel(c.plan) || 'Not set')}</td>
           <td class="r-num">${monthly(c) ? money(monthly(c)) : '<span class="i-faint">—</span>'}</td>
           <td class="i-hide-md i-muted">${c.start_date ? new Date(c.start_date + 'T12:00').toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : ''}</td>
-          <td class="r-num" data-no-edit>${safe ? `<a class="a-btn i-btn" href="${esc(c.admin_url.trim())}" target="_blank" rel="noopener">Open dashboard</a>` : ''}</td>
+          <td class="r-num" data-no-edit>${safe ? `<a class="a-btn i-btn" href="${esc((c.admin_url ?? '').trim())}" target="_blank" rel="noopener">Open dashboard</a>` : ''}</td>
         </tr>`;
       })
       .join('');
@@ -186,7 +186,7 @@ import { MONTHLY_ADDONS, PLANS } from '../../lib/cmcPlans';
     if (c) {
       const f = form.elements as unknown as Record<string, HTMLInputElement>;
       f.name.value = c.name;
-      f.admin_url.value = c.admin_url;
+      f.admin_url.value = c.admin_url ?? '';
       f.plan.value = c.plan ?? '';
       f.monthly_price.value = c.monthly_price != null ? String(c.monthly_price) : '';
       f.start_date.value = c.start_date ?? '';
@@ -226,7 +226,7 @@ import { MONTHLY_ADDONS, PLANS } from '../../lib/cmcPlans';
     const text = (k: string) => ((data.get(k) as string) ?? '').trim() || null;
     const row = {
       name: text('name') ?? '',
-      admin_url: text('admin_url') ?? '',
+      admin_url: text('admin_url'),
       plan: text('plan'),
       monthly_price: text('monthly_price') != null ? Math.max(0, Math.round(Number(text('monthly_price')))) : null,
       addons: data.getAll('addons') as string[],
@@ -234,7 +234,7 @@ import { MONTHLY_ADDONS, PLANS } from '../../lib/cmcPlans';
       status: (data.get('status') as Client['status']) ?? 'active',
       notes: text('notes'),
     };
-    if (!row.name || !row.admin_url) return;
+    if (!row.name) return;
     const q = editing ? supabase.from('client_sites').update(row).eq('id', editing).select().single() : supabase.from('client_sites').insert(row).select().single();
     const { data: saved, error } = await q;
     if (error) {

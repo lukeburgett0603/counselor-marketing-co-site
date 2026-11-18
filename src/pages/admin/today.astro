@@ -33,7 +33,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   import { initAdminAuth, supabase, type AdminUser } from '../../lib/adminAuth';
   import { withBase } from '../../lib/url';
 
-  type Lead = { id: string; name: string | null; created_at: string; status: string | null; follow_up_date: string | null; lead_magnet_id: string | null; next_step: string | null; unread_reply_at: string | null };
+  type Lead = { id: string; name: string | null; created_at: string; status: string | null; follow_up_date: string | null; lead_magnet_id: string | null; next_step: string | null; unread_reply_at: string | null; check_back_date: string | null };
   type Audit = {
     id: string;
     token: string;
@@ -88,7 +88,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const [l, a, k] = await Promise.all([
-      supabase.from('leads').select('id, name, created_at, status, follow_up_date, lead_magnet_id, next_step, unread_reply_at').is('archived_at', null).order('created_at', { ascending: false }).limit(500),
+      supabase.from('leads').select('id, name, created_at, status, follow_up_date, lead_magnet_id, next_step, unread_reply_at, check_back_date').is('archived_at', null).order('created_at', { ascending: false }).limit(500),
       supabase.from('audits').select('id, token, name, practice_name, practice_input, status, created_at, first_viewed_at, lead_id, lead:leads(status)').order('created_at', { ascending: false }).limit(200),
       supabase.from('link_opportunities').select('id, name, status, next_step_date'),
     ]);
@@ -156,6 +156,10 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         link: `${crm}?lead=${x.id}`,
         linkText: 'Open',
       });
+    }
+    // CRM phase 3: a lost or not-a-fit prospect whose check-back date has come.
+    for (const x of leads.filter((y) => y.check_back_date && y.check_back_date <= today && ['referred', 'withdrawn'].includes(y.status ?? '')).slice(0, 3)) {
+      moves.push({ title: `Check back in with ${nameOf(x)}`, sub: 'The date you set when it didn\'t go ahead has come.', tag: 'Inquiry', link: `${crm}?lead=${x.id}`, linkText: 'Open' });
     }
     // Every open prospect should have a next step; flag the ones that don't.
     for (const x of leads.filter((y) => y.status && !['new'].includes(y.status) && !closed(y.status) && !y.follow_up_date).slice(0, 3)) {

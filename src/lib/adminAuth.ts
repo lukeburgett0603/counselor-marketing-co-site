@@ -46,6 +46,7 @@ const ROLE_NAV_ACCESS: Record<AdminUser['role'], string[]> = {
     'links',
     // CMC-only screens; keep when syncing from the template.
     'audits',
+    'sales-report',
     'testimonials',
     'directory',
     'review-program',
@@ -75,6 +76,7 @@ const ROLE_NAV_ACCESS: Record<AdminUser['role'], string[]> = {
     'links',
     // CMC-only screens; keep when syncing from the template.
     'audits',
+    'sales-report',
     'testimonials',
     'directory',
     'review-program',

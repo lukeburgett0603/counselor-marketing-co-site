@@ -2472,6 +2472,13 @@ emails" and "a full CRM for our own sales"); the code map is here.
   else Luke's inbox), used by send-lead-email, request-audit and
   send-audit-followups. get-audit and send-audit-followups also write
   timeline events.
+- **CRM phase 3 (migration 0105):** seven stages in `src/lib/leadStatus.ts`
+  (CMC-only `call_booked`, `plan_sent`; colors overridden for the dark admin in
+  `admin.css`), `lost_reason` / `lost_note` / `check_back_date`, and
+  `client_sites.lead_id`. The outcome and add-to-client-list dialogs are the
+  last CMC-ONLY script in `crm.astro`; it listens for any `.status-select`
+  change. The Sales report is CMC-only `src/pages/admin/sales-report.astro`
+  (menu key `sales-report` in `AdminLayout.astro` and `adminAuth.ts`).
 - **Production database and function changes are blocked in auto mode**; switch
   to Manual mode so Luke approves each command.
 - **Freedom case study** (`src/pages/results/freedom-counseling-services.astro`,
