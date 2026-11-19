@@ -4,6 +4,8 @@
 // already-fetched array" reason getCounselorOptions/getAuthorHeadshot
 // are split out of pages.ts rather than inlined at each call site.
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 export interface TargetKeyword {
   id: string;
   keyword: string;
@@ -105,4 +107,50 @@ export function latestGapBatch(snapshots: GapSnapshot[]): GapSnapshot[] {
   // date only (not exact ms) to tolerate any tiny per-row insert drift.
   const latestDate = new Date(latestCheckedAt).toDateString();
   return snapshots.filter((s) => new Date(s.checked_at).toDateString() === latestDate);
+}
+
+// ---------------------------------------------------------------------------
+// History windows (2026-11-18). Ranking and competitor-gap history grow every
+// week (Freedom: about 77 ranking rows and 96 gap rows a week) and a Supabase
+// request returns at most 1,000 rows. Fetching the whole history on every
+// visit would quietly cut rows off (ranking history crosses 1,000 within a
+// few months) and download more each week for nothing. Screens fetch only the
+// window they show, counted back from the newest check (not from today), so
+// a paused weekly refresh still shows the last results.
+
+const DAY_MS = 86_400_000;
+const PAGE = 1000;
+
+async function windowStart(supabase: SupabaseClient, table: string, days: number): Promise<string | null> {
+  const { data } = await supabase.from(table).select('checked_at').order('checked_at', { ascending: false }).limit(1);
+  const newest = (data?.[0] as { checked_at?: string } | undefined)?.checked_at;
+  return newest ? new Date(new Date(newest).getTime() - days * DAY_MS).toISOString() : null;
+}
+
+async function rowsSince<T>(supabase: SupabaseClient, table: string, columns: string, since: string): Promise<T[]> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from(table)
+      .select(columns)
+      .gte('checked_at', since)
+      .order('checked_at', { ascending: false })
+      .order('id', { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    rows.push(...((data ?? []) as T[]));
+    if (!data || data.length < PAGE) return rows;
+  }
+}
+
+/** Ranking rows (newest first) from the newest check back `days` days. */
+export async function fetchRankHistory<T = RankSnapshot>(supabase: SupabaseClient, days: number, columns = '*'): Promise<T[]> {
+  const since = await windowStart(supabase, 'keyword_rank_snapshots', days);
+  return since ? rowsSince<T>(supabase, 'keyword_rank_snapshots', columns, since) : [];
+}
+
+/** Competitor-gap rows from the latest weekly run only (what the page shows). */
+export async function fetchLatestGapRows(supabase: SupabaseClient): Promise<GapSnapshot[]> {
+  const since = await windowStart(supabase, 'keyword_gap_snapshots', 1);
+  return since ? latestGapBatch(await rowsSince<GapSnapshot>(supabase, 'keyword_gap_snapshots', '*', since)) : [];
 }

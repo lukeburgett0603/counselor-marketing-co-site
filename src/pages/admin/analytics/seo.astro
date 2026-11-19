@@ -116,6 +116,8 @@ import { withBase } from '../../../lib/url';
     normalizeKeyword,
     keywordsWithNoPage,
     latestGapBatch,
+    fetchRankHistory,
+    fetchLatestGapRows,
     type TargetKeyword,
     type RankSnapshot,
     type GapSnapshot,
@@ -489,9 +491,10 @@ import { withBase } from '../../../lib/url';
   }
 
   async function loadKeywordsAndSnapshots() {
-    const [{ data: keywordsData, error }, { data: snapshotsData }] = await Promise.all([
+    // Only the weeks the sparklines show (HISTORY checks, plus a spare week).
+    const [{ data: keywordsData, error }, snapshotsData] = await Promise.all([
       supabase.from('target_keywords').select('*').order('keyword', { ascending: true }),
-      supabase.from('keyword_rank_snapshots').select('*').order('checked_at', { ascending: false }),
+      fetchRankHistory(supabase, (HISTORY + 1) * 7).catch(() => [] as RankSnapshot[]),
     ]);
     if (error) {
       keywordsList.innerHTML = `<li class="i-hint r-err">Could not load tracked searches: ${escapeHtml(error.message)}</li>`;
@@ -504,8 +507,7 @@ import { withBase } from '../../../lib/url';
   }
 
   async function loadGapSnapshots() {
-    const { data } = await supabase.from('keyword_gap_snapshots').select('*').order('checked_at', { ascending: false });
-    gapSnapshots = (data as GapSnapshot[]) ?? [];
+    gapSnapshots = await fetchLatestGapRows(supabase).catch(() => [] as GapSnapshot[]);
     renderGapTable();
   }
 
