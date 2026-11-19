@@ -164,15 +164,19 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: 'Name and email are required' }, 400);
   }
 
-  // Honeypot: a real visitor never sees or fills this field (see
-  // LeadGenerator.astro's markup comment), so any non-empty value here is
-  // an unsophisticated bot that fills in every input it finds. Reported
-  // back as a normal success — never tipping the bot off that it was
-  // caught — but the lead is never actually inserted.
+  // Honeypot (hidden field `hp_website` in the request; the form's input is
+  // named hp_leave_blank so browser autofill never fills it). Changed
+  // 2026-11-18: Chrome autofilled the old input (named "hp_website") on a
+  // real audit request, and the inquiry was silently thrown away. Now the
+  // honeypot only decides when Turnstile isn't set up; when it is, a real
+  // Turnstile pass below wins and the inquiry is saved.
   const honeypotValue = typeof body.hp_website === 'string' ? body.hp_website.trim() : '';
-  if (honeypotValue) {
+  const turnstileConfigured = !!Deno.env.get('CLOUDFLARE_TURNSTILE_SECRET_KEY');
+  if (honeypotValue && !turnstileConfigured) {
+    console.warn('submit-lead: honeypot filled, inquiry dropped (no Turnstile on this project)');
     return jsonResponse({ ok: true });
   }
+  if (honeypotValue) console.warn('submit-lead: honeypot filled; Turnstile decides');
 
   // Turnstile: only enforced when this project has a secret key configured
   // (i.e. the client opted in via Cloudflare's dashboard). Unlike the

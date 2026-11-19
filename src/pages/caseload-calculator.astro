@@ -106,7 +106,7 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
       <form class="calc-capture card p-6 sm:p-8" novalidate>
           <p class="font-semibold text-ink">Want a plan to fill those <span data-out="open">12</span> spots?</p>
           <div class="absolute -left-[9999px] h-px w-px overflow-hidden" aria-hidden="true">
-            <input type="text" name="hp_website" tabindex="-1" autocomplete="off" />
+            <input type="text" name="hp_leave_blank" tabindex="-1" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore />
           </div>
           <div class="mt-4 flex flex-col gap-3 sm:flex-row lg:flex-col xl:flex-row">
             <label class="flex-1">
@@ -229,7 +229,7 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
         apikey: import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
         Authorization: `Bearer ${import.meta.env.PUBLIC_SUPABASE_ANON_KEY}`,
       },
-      body: JSON.stringify({ name: email, email, message, source_page: 'caseload-calculator', hp_website: fd.get('hp_website') || '', turnstile_token: turnstileToken }),
+      body: JSON.stringify({ name: email, email, message, source_page: 'caseload-calculator', hp_website: fd.get('hp_leave_blank') || '', turnstile_token: turnstileToken }),
     });
     status.textContent = res.ok ? "Sent. Watch your inbox for your numbers and a plan." : 'Something went wrong. Please try again.';
     if (res.ok) capture.reset();

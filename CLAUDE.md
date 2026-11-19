@@ -2512,3 +2512,14 @@ emails" and "a full CRM for our own sales"); the code map is here.
   step skips the check by design (tokens are single-use) and request-audit
   only runs for a lead created in the last 2 hours.
 - **Check:** `npm run build && npm run check:usage`.
+
+## Honeypot autofill fix (2026-11-18)
+
+**Fixed 2026-11-18: autofill tripped the honeypot.** Chrome autofilled the
+hidden input named `hp_website` (it looks like a "website" field) on a real
+audit request, so submit-lead returned `{ok:true}` and silently threw the
+inquiry away. The input is now named `hp_leave_blank` (with password-manager
+ignore attributes); the request key stays `hp_website`. submit-lead now only
+drops on the honeypot when Turnstile isn't configured; with Turnstile set, a
+real Turnstile pass saves the inquiry. Never give the honeypot a name or
+label autofill recognizes (website, url, company, phone, address).

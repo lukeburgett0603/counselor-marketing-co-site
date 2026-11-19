@@ -115,7 +115,7 @@ const Wrapper = embedded ? 'div' : 'section';
         just gives that check something to catch.
       */}
       <div class="absolute -left-[9999px] h-px w-px overflow-hidden" aria-hidden="true">
-        <input type="text" name="hp_website" tabindex="-1" autocomplete="off" />
+        <input type="text" name="hp_leave_blank" tabindex="-1" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore />
       </div>
       <input
         name="name"
@@ -234,7 +234,7 @@ const Wrapper = embedded ? 'div' : 'section';
         // them), filled in by an unsophisticated bot. submit-lead is what
         // actually acts on this; see the field's own comment in the
         // markup above for why enforcement can't live only here.
-        hp_website: formData.get('hp_website') || '',
+        hp_website: formData.get('hp_leave_blank') || '',
         // Present only when this instance rendered the Turnstile widget
         // (Cloudflare's script inserts this hidden input itself inside
         // the .cf-turnstile div) — null when Turnstile isn't configured

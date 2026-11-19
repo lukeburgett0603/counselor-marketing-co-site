@@ -42,7 +42,7 @@ const magnet = await getLeadMagnetForPage(pageId);
               {/* Honeypot — same pattern as LeadGenerator.astro, see that
                   component's own comment for why enforcement is server-side. */}
               <div class="absolute -left-[9999px] h-px w-px overflow-hidden" aria-hidden="true">
-                <input type="text" name="hp_website" tabindex="-1" autocomplete="off" />
+                <input type="text" name="hp_leave_blank" tabindex="-1" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore />
               </div>
               <input
                 name="name"
@@ -142,7 +142,7 @@ const magnet = await getLeadMagnetForPage(pageId);
           email: formData.get('email'),
           source_page: window.location.pathname,
           lead_magnet_id: form.dataset.magnetId,
-          hp_website: formData.get('hp_website') || '',
+          hp_website: formData.get('hp_leave_blank') || '',
           turnstile_token: turnstileToken,
         }),
       });

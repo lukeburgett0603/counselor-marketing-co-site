@@ -21,7 +21,7 @@ const { sourcePage, heading = 'Get your free Caseload Audit', lead = 'A personal
     <h2 class="text-xl font-semibold tracking-[-0.02em] text-ink">{heading}</h2>
     <p class="mt-1 text-[15px] text-muted">{lead}</p>
     <div class="absolute -left-[9999px] h-px w-px overflow-hidden" aria-hidden="true">
-      <input type="text" name="hp_website" tabindex="-1" autocomplete="off" />
+      <input type="text" name="hp_leave_blank" tabindex="-1" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore />
     </div>
     <input type="hidden" name="plan" value="" />
     <div class="mt-5 space-y-4">
@@ -216,7 +216,7 @@ const { sourcePage, heading = 'Get your free Caseload Audit', lead = 'A personal
         existing_website_url: fd.get('practice'),
         message: fd.get('plan') ? `Plan interest: ${fd.get('plan')}` : null,
         source_page: root.dataset.sourcePage,
-        hp_website: fd.get('hp_website') || '',
+        hp_website: fd.get('hp_leave_blank') || '',
         turnstile_token: turnstileToken,
       });
       button.disabled = false;
