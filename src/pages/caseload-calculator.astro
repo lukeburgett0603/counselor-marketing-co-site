@@ -1,6 +1,7 @@
 ---
 // rebuild/copy/20-caseload-calculator.md. Free tool; the math matches the
-// platform's caseload meter (CASELOAD_MULTIPLIER = 1.5) exactly. Results
+// platform's default caseload rule (CASELOAD_MULTIPLIER = 2.0 since
+// 2026-11-20; on the platform each counselor can also set their own). Results
 // are ungated; the email capture below is optional.
 import SiteLayout from '../layouts/SiteLayout.astro';
 import PageHero from '../components/site/PageHero.astro';
@@ -17,8 +18,8 @@ const description =
   'How many open spots do you really have, and what are they worth? A free calculator for counselors and therapists, using the same caseload math our platform uses.';
 const faqs = [
   {
-    q: 'Why multiply by 1.5?',
-    a: "Not every client comes weekly. Some come every other week or monthly, so a counselor seeing 20 clients a week usually has closer to 30 on their caseload. It's a rule of thumb, not an exact figure.",
+    q: 'Why multiply by 2?',
+    a: "Not every client comes weekly. Some come every other week or monthly, and some sessions get cancelled, so a counselor seeing 20 clients a week usually carries around 40 on their caseload. It's a rule of thumb, not an exact figure. On our platform, each counselor can set their own number.",
   },
   { q: 'Is the 20-session default realistic?', a: "It's a rough estimate. If you know your own average from your EHR, use it." },
   { q: 'Does this include no-shows?', a: "No. It's a simple estimate. Your actual numbers will be a bit lower." },
@@ -75,12 +76,12 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
           <div class="grid flex-1 grid-cols-2 divide-x divide-line">
             <div class="p-6">
               <p class="text-sm text-muted">Your full caseload</p>
-              <p class="mt-1 font-mono text-4xl font-medium tracking-tight text-ink"><span data-out="full">30</span></p>
-              <p class="mt-1 text-xs text-muted">Clients per week × 1.5</p>
+              <p class="mt-1 font-mono text-4xl font-medium tracking-tight text-ink"><span data-out="full">40</span></p>
+              <p class="mt-1 text-xs text-muted">Clients per week × 2</p>
             </div>
             <div class="p-6">
               <p class="text-sm text-muted">Open spots</p>
-              <p class="mt-1 font-mono text-4xl font-medium tracking-tight text-accent"><span data-out="open">12</span></p>
+              <p class="mt-1 font-mono text-4xl font-medium tracking-tight text-accent"><span data-out="open">22</span></p>
             </div>
           </div>
           <div class="flex flex-1 flex-col justify-center p-6">
@@ -90,7 +91,7 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
           </div>
           <div class="flex flex-1 flex-col justify-center p-6" data-when="open">
             <p class="text-sm text-muted">Filling your open spots</p>
-            <p class="mt-1 font-mono text-3xl font-medium tracking-tight text-ink"><span data-out="monthlyGap">$4,500</span><span class="text-lg text-muted"> a month</span></p>
+            <p class="mt-1 font-mono text-3xl font-medium tracking-tight text-ink"><span data-out="monthlyGap">$6,190</span><span class="text-lg text-muted"> a month</span></p>
           </div>
           <div class="flex flex-1 flex-col justify-center p-6" data-when="full" style="display: none">
             <p class="text-lg font-semibold text-ink">You're full. Nice work.</p>
@@ -104,7 +105,7 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
       </div>
 
       <form class="calc-capture card p-6 sm:p-8" novalidate>
-          <p class="font-semibold text-ink">Want a plan to fill those <span data-out="open">12</span> spots?</p>
+          <p class="font-semibold text-ink">Want a plan to fill those <span data-out="open">22</span> spots?</p>
           <div class="absolute -left-[9999px] h-px w-px overflow-hidden" aria-hidden="true">
             <input type="text" name="hp_leave_blank" tabindex="-1" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore />
           </div>
@@ -131,14 +132,14 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
   <Section title="How the calculator works" narrow>
     <div class="space-y-4 text-[17px] text-muted">
       <p>
-        Your full caseload is the number of clients you want to see each week, times 1.5, because some clients come every other week
-        or monthly. Open spots are your full caseload minus your current clients.
+        Your full caseload is the number of clients you want to see each week, times 2, because some clients come every other week
+        or monthly and some sessions get cancelled. Open spots are your full caseload minus your current clients.
       </p>
       <p>
         One new client's value is your fee times the average number of sessions in a course of treatment. The monthly figure assumes
-        each client on a full caseload averages about 2.9 sessions a month (4.33 weeks divided by 1.5).
+        each client on a full caseload averages about 2.2 sessions a month (4.33 weeks divided by 2).
       </p>
-      <p>It's the same formula our dashboard uses for each counselor's caseload meter.</p>
+      <p>It's the same starting point our dashboard uses for each counselor's caseload meter. On the platform, each counselor can also set the number that means full for them.</p>
     </div>
   </Section>
 
@@ -158,11 +159,11 @@ const siteUrl = rootUrl(Astro.site, Astro.url);
   import { loadTurnstileWhenNeeded, waitForTurnstileToken } from '../lib/turnstile';
   // Same rule as the platform's CASELOAD_MULTIPLIER (src/lib/caseload.ts on
   // client sites). Round money to the nearest $10.
-  const MULTIPLIER = 1.5;
+  const MULTIPLIER = 2;
   const DONE_FOR_YOU_YEAR = 800 * 12;
   const money = (n: number) => '$' + (Math.round(n / 10) * 10).toLocaleString('en-US');
   const root = document.querySelector<HTMLElement>('.calc');
-  let latest = { weekly: 20, current: 18, fee: 130, sessions: 20, full: 30, open: 12, clientValue: 2600, monthlyGap: 0 };
+  let latest = { weekly: 20, current: 18, fee: 130, sessions: 20, full: 40, open: 22, clientValue: 2600, monthlyGap: 0 };
 
   function num(name: string, min: number, max: number) {
     const el = root?.querySelector<HTMLInputElement>(`[name="${name}"]`);

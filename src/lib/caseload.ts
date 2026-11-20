@@ -6,7 +6,7 @@
 // biweekly or monthly. A deliberate rule of thumb (client decision,
 // 2026-09-28): close enough to be useful, without asking counselors to
 // describe their visit-frequency mix.
-export const CASELOAD_MULTIPLIER = 1.5;
+export const CASELOAD_MULTIPLIER = 2; // default since 2026-11-20 (template 9c02a08)
 
 export const WEEKLY_TARGET_GUIDANCE =
   'Most full-time counselors see 16 to 30 clients a week, and 20 is typical.';
