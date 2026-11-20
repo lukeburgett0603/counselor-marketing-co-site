@@ -5284,3 +5284,14 @@ html.cmc-admin[data-theme='light'] .bp-serp-t {
     background: none;
   }
 }
+
+/* A table stretches to the card's bottom edge only when it's the last
+   thing in the card; anything after it used to be pulled 18px up into the
+   table (synced from template 43683b4, 2026-11-20). */
+.q-table-wrap:not(:last-child) {
+  margin-bottom: 12px;
+}
+.i-table + .i-hint,
+.i-table + .t-empty {
+  margin-top: 12px;
+}
