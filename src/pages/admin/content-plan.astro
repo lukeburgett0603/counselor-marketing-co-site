@@ -276,9 +276,12 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     drafted: 'Written, not live',
     published: 'Live on the site',
   };
-  // Published is history: the latest few show, the rest stay a click away.
-  const PUBLISHED_SHOWN = 6;
-  let showAllPublished = false;
+  // Each column shows 50 cards, then "Show 50 more" (Luke, 2026-11-22: no
+  // endless lists). Published is history: the latest 6 show, the rest a
+  // click away. A new search starts every column over.
+  const PAGE_SIZE = 50;
+  const startShown = (status: string) => (status === 'published' ? 6 : PAGE_SIZE);
+  const shown: Record<string, number> = {};
   const PRIORITY_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 };
 
   function renderBoard() {
@@ -294,17 +297,27 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         // Within a column: overdue/soonest due first, then priority.
         col.sort((a, b) => (a.due_date ?? '9999').localeCompare(b.due_date ?? '9999') || (PRIORITY_RANK[a.priority ?? ''] ?? 3) - (PRIORITY_RANK[b.priority ?? ''] ?? 3));
         const total = col.length;
-        if (status === 'published' && !showAllPublished) col = col.slice(0, PUBLISHED_SHOWN);
+        const limit = shown[status] ?? startShown(status);
+        col = col.slice(0, limit);
         return `<section class="cp-col cp-col-${status}" data-status="${status}">
           <h2><span class="cp-dot"></span>${STATUS_LABELS[status]}<span class="cp-n a-num">${total}</span><small>${COLUMN_HINTS[status]}</small></h2>
           <div class="cp-cards">${col.map((i) => cardHtml(i, { board: true })).join('') || '<p class="cp-none">Nothing here</p>'}</div>
-          ${status === 'published' && total > PUBLISHED_SHOWN ? `<button type="button" class="a-link cp-more" data-toggle-published>${showAllPublished ? 'Show fewer' : `Show all ${total}`}</button>` : ''}
+          ${
+            total > limit
+              ? `<button type="button" class="a-link cp-more" data-show-more="${status}">Show ${Math.min(PAGE_SIZE, total - limit)} more <span class="i-faint">(${limit} of ${total})</span></button>`
+              : limit > startShown(status) && total > startShown(status)
+                ? `<button type="button" class="a-link cp-more" data-show-fewer="${status}">Show fewer</button>`
+                : ''
+          }
         </section>`;
       })
       .join('');
   }
 
-  searchField.addEventListener('input', renderBoard);
+  searchField.addEventListener('input', () => {
+    for (const key of Object.keys(shown)) delete shown[key];
+    renderBoard();
+  });
 
   async function setStatus(itemId: string, status: string) {
     const item = items.find((i) => i.id === itemId);
@@ -539,9 +552,19 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       return;
     }
 
-    if (target.closest('[data-toggle-published]')) {
-      showAllPublished = !showAllPublished;
+    const moreButton = target.closest<HTMLElement>('[data-show-more]');
+    if (moreButton) {
+      const status = moreButton.dataset.showMore!;
+      shown[status] = (shown[status] ?? startShown(status)) + PAGE_SIZE;
       renderBoard();
+      return;
+    }
+    const fewerButton = target.closest<HTMLElement>('[data-show-fewer]');
+    if (fewerButton) {
+      const status = fewerButton.dataset.showFewer!;
+      delete shown[status];
+      renderBoard();
+      document.querySelector(`.cp-col-${status}`)?.scrollIntoView({ block: 'start' });
       return;
     }
 
