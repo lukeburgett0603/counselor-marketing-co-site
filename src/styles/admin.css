@@ -3169,6 +3169,22 @@ html.cmc-admin [hidden] {
 .q-table-wrap .i-table tbody tr {
   cursor: pointer;
 }
+.q-pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 4px;
+  color: var(--a-muted);
+  font-size: 13px;
+}
+.q-pager[hidden] {
+  display: none;
+}
+.q-pager .a-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
 @media (max-width: 1000px) {
   .q-ads {
     grid-template-columns: minmax(0, 1fr);

@@ -115,6 +115,12 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         <tbody id="leads-table-body"></tbody>
       </table>
     </div>
+    <!-- 50 per page (Luke, 2026-11-22): the list used to grow forever. -->
+    <nav class="q-pager" id="leads-pager" aria-label="Inquiry pages" hidden>
+      <button type="button" class="a-btn i-btn" id="leads-prev">Previous</button>
+      <span id="leads-range" class="a-num" aria-live="polite"></span>
+      <button type="button" class="a-btn i-btn" id="leads-next">Next</button>
+    </nav>
   </section>
 </AdminLayout>
 
@@ -420,7 +426,30 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
     renderContactsWidget(contacts, realLeads);
 
     leadsCount.textContent = `${realLeads.length} total · click one to open it in Inquiries`;
-    tableBody.innerHTML = realLeads
+    listLeads = realLeads;
+    renderListPage();
+  }
+
+  // Every inquiry, 50 at a time (newest first). Kept across reloads of
+  // the data so a status change doesn't jump back to page 1.
+  const PAGE_SIZE = 50;
+  let listLeads: Lead[] = [];
+  let listPage = 0;
+  const pager = document.getElementById('leads-pager')!;
+  const prevBtn = document.getElementById('leads-prev') as HTMLButtonElement;
+  const nextBtn = document.getElementById('leads-next') as HTMLButtonElement;
+  const rangeEl = document.getElementById('leads-range')!;
+
+  function renderListPage() {
+    const pages = Math.max(1, Math.ceil(listLeads.length / PAGE_SIZE));
+    listPage = Math.min(Math.max(0, listPage), pages - 1);
+    const start = listPage * PAGE_SIZE;
+    const pageLeads = listLeads.slice(start, start + PAGE_SIZE);
+    pager.hidden = listLeads.length <= PAGE_SIZE;
+    rangeEl.textContent = `${start + 1}–${start + pageLeads.length} of ${listLeads.length}`;
+    prevBtn.disabled = listPage === 0;
+    nextBtn.disabled = listPage >= pages - 1;
+    tableBody.innerHTML = pageLeads
       .map((lead) => {
         const heard = lead.lead_source ? leadSourceLabel(lead.lead_source) + (lead.lead_source_detail ? ` (${lead.lead_source_detail})` : '') : '';
         const asked = [
@@ -441,6 +470,14 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       })
       .join('');
   }
+
+  function goToPage(delta: number) {
+    listPage += delta;
+    renderListPage();
+    document.querySelector('.q-list')?.scrollIntoView({ block: 'start' });
+  }
+  prevBtn.addEventListener('click', () => goToPage(-1));
+  nextBtn.addEventListener('click', () => goToPage(1));
 
   // A row opens that inquiry in Inquiries; the status picker stays inline.
   tableBody.addEventListener('click', (event) => {
