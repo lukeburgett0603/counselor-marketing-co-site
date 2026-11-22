@@ -3185,6 +3185,10 @@ html.cmc-admin [hidden] {
   opacity: 0.45;
   cursor: default;
 }
+/* Inside the Inquiries list card (no card padding there). */
+.i-pager {
+  padding: 10px 14px;
+}
 @media (max-width: 1000px) {
   .q-ads {
     grid-template-columns: minmax(0, 1fr);

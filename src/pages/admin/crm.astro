@@ -89,6 +89,12 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
         <tbody id="leads-table-body"></tbody>
       </table>
       <div id="i-empty" class="t-empty" hidden></div>
+      <!-- 50 per page (Luke, 2026-11-22), like Inquiry trends. -->
+      <nav class="q-pager i-pager" id="list-pager" aria-label="Inquiry pages" hidden>
+        <button type="button" class="a-btn i-btn" id="list-prev">Previous</button>
+        <span id="list-range" class="a-num" aria-live="polite"></span>
+        <button type="button" class="a-btn i-btn" id="list-next">Next</button>
+      </nav>
     </div>
 
     <div id="actions-menu" class="i-menu hidden">
@@ -747,9 +753,39 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
     renderList();
   });
 
+  // The list shows 50 at a time. A new search, filter, status chip or view
+  // starts again at page 1; edits (status, archive, notes) keep the page.
+  const PAGE_SIZE = 50;
+  let listPage = 0;
+  let listKey = '';
+  const listPager = document.getElementById('list-pager')!;
+  const listPrev = document.getElementById('list-prev') as HTMLButtonElement;
+  const listNext = document.getElementById('list-next') as HTMLButtonElement;
+  const listRange = document.getElementById('list-range')!;
+  function goToListPage(delta: number) {
+    listPage += delta;
+    renderList();
+    document.querySelector('.i-list')?.scrollIntoView({ block: 'start' });
+  }
+  listPrev.addEventListener('click', () => goToListPage(-1));
+  listNext.addEventListener('click', () => goToListPage(1));
+
   function renderList() {
     renderPipeline();
     const filtered = applyFilters(allLeads);
+    const key = [currentView, searchInput.value.trim(), statusFilter.value, dateFilter.value, sourceFilter.value, showArchivedFilter.checked].join('|');
+    if (key !== listKey) {
+      listKey = key;
+      listPage = 0;
+    }
+    const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    listPage = Math.min(Math.max(0, listPage), pageCount - 1);
+    const pageStart = listPage * PAGE_SIZE;
+    const pageLeads = filtered.slice(pageStart, pageStart + PAGE_SIZE);
+    listPager.hidden = filtered.length <= PAGE_SIZE;
+    listRange.textContent = `${pageStart + 1}–${pageStart + pageLeads.length} of ${filtered.length}`;
+    listPrev.disabled = listPage === 0;
+    listNext.disabled = listPage >= pageCount - 1;
     const noun = currentView === 'contacts' ? 'download' : 'inquiry';
     leadsCount.textContent = `${filtered.length} ${filtered.length === 1 ? noun : noun === 'inquiry' ? 'inquiries' : 'downloads'}`;
     const empty = document.getElementById('i-empty')!;
@@ -762,7 +798,7 @@ import { LEAD_SOURCES } from '../../lib/leadSource';
           ? "<b>No inquiries assigned to you yet.</b>When one is assigned to you, it shows up here."
           : '<b>No inquiries yet.</b>New ones from your website show up here the moment they arrive.';
     }
-    tableBody.innerHTML = filtered
+    tableBody.innerHTML = pageLeads
       .map((lead) => {
         const counselor = lead.assigned_counselor_page_id ? (counselorNames.get(lead.assigned_counselor_page_id) ?? '').split(',')[0] : '';
         const contact = lead.email || lead.phone || '';
