@@ -121,6 +121,7 @@ import { MONTHLY_ADDONS, PLANS } from '../../lib/cmcPlans';
 
 <script>
   import { supabase, initAdminAuth } from '../../lib/adminAuth';
+  import { createListPager } from '../../lib/listPager';
   import { MONTHLY_ADDONS, PLANS, addonsTotal, money, planLabel } from '../../lib/cmcPlans';
 
   type Client = {
@@ -148,6 +149,12 @@ import { MONTHLY_ADDONS, PLANS } from '../../lib/cmcPlans';
   const formStatus = document.getElementById('cd-status')!;
   const showEnded = document.getElementById('cd-show-ended') as HTMLInputElement;
 
+  // 50 at a time (Luke, 2026-11-22).
+  const clientsPager = createListPager(document.getElementById('cd-empty')!, 'Client pages', () => render(), {
+    extraClass: 'i-pager',
+    scrollTo: document.querySelector<HTMLElement>('.i-list')!,
+  });
+
   function render() {
     const active = clients.filter((c) => c.status === 'active');
     const mrr = active.reduce((s, c) => s + monthly(c), 0);
@@ -161,7 +168,8 @@ import { MONTHLY_ADDONS, PLANS } from '../../lib/cmcPlans';
     const rows = clients.filter((c) => showEnded.checked || c.status !== 'ended');
     document.getElementById('cd-count')!.textContent = `${rows.length} client${rows.length === 1 ? '' : 's'}`;
     document.getElementById('cd-empty')!.hidden = rows.length > 0;
-    document.getElementById('cd-body')!.innerHTML = rows
+    document.getElementById('cd-body')!.innerHTML = clientsPager
+      .slice(rows, String(showEnded.checked))
       .map((c) => {
         const safe = /^https?:\/\//i.test((c.admin_url ?? '').trim());
         const addons = (c.addons ?? []).map((a) => MONTHLY_ADDONS.find((x) => x.value === a)?.label).filter(Boolean);
