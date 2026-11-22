@@ -25,6 +25,12 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
       <h2>Posts<span class="t-aside" id="blog-count"></span></h2>
       <ul id="blog-table-body" class="bp-list"></ul>
       <div id="bp-empty" class="t-empty" hidden></div>
+      <!-- 50 per page (Luke, 2026-11-22), like Inquiries. -->
+      <nav class="q-pager" id="list-pager" aria-label="Post pages" hidden>
+        <button type="button" class="a-btn i-btn" id="list-prev">Previous</button>
+        <span id="list-range" class="a-num" aria-live="polite"></span>
+        <button type="button" class="a-btn i-btn" id="list-next">Next</button>
+      </nav>
     </section>
   </div>
 
@@ -302,6 +308,23 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
       : 'No date';
   }
 
+  // The list shows 50 at a time. A new search or filter starts again at
+  // page 1; saving a post keeps the page.
+  const PAGE_SIZE = 50;
+  let listPage = 0;
+  let listKey = '';
+  const listPager = document.getElementById('list-pager')!;
+  const listPrev = document.getElementById('list-prev') as HTMLButtonElement;
+  const listNext = document.getElementById('list-next') as HTMLButtonElement;
+  const listRange = document.getElementById('list-range')!;
+  function goToListPage(delta: number) {
+    listPage += delta;
+    renderList();
+    document.querySelector('.bp-listcard')?.scrollIntoView({ block: 'start' });
+  }
+  listPrev.addEventListener('click', () => goToListPage(-1));
+  listNext.addEventListener('click', () => goToListPage(1));
+
   function renderList() {
     const pub = posts.filter(isPublished).length;
     document.getElementById('bp-n-all')!.textContent = String(posts.length);
@@ -319,7 +342,20 @@ import UnsplashSearchModal from '../../components/UnsplashSearchModal.astro';
     empty.innerHTML = posts.length
       ? '<b>No posts match.</b>Try a different filter or search.'
       : '<b>No posts yet.</b>Start one with New post, or draft one from an idea in your Content plan.';
-    tableBody.innerHTML = rows
+    const key = [listFilter, q].join('|');
+    if (key !== listKey) {
+      listKey = key;
+      listPage = 0;
+    }
+    const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+    listPage = Math.min(Math.max(0, listPage), pageCount - 1);
+    const pageStart = listPage * PAGE_SIZE;
+    const pageRows = rows.slice(pageStart, pageStart + PAGE_SIZE);
+    listPager.hidden = rows.length <= PAGE_SIZE;
+    listRange.textContent = `${pageStart + 1}–${pageStart + pageRows.length} of ${rows.length}`;
+    listPrev.disabled = listPage === 0;
+    listNext.disabled = listPage >= pageCount - 1;
+    tableBody.innerHTML = pageRows
       .map((post) => {
         const img = post.images?.hero?.url;
         const today = new Date().toISOString().slice(0, 10);
